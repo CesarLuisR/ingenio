@@ -1,0 +1,35 @@
+# --- Node & TypeScript ---
+node_modules/
+dist/
+build/
+*.log
+*.tsbuildinfo
+
+# --- Environment files ---
+.env
+.env.*.local
+.env.local
+.env.development.local
+.env.production.local
+
+# --- OS junk ---
+.DS_Store
+Thumbs.db
+
+# --- Editor junk ---
+.vscode/
+.idea/
+
+# --- Docker ---
+# ignore any local volumes, containers, images artifacts
+**/data/
+docker-data/
+tmp/
+*.pid
+
+# --- React build output ---
+apps/web/build/
+
+# --- Mongo persistent volume (if mounted locally) ---
+mongo/data/
+mongo/db/
