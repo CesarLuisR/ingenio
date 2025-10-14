@@ -1,26 +1,25 @@
 import { RequestHandler } from "express";
-import { enqueueReading } from "../queue/readingQueue";
-import { broadcast } from "../sockets/webSocket";
+import { IMessageBus } from "../sockets/messageBus";
+import { IReadingQueue } from "../queue/readingQueue";
 
-export const ingestCtrl: RequestHandler = (req, res) => {
-    const data = req.body;
+export function createIngestCtrl(bus: IMessageBus, queue: IReadingQueue): RequestHandler {
+    return (req, res) => {
+        try {
+            const data = req.body;
 
-    if (!data || typeof data !== "object") {
-        return res.status(400).json({ error: "Invalid or missing payload" });
-    }
+            if (!data || typeof data !== "object") 
+                return res.status(400).json({ error: "Invalid or missing payload" });
 
-    try {
-        enqueueReading(data);
+            if (!("sensorId" in data) || !("value" in data)) 
+                return res.status(400).json({ error: "Missing required fields" });
 
-        if (req.wss) {
-            broadcast({ type: "reading", ...data }, req.wss);
-        } else {
-            console.warn("Broadcast skipped: WebSocket server not available");
+            queue.enqueue(data);
+            bus.publish("reading", data);
+
+            return res.status(202).json({ ok: true });
+        } catch (err) {
+            console.error("Error in /ingest controller:", err);
+            return res.status(500).json({ error: "Internal server error" });
         }
-
-        return res.status(202).json({ ok: true });
-    } catch (err) {
-        console.error("Error processing /ingest:", err);
-        return res.status(500).json({ error: "Internal server error" });
-    }
-};
+    };
+}

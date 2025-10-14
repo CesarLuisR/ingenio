@@ -1,20 +1,20 @@
 import express from "express";
 import cors from "cors";
 import http from "http";
-import { createWebSocketServer } from "./lib/sockets/webSocket";
 import ingestRoutes from "./lib/routes/ingestRoute";
+import { WebSocketServer } from "ws";
+import { WebSocketBus } from "./lib/sockets/webSocket";
+import EventEmitterQueue from "./lib/queue/EventEmitter";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 const server = http.createServer(app);
-const wss = createWebSocketServer(server);
+const wss = new WebSocketServer({ server, path: "/ws" });
+const messageBus = new WebSocketBus(wss);
+const queue = new EventEmitterQueue();
 
-app.use((req, res, next) => {
-    req.wss = wss;
-    next();
-});
-app.use("/ingest", ingestRoutes);
+app.use("/ingest", ingestRoutes(messageBus, queue));
 
 export default server;

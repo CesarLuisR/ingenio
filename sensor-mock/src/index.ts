@@ -13,7 +13,7 @@ const SERVER_PORT = 5000;
 const API_PATH = "/ingest";
 const INTERVALO_MS = 3000;
 
-let counter = 1; // 👈 mover aquí, fuera de la función
+let counter = 1; 
 
 async function enviarMockedData(): Promise<void> {
     const data: SensorData = {

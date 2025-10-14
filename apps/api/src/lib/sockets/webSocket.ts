@@ -1,19 +1,13 @@
 import { WebSocketServer } from "ws";
+import { IMessageBus } from "./messageBus";
 
-export function createWebSocketServer(server: any) {
-    const wss = new WebSocketServer({ server, path: "/ws" });
+export class WebSocketBus implements IMessageBus {
+    constructor(private wss: WebSocketServer) {}
 
-    wss.on("connection", (socket) => {
-        console.log("Nuevo cliente conectado al WebSocket");
-        socket.on("close", () => console.log("Cliente desconectado"));
-    });
-
-    return wss;
-}
-
-export function broadcast(data: unknown, wss: WebSocketServer) {
-    const msg = JSON.stringify(data);
-    for (const client of wss.clients) {
-        if (client.readyState === 1) client.send(msg);
+    publish(event: string, payload: any): void {
+        const msg = JSON.stringify({ type: event, ...payload });
+        for (const client of this.wss.clients) {
+            if (client.readyState === 1) client.send(msg);
+        }
     }
 }

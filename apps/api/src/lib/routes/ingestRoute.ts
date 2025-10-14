@@ -1,8 +1,11 @@
 import { Router } from "express";
-import { ingestCtrl } from "../controllers/ingestCtrl";
+import { createIngestCtrl } from "../controllers/ingestCtrl";
+import { IMessageBus } from "../sockets/messageBus";
+import { IReadingQueue } from "../queue/readingQueue";
 
-const router = Router();
+export default function ingestRoutes(bus: IMessageBus, queue: IReadingQueue) {
+    const router = Router();
+    router.post("/", createIngestCtrl(bus, queue));
+    return router;
+}
 
-router.post("/", ingestCtrl);
-
-export default router;
