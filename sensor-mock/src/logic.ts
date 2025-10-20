@@ -2,23 +2,26 @@ import { ConfigData, ReadingData } from "./types";
 
 export function createRandomReading(config: ConfigData) {
     const reading: ReadingData = {
-        sensorId: config.sensorId || "unknown",
+        sensorId: config.sensorId,
         timestamp: new Date().toISOString(),
         metrics: {}
-    };
+    }
 
-    for (const [group, vars] of Object.entries(config.metricsConfig)) {
-        reading.metrics[group] = {};
-        for (const [key, range] of Object.entries(vars)) {
-            let min = range.min ?? 0;
-            let max = range.max ?? 100;
+    for (const metricGroup of Object.entries(config.metricsConfig)) {
+        const metricGroupName = metricGroup[0]
+        const metricGroupValues = metricGroup[1];
+        reading.metrics[metricGroupName] = {};
 
-            // Making it get out of the fine range by a 10% sometimes
-            min = min - (min * 0.1);
-            max = max + (max * 0.1);
+        for (const metric of Object.entries(metricGroupValues)) {
+            const metricName = metric[0];
+            const metricValue = metric[1];
 
-            const value = parseFloat((Math.random() * (max - min) + min).toFixed(2));
-            reading.metrics[group][key] = value;
+            const min = metricValue.min - (metricValue.min * 0.10);
+            const max = metricValue.max + (metricValue.max * 0.10);
+
+            const randomValue = parseFloat((Math.random() * (max - min) + min).toFixed(2));
+
+            reading.metrics[metricGroupName][metricName] = randomValue;
         }
     }
 

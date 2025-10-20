@@ -3,7 +3,7 @@ export interface ConfigData {
     type: string;
     location: string;
     intervalMs: number;
-    metricsConfig: Record<string, Record<string, { min?: number, max?: number }>>;
+    metricsConfig: Record<string, Record<string, { min: number, max: number }>>;
     createdAt: Date;
     lastSeen: Date;
     active: boolean;

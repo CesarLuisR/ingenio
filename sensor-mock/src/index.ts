@@ -19,7 +19,9 @@ async function run() {
     while (true) {
         const success = await sendSensor(url, explicitConfig);
         if (success) break;
-        setTimeout(() => {}, 1000);
+        
+        // delay
+        await new Promise(_ => setTimeout(_, 1000));
     }
 
     setInterval(async () => {
