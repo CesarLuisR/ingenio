@@ -10,7 +10,7 @@ import sensorRoutes from "./lib/routes/sensorRoutes";
 import maintenanceRoutes from "./lib/routes/maintenanceRoutes";
 import failureRoutes from "./lib/routes/failureRoutes";
 import userRoutes from "./lib/routes/userRoutes";
-
+import analyzeRoutes from "./lib/routes/analyzeRoutes";
 
 const app = express();
 app.use(cors());
@@ -29,5 +29,6 @@ app.use("/sensors", sensorRoutes);
 app.use("/maintenances", maintenanceRoutes);
 app.use("/failures", failureRoutes);
 app.use("/users", userRoutes);
+app.use("/analyze", analyzeRoutes);
 
 export default server;

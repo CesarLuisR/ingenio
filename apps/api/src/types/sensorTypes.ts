@@ -15,3 +15,8 @@ export interface ReadingData {
     timestamp: string;
     metrics: Record<string, Record<string, number>>;
 }
+
+export interface IMachineData {
+    config: ConfigData;
+    readings: ReadingData[];
+}
