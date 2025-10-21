@@ -30,6 +30,7 @@ services:
       - MONGO_URI=mongodb://mongo:27017/ingenio
       - REDIS_URL=redis://redis:6379
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/ingenio
+      - IA_API=http://ia_mock:8081
     depends_on:
       - mongo
   
@@ -64,7 +65,7 @@ services:
 
   sensor_mock:
     build:
-      context: ./sensor-mock 
+      context: ./apps/sensor-mock 
       dockerfile: Dockerfile
       # target: dev
     # ports:
@@ -76,6 +77,13 @@ services:
       - CONFIG_FILE_NAME=motor-01.json
     depends_on:
       - api
+  
+  ia_mock:
+    build:
+      context: ./apps/ia-mock
+      dockerfile: Dockerfile
+    volumes:
+      - ./apps/ia-mock:/app
 
 volumes:
   mongo_data:
