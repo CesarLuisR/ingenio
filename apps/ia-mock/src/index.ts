@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import { ConfigData, IMachineData, ReadingData } from "./types";
+import { IMachineData } from "./types";
 
 const app = express();
 app.use(cors());

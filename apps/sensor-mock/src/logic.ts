@@ -16,8 +16,8 @@ export function createRandomReading(config: ConfigData) {
             const metricName = metric[0];
             const metricValue = metric[1];
 
-            const min = metricValue.min - (metricValue.min * 0.10);
-            const max = metricValue.max + (metricValue.max * 0.10);
+            const min = metricValue.min - (metricValue.min * 0.01);
+            const max = metricValue.max + (metricValue.max * 0.01);
 
             const randomValue = parseFloat((Math.random() * (max - min) + min).toFixed(2));
 
