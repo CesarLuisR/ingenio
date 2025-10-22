@@ -11,7 +11,6 @@ export default class EventEmitterQueue implements IReadingQueue {
             try {
                 const reading = new Reading(data);
                 await reading.save();
-                console.log(reading.toJSON());
             } catch (err) {
                 console.error("Error guardando lectura:", err);
             }

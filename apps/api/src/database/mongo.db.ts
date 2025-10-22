@@ -51,14 +51,7 @@ const ReadingSchema = new Schema(
         sensorId: { type: String, required: true },
         timestamp: { type: Date, default: Date.now },
         metrics: {
-            type: Map,
-            of: new Schema(
-                {
-                    type: Map,
-                    of: Number,
-                },
-                { _id: false }
-            ),
+            type: Object,
             required: true,
         },
     },
