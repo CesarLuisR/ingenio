@@ -3,11 +3,11 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000"
 // Tipos
 export interface Sensor {
   id: string
-  sensorId: string;
+  sensorId: string
   name: string
   type: string
   location: string
-  status: "active" | "inactive" | "maintenance"
+  status: "active" | "inactive" | "maintenance" | "unknown"
   lastReading?: string
   createdAt: string
   updatedAt: string
@@ -81,6 +81,30 @@ export interface AnalysisResponse {
   report: SensorReport[]
 }
 
+// Lecturas dinámicas
+export interface MetricInfo {
+  value: number
+  status: "ok" | "low" | "high" | "critical" | "unknown"
+}
+
+export interface MetricsGroup {
+  [metricName: string]: MetricInfo | number | undefined
+}
+
+export interface MetricsMap {
+  [category: string]: MetricsGroup
+}
+
+export interface Reading {
+  sensorId: string
+  timestamp: string
+  status: "ok" | "warning" | "critical" | "unknown"
+  issues: any[]
+  metrics: MetricsMap
+  totalIssues: number
+  severityLevel: number
+}
+
 // API Client
 class ApiClient {
   private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -91,11 +115,7 @@ class ApiClient {
         ...options?.headers,
       },
     })
-
-    if (!response.ok) {
-      throw new Error(`API Error: ${response.statusText}`)
-    }
-
+    if (!response.ok) throw new Error(`API Error: ${response.statusText}`)
     return response.json()
   }
 
@@ -123,9 +143,7 @@ class ApiClient {
   }
 
   async deleteSensor(id: string): Promise<void> {
-    return this.request<void>(`/sensors/${id}`, {
-      method: "DELETE",
-    })
+    return this.request<void>(`/sensors/${id}`, { method: "DELETE" })
   }
 
   // Mantenimientos
@@ -185,6 +203,11 @@ class ApiClient {
       method: "POST",
       body: JSON.stringify(data),
     })
+  }
+
+  // Lecturas históricas
+  async getSensorReadings(sensorId: string): Promise<Reading[]> {
+    return this.request<Reading[]>(`/sensors/${sensorId}/readings`)
   }
 }
 
