@@ -1,8 +1,8 @@
 # ---- Deps ------
 FROM node:20-alpine AS deps
 WORKDIR /app
-COPY pnpm-lock.yaml package.json ./
-RUN corepack enable && pnpm install
+COPY package*.json ./
+RUN npm install
 
 # ----- Dev ------
 FROM node:20-alpine AS dev

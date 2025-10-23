@@ -11,8 +11,6 @@ services:
       - "5173:5173"
     environment:
       - NODE_ENV=development
-    depends_on:
-      - api
 
   api:
     build:
@@ -75,8 +73,6 @@ services:
       # - PORT=5001
       - API=http://api:5000
       - CONFIG_FILE_NAME=motor-01.json
-    depends_on:
-      - api
   
   ia_mock:
     build:

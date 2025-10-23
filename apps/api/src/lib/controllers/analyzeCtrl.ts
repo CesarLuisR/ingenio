@@ -3,18 +3,18 @@ import axios from "axios";
 import { Reading } from "../../database/mongo.db";
 import { ConfigData, IMachineData, ReadingData } from "../../types/sensorTypes";
 import { getSensorConfig } from "../repositories/sensorRepository";
+import { AnalysisResponse, MetricAnalysis } from "../../types/analysisTypes";
 
 export const getAnalysis: RequestHandler = async (req, res) => {
     const IA_API = process.env.IA_API;
     const data: string[] = req.body; // lista de sensorIds
     const request: IMachineData[] = [];
 
-    if (!IA_API) {
+    if (!IA_API)
         return res.status(500).json({ error: "IA_API no configurada en el entorno" });
-    }
 
     try {
-        // Construimos el payload
+        // --- Construir payload con sensores y lecturas ---
         for (const sensorId of data) {
             const sensorConfig: ConfigData = await getSensorConfig(sensorId);
             if (!sensorConfig) {
@@ -35,11 +35,14 @@ export const getAnalysis: RequestHandler = async (req, res) => {
             return res.status(400).json({ error: "No hay sensores válidos con datos" });
         }
 
-        // Llamada al microservicio de análisis
-        const response = await axios.post(`${IA_API}/analyze`, request);
-        const report = response.data;
+        // --- Llamada al microservicio de IA ---
+        const response = await axios.post<AnalysisResponse>(`${IA_API}/analyze`, request, {
+            headers: { "Content-Type": "application/json" },
+        });
 
-        // Mostrar en consola de forma legible
+        const report = response.data; // 👈 obtenemos solo los datos JSON planos
+
+        // --- Mostrar resumen en consola para debugging ---
         console.log("\n==============================");
         console.log("📊 REPORTE DE ANÁLISIS DE SENSORES");
         console.log("==============================");
@@ -48,14 +51,7 @@ export const getAnalysis: RequestHandler = async (req, res) => {
             console.log(`\n🔹 Sensor: ${sensor.sensorId}`);
             for (const [category, metrics] of Object.entries(sensor.resumen)) {
                 console.log(`  ▸ ${category.toUpperCase()}`);
-
-                for (const [metric, info] of Object.entries(metrics as Record<string, {
-                    tendencia?: string;
-                    pendiente?: number;
-                    valorActual?: number;
-                    rango?: { min?: number; max?: number };
-                    urgencia?: string;
-                }>)) {
+                for (const [metric, info] of Object.entries(metrics as Record<string, MetricAnalysis>)) {
                     console.log(
                         `     - ${metric}: ${info.tendencia ?? "?"} | Valor: ${info.valorActual?.toFixed?.(2) ?? "?"} | Pendiente: ${info.pendiente?.toExponential?.(3) ?? "-"} | Urgencia: ${info.urgencia ?? "?"}`
                     );
@@ -65,9 +61,15 @@ export const getAnalysis: RequestHandler = async (req, res) => {
 
         console.log("==============================\n");
 
-        // Responder con el contenido real, no con el objeto de Axios
-        return res.status(200).json(report);
-
+        // --- Devolver datos al frontend (formato JSON correcto) ---
+        return res.status(200).json({
+            timestamp: report.timestamp,
+            report: report.report.map(sensor => ({
+                sensorId: sensor.sensorId,
+                resumen: sensor.resumen,
+                chartData: sensor.chartData, // 👈 incluye también las gráficas
+            })),
+        });
     } catch (e: any) {
         console.error("❌ Error durante el análisis:", e.message || e);
         return res.status(500).json({ error: "Error procesando el análisis" });
