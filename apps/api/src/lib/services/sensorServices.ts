@@ -1,20 +1,6 @@
-import { ReadingData } from "../../types/sensorTypes";
-import { getSensorConfig } from "../repositories/sensorRepository";
+import { ConfigData, ReadingData } from "../../types/sensorTypes";
 
-export async function createPublishInfo(data: ReadingData) {
-    const config = await getSensorConfig(data.sensorId);
-
-    if (!config) {
-        console.warn(`No config found for sensor ${data.sensorId}`);
-        return {
-            sensorId: data.sensorId,
-            timestamp: data.timestamp,
-            status: "unknown",
-            issues: [],
-            metrics: data.metrics
-        };
-    }
-
+export async function createPublishInfo(data: ReadingData, config: ConfigData) {
     const metricsReport: Record<string, any> = {};
     const issues: { metric: string; type: string; value: number; limit: number }[] = [];
     let severity = 0;

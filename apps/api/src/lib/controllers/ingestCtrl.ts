@@ -18,7 +18,13 @@ export function createIngestCtrl(bus: IMessageBus, queue: IReadingQueue): Reques
 
             queue.enqueue(data);
 
-            const info = await createPublishInfo(data);
+            const readingSensorConfig = await getSensorConfig(data.sensorId);
+            if (!readingSensorConfig) {
+                console.warn(`No sensor config found for sensorId: ${data.sensorId}`);
+                return res.status(404).json({ error: "Sensor configuration not found" });
+            }
+
+            const info = await createPublishInfo(data, readingSensorConfig);
             bus.publish("reading", info);
 
             return res.status(202).json({ ok: true });
