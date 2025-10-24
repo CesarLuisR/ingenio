@@ -1,42 +1,31 @@
-import redis from "../../database/redis.db";
-import prisma from "../../database/postgres.db";
 import { ConfigData } from "../../types/sensorTypes";
+import { CacheRepository } from "./cache";
+import { DBRepository } from "./database";
 
-const getCacheKey = (sensorId: string): string => `sensor:${sensorId}:config`;
+export default class SensorRepository {
+    constructor(private cacheRepository: CacheRepository, private dbRepository: DBRepository) {}
 
-export async function getSensorConfig(sensorId: string) {
-    const cacheKey = getCacheKey(sensorId);
+    getCacheKey(sensorId: string): string {
+        return `sensor:${sensorId}:config`;
+    }
 
-    const cached = await redis.get(cacheKey);
-    if (cached) return JSON.parse(cached);
+    async getSensorConfig(sensorId: string) {
+        const cacheKey = this.getCacheKey(sensorId);
 
-    const sensor = await prisma.sensor.findFirst({ where: { sensorId } });
-    if (!sensor) return null;
+        const cached = await this.cacheRepository.get(cacheKey);
+        if (cached) return JSON.parse(cached);          
 
-    await redis.set(cacheKey, JSON.stringify(sensor));
-    return sensor;
-}
+        const sensor = await this.dbRepository.findSensorById(sensorId);
+        if (!sensor) return null;
 
-export async function setSensorConfig(sensorConfig: ConfigData) {
-    const sensor = await prisma.sensor.upsert({
-        where: { sensorId: sensorConfig.sensorId },
-        update: {
-            type: sensorConfig.type,
-            metricsConfig: sensorConfig.metricsConfig,
-            updatedAt: sensorConfig.lastSeen,
-        },
-        create: {
-            sensorId: sensorConfig.sensorId,
-            name: sensorConfig.sensorId,
-            type: sensorConfig.type,
-            metricsConfig: sensorConfig.metricsConfig,
-            createdAt: sensorConfig.createdAt,
-            updatedAt: sensorConfig.lastSeen,
-        },
-    });
+        await this.cacheRepository.set(cacheKey, JSON.stringify(sensor));
+        return sensor;
+    }
 
-    const cacheKey = getCacheKey(sensorConfig.sensorId);
-    await redis.set(cacheKey, JSON.stringify(sensorConfig));
-
-    return sensor;
+    async setSensorConfig(sensorConfig: ConfigData) {
+        const sensor = await this.dbRepository.upsertSensorConfig(sensorConfig);
+        const cacheKey = this.getCacheKey(sensorConfig.sensorId);
+        await this.cacheRepository.set(cacheKey, JSON.stringify(sensorConfig));
+        return sensor;
+    }
 }

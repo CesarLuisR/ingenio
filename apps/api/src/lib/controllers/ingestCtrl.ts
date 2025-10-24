@@ -2,8 +2,12 @@ import { RequestHandler } from "express";
 import { IMessageBus } from "../sockets/messageBus";
 import { IReadingQueue } from "../queue/readingQueue";
 import { ConfigData, ReadingData } from "../../types/sensorTypes";
-import { getSensorConfig, setSensorConfig } from "../repositories/sensorRepository";
 import { createPublishInfo } from "../services/sensorServices";
+import SensorRepository from "../repositories/sensorRepository";
+import RedisRepository from "../repositories/cache/redisRepository";
+import PostgresRepository from "../repositories/database/postgresRepository";
+
+const sensorRepository = new SensorRepository(new RedisRepository(), new PostgresRepository()); 
 
 export function createIngestCtrl(bus: IMessageBus, queue: IReadingQueue): RequestHandler {
     return async (req, res) => {
@@ -18,7 +22,8 @@ export function createIngestCtrl(bus: IMessageBus, queue: IReadingQueue): Reques
 
             queue.enqueue(data);
 
-            const readingSensorConfig = await getSensorConfig(data.sensorId);
+
+            const readingSensorConfig: ConfigData | null = await sensorRepository.getSensorConfig(data.sensorId);
             if (!readingSensorConfig) {
                 console.warn(`No sensor config found for sensorId: ${data.sensorId}`);
                 return res.status(404).json({ error: "Sensor configuration not found" });
@@ -39,13 +44,13 @@ export const addSensorCtrl: RequestHandler = async (req, res) => {
     const data: ConfigData = req.body;
 
     try {
-        let sensor = await getSensorConfig(data.sensorId);
+        let sensor = await sensorRepository.getSensorConfig(data.sensorId);
         if (sensor) {
             console.log(`✅ Config encontrada para ${sensor.sensorId}`);
             return res.status(201).json({ ok: true, sensor });
         }
 
-        sensor = await setSensorConfig(data);
+        sensor = await sensorRepository.setSensorConfig(data);
         console.log(`✅ Config registrada para ${sensor.sensorId}`);
         return res.status(201).json({ ok: true, sensor });
     } catch (err) {
