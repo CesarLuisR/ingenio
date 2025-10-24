@@ -11,6 +11,8 @@ import maintenanceRoutes from "./lib/routes/maintenanceRoutes";
 import failureRoutes from "./lib/routes/failureRoutes";
 import userRoutes from "./lib/routes/userRoutes";
 import analyzeRoutes from "./lib/routes/analyzeRoutes";
+import { ReadingData } from "./types/sensorTypes";
+import { Reading } from "./database/mongo.db";
 
 const app = express();
 app.use(cors());
@@ -20,6 +22,10 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: "/ws" });
 const messageBus = new WebSocketBus(wss);
 const queue = new EventEmitterQueue();
+queue.onReading(async (data: ReadingData) => {
+    const reading = new Reading(data);
+    await reading.save();
+});
 
 // Sensor info ingestion
 app.use("/ingest", ingestRoutes(messageBus, queue));

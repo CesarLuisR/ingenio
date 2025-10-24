@@ -1,23 +1,16 @@
 import { EventEmitter } from "events";
-import { Reading } from "../../database/mongo.db";
 import { IReadingQueue } from "./readingQueue";
-import { ReadingData } from "../../types/sensorTypes";
 
 export default class EventEmitterQueue implements IReadingQueue {
     private queue = new EventEmitter();
 
-    constructor() {
-        this.queue.on("reading", async (data: ReadingData) => {
-            try {
-                const reading = new Reading(data);
-                await reading.save();
-            } catch (err) {
-                console.error("Error guardando lectura:", err);
-            }
-        })
-    }
+    onReading(handler: (data: any) => Promise<void>): void {
+        this.queue.on("reading", async (data) => {
+            await handler(data); 
+        });
+    };
 
-    enqueue(data: ReadingData): void {
+    enqueue(data: any): void {
         this.queue.emit("reading", data);
     }
 }

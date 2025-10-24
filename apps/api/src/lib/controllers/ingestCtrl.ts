@@ -22,7 +22,6 @@ export function createIngestCtrl(bus: IMessageBus, queue: IReadingQueue): Reques
 
             queue.enqueue(data);
 
-
             const readingSensorConfig: ConfigData | null = await sensorRepository.getSensorConfig(data.sensorId);
             if (!readingSensorConfig) {
                 console.warn(`No sensor config found for sensorId: ${data.sensorId}`);
