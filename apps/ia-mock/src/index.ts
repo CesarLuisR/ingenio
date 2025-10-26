@@ -88,14 +88,31 @@ app.use("/analyze", (req, res) => {
                         urgencia: urgency,
                     };
 
-                    // Agregar datos crudos para graficar
-                    const series: ChartPoint[] = readings
+                    // --- Muestreo uniforme para reducir datos del gráfico ---
+                    const allSeries: ChartPoint[] = readings
                         .map(r => ({
                             timestamp: r.timestamp,
                             value: r?.metrics?.[category]?.[metricName],
                         }))
                         .filter(p => typeof p.value === "number");
 
+                    const MAX_POINTS = 50;
+                    let series: ChartPoint[];
+
+                    if (allSeries.length <= MAX_POINTS) {
+                        // Si hay pocos puntos, usamos todos
+                        series = allSeries;
+                    } else {
+                        // Tomamos puntos uniformemente distribuidos
+                        const step = allSeries.length / MAX_POINTS;
+                        series = [];
+                        for (let i = 0; i < MAX_POINTS; i++) {
+                            const index = Math.floor(i * step);
+                            series.push(allSeries[index]);
+                        }
+                    }
+
+                    // Guardar datos para graficar
                     chartData[category].push({
                         metric: metricName,
                         data: series,

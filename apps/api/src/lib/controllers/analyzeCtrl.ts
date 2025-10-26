@@ -1,9 +1,16 @@
-import { RequestHandler } from "express";
 import axios from "axios";
+import { RequestHandler } from "express";
 import { Reading } from "../../database/mongo.db";
 import { ConfigData, IMachineData, ReadingData } from "../../types/sensorTypes";
-import { getSensorConfig } from "../repositories/sensorRepository";
 import { AnalysisResponse, MetricAnalysis } from "../../types/analysisTypes";
+
+import SensorRepository from "../repositories/sensorRepository";
+import RedisRepository from "../repositories/cache/redisRepository";
+import PostgresRepository from "../repositories/database/postgresRepository";
+
+const redisRepository = new RedisRepository();
+const postgresRepository = new PostgresRepository();
+const sensorRepository = new SensorRepository(redisRepository, postgresRepository);
 
 export const getAnalysis: RequestHandler = async (req, res) => {
     const IA_API = process.env.IA_API;
@@ -16,7 +23,7 @@ export const getAnalysis: RequestHandler = async (req, res) => {
     try {
         // --- Construir payload con sensores y lecturas ---
         for (const sensorId of data) {
-            const sensorConfig: ConfigData = await getSensorConfig(sensorId);
+            const sensorConfig: ConfigData = await sensorRepository.getSensorConfig(sensorId);
             if (!sensorConfig) {
                 console.warn(`⚠️  Sensor no encontrado: ${sensorId}`);
                 continue;
