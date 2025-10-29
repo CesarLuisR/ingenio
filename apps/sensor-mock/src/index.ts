@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import { ConfigData, ReadingData } from "./types";
+import { ConfigData } from "./types";
 import { createRandomReading, sendReading, sendSensor } from "./logic";
 
 const configFileName = process.env.CONFIG_FILE_NAME || 'none';

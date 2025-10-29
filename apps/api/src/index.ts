@@ -3,7 +3,7 @@ import { connectDB as MongoDBConnect } from "./database/mongo.db";
 import redis from "./database/redis.db";
 
 async function run() {
-    await MongoDBConnect();
+    MongoDBConnect();
     await redis.connect();
     
     const PORT = process.env.PORT || 5000;

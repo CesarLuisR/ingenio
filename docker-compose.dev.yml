@@ -29,8 +29,6 @@ services:
       - REDIS_URL=redis://redis:6379
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/ingenio
       - IA_API=http://ia_mock:8081
-    depends_on:
-      - mongo
   
   mongo:
     image: mongo:7

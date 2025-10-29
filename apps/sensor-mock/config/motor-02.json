@@ -1,0 +1,25 @@
+{
+	"sensorId": "Bomba puesta en la UCE",
+	"type": "induction-motor",
+	"location": "Planta B - Línea 3",
+	"intervalMs": 1000,
+	"metricsConfig": {
+		"electrical": {
+			"current": { "min": 2.5, "max": 5.0 },
+			"voltage": { "min": 220, "max": 240 },
+			"power": { "min": 400, "max": 900 }
+		},
+		"mechanical": {
+			"vibrationRMS": { "min": 0.01, "max": 0.05 },
+			"rpm": { "min": 1750, "max": 1850 }
+		},
+		"thermal": {
+			"motorTemperature": { "min": 40, "max": 80 },
+			"ambientTemperature": { "min": 20, "max": 35 }
+		}
+	},
+	"createdAt": "2025-10-17T12:00:00Z",
+	"lastSeen": "2025-10-17T12:30:00Z",
+	"active": true,
+	"configVersion": "v1"
+}
