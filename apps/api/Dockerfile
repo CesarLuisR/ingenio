@@ -1,8 +1,8 @@
 # ---- Deps ----
 FROM node:20-alpine AS deps
 WORKDIR /app
-ENV NODE_ENV=development
 COPY package*.json ./
+ENV NODE_ENV=development
 RUN npm install --include=dev
 
 # ---- Dev ----
@@ -11,6 +11,7 @@ WORKDIR /app
 ENV NODE_ENV=development
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npx prisma generate 
+RUN npx prisma generate
+
 EXPOSE 5000
-CMD ["npm", "run", "dev"]
+CMD ["sh", "-c", "npx prisma migrate deploy && npm run dev"]
