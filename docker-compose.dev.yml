@@ -36,7 +36,6 @@ services:
   
   mongo:
     image: mongo:7
-    container_name: ingenio-mongo
     ports:
       - "27017:27017"
     volumes:
@@ -44,7 +43,6 @@ services:
   
   redis:
     image: redis:7
-    container_name: ingenio-redis
     ports:
       - "6379:6379"
     command: ["redis-server", "--appendonly", "yes"]
@@ -53,7 +51,6 @@ services:
 
   postgres:
     image: postgres:16
-    container_name: ingenio_postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
