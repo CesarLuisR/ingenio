@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
-import { type Reading } from "../lib/api";
+import { useReadingsStore } from "../context/readingState"; // 👈 importamos tu store
+import type { Reading } from "../lib/api";
 
 // === estilos ===
 const Container = styled.div`
@@ -73,9 +74,9 @@ const Empty = styled.div`
 
 // === componente ===
 export default function Dashboard() {
-	const [connectedSensors, setConnectedSensors] = useState<
-		Record<string, Reading>
-	>({});
+	const addReading = useReadingsStore((s) => s.addReading);
+	const sensorMap = useReadingsStore((s) => s.sensorMap);
+
 	const [status, setStatus] = useState<"connecting" | "connected" | "closed">(
 		"connecting"
 	);
@@ -101,14 +102,10 @@ export default function Dashboard() {
 			console.log("🔴 Conexión cerrada. Reintentando en 3s...");
 			setStatus("closed");
 			setTimeout(() => {
-				if (
-					!wsRef.current ||
-					wsRef.current.readyState === WebSocket.CLOSED
-				) {
+				if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
 					console.log("🔁 Reintentando conexión WebSocket...");
 					wsRef.current = null;
 					setStatus("connecting");
-					// reinicia
 					const reconnect = new WebSocket(wsUrl);
 					wsRef.current = reconnect;
 				}
@@ -126,14 +123,8 @@ export default function Dashboard() {
 					const reading: Reading = msg.payload || msg.data;
 					if (!reading || !reading.sensorId) return;
 
-					// Mostrar lectura entrante en consola
 					console.log("📡 Nueva lectura recibida:", reading);
-
-					// Actualizar dashboard dinámico
-					setConnectedSensors((prev) => ({
-						...prev,
-						[reading.sensorId]: reading,
-					}));
+					addReading(reading); // 👈 guardamos en Zustand
 				}
 			} catch (err) {
 				console.error("Error parseando mensaje WS:", err);
@@ -144,9 +135,12 @@ export default function Dashboard() {
 			ws.close();
 			wsRef.current = null;
 		};
-	}, []);
+	}, [addReading]);
 
-	const sensorsArray = Object.values(connectedSensors);
+	// Convertimos el Map en un array para renderizar
+	const sensorsArray = Array.from(sensorMap.values()).map(
+		(readings) => readings[readings.length - 1] // última lectura de cada sensor
+	);
 
 	return (
 		<Container>
@@ -169,23 +163,13 @@ export default function Dashboard() {
 							to={`/sensor/${reading.sensorId}`}
 							style={{ textDecoration: "none" }}>
 							<Card>
-								<h2
-									style={{
-										fontSize: "1.25rem",
-										fontWeight: 600,
-									}}>
+								<h2 style={{ fontSize: "1.25rem", fontWeight: 600 }}>
 									{reading.sensorId}
 								</h2>
 
-								<p
-									style={{
-										color: "#6b7280",
-										marginBottom: "0.5rem",
-									}}>
+								<p style={{ color: "#6b7280", marginBottom: "0.5rem" }}>
 									Última actualización:{" "}
-									{new Date(
-										reading.timestamp
-									).toLocaleTimeString()}
+									{new Date(reading.timestamp).toLocaleTimeString()}
 								</p>
 
 								<Status status={reading.status}>

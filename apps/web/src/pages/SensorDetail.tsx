@@ -18,6 +18,7 @@ import {
 	type Failure,
 	type AnalysisResponse,
 } from "../lib/api";
+import { useReadingsStore } from "../context/readingState";
 
 const MAX_POINTS = 30;
 
@@ -130,13 +131,15 @@ const CodeBox = styled.pre`
 // === componente principal ===
 export default function SensorDetail() {
 	const { id } = useParams<{ id: string }>();
-	const [history, setHistory] = useState<Reading[]>([]);
 	const [sensorName, setSensorName] = useState<string>("");
 	const [maintenances, setMaintenances] = useState<Maintenance[]>([]);
 	const [failures, setFailures] = useState<Failure[]>([]);
 	const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
 	const [chartData, setChartData] = useState<Record<string, any[]>>({});
 	const wsRef = useRef<WebSocket | null>(null);
+
+	const addReading = useReadingsStore((s) => s.addReading);
+	const sensorMap = useReadingsStore((s) => s.sensorMap);
 
 	// === cargar datos iniciales ===
 	useEffect(() => {
@@ -151,12 +154,8 @@ export default function SensorDetail() {
 					api.analyzeData([String(id)]),
 				]);
 
-				setMaintenances(
-					maints.filter((m) => m.sensorId === sensor.sensorId)
-				);
-				setFailures(
-					fails.filter((f) => f.sensorId === sensor.sensorId)
-				);
+				setMaintenances(maints.filter((m) => m.sensorId === sensor.id));
+				setFailures(fails.filter((f) => f.sensorId === sensor.id));
 				setAnalysis(anal);
 			} catch (err) {
 				console.error("Error cargando datos base:", err);
@@ -181,13 +180,9 @@ export default function SensorDetail() {
 		ws.onmessage = (ev) => {
 			try {
 				const msg = JSON.parse(ev.data);
-				const reading = msg.payload || msg.data;
+				const reading: Reading = msg.payload || msg.data;
 				if (msg.type === "reading" && reading?.sensorId === id) {
-					setHistory((prev) => {
-						const updated = [...prev, reading];
-						return updated.slice(-MAX_POINTS);
-					});
-					updateChartData(reading);
+					addReading(reading);
 				}
 			} catch (e) {
 				console.error("Error procesando WS:", e);
@@ -198,19 +193,28 @@ export default function SensorDetail() {
 			ws.close();
 			wsRef.current = null;
 		};
-	}, [id]);
+	}, [id, addReading]);
 
-	// === actualización de gráficas ===
-	const updateChartData = (reading: Reading) => {
-		setChartData((prev) => {
-			const newData = { ...prev };
-			const time = new Date(reading.timestamp).toLocaleTimeString();
+	// === obtener historial del store ===
+	const history = sensorMap.get(String(id)) || [];
+
+	// === actualizar gráficas cuando cambian lecturas ===
+	useEffect(() => {
+		if (history.length === 0) return;
+
+		const newChartData: Record<string, any[]> = {};
+
+		history.forEach((reading) => {
+			const time =
+				typeof reading.timestamp === "string"
+					? new Date(reading.timestamp).toLocaleTimeString()
+					: new Date(Number(reading.timestamp)).toLocaleTimeString();
 
 			Object.entries(reading.metrics || {}).forEach(
 				([category, metrics]) => {
-					if (!newData[category]) newData[category] = [];
+					if (!newChartData[category]) newChartData[category] = [];
 
-					const newPoint: any = { time };
+					const point: any = { time };
 					Object.entries(metrics).forEach(([metric, val]) => {
 						const value =
 							typeof val === "object" &&
@@ -218,18 +222,21 @@ export default function SensorDetail() {
 							"value" in val
 								? (val as any).value
 								: val;
-						newPoint[metric] = value;
+						point[metric] = value;
 					});
 
-					newData[category] = [...newData[category], newPoint].slice(
-						-MAX_POINTS
-					);
+					newChartData[category].push(point);
 				}
 			);
-
-			return newData;
 		});
-	};
+
+		// limitamos a los últimos MAX_POINTS puntos
+		Object.keys(newChartData).forEach((key) => {
+			newChartData[key] = newChartData[key].slice(-MAX_POINTS);
+		});
+
+		setChartData(newChartData);
+	}, [history]);
 
 	const latest = history[history.length - 1];
 	const colors = [
@@ -243,7 +250,6 @@ export default function SensorDetail() {
 		"#14b8a6",
 	];
 
-	// Usa el mismo campo status del reading (como en el dashboard)
 	const getStatusLabel = (status?: string) => {
 		if (!status) return "unknown";
 		if (status === "ok") return "✅ OK";

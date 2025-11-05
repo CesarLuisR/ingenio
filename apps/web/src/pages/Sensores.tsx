@@ -1,8 +1,7 @@
-"use client";
-
 import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import { api, type Sensor, type Reading } from "../lib/api";
+import { useReadingsStore } from "../context/readingState"; // ✅ Zustand
 
 // === Styled Components ===
 const Container = styled.div``;
@@ -236,20 +235,22 @@ const SubmitButton = styled.button`
 	}
 `;
 
-// === Main Component ===
+// === MAIN COMPONENT ===
 export default function Sensores() {
 	const [sensors, setSensors] = useState<Sensor[]>([]);
-	const [connectedSensors, setConnectedSensors] = useState<
-		Record<string, Reading>
-	>({});
-	const [lastSeenMap, setLastSeenMap] = useState<Record<string, number>>({});
 	const [loading, setLoading] = useState(true);
 	const [showForm, setShowForm] = useState(false);
 	const [editingSensor, setEditingSensor] = useState<Sensor | null>(null);
 	const [searchTerm, setSearchTerm] = useState("");
+	const [activeMap, setActiveMap] = useState<Record<string, boolean>>({});
+	const [now, setNow] = useState(() => Date.now());
+
+	const addReading = useReadingsStore((s) => s.addReading);
+	const sensorMap = useReadingsStore((s) => s.sensorMap);
+
 	const wsRef = useRef<WebSocket | null>(null);
 
-	// === WebSocket setup ===
+	// === WebSocket: recibe lecturas y actualiza el estado global ===
 	useEffect(() => {
 		const wsUrl =
 			window.location.hostname === "localhost"
@@ -268,16 +269,7 @@ export default function Sensores() {
 				if (msg.type === "reading") {
 					const reading: Reading = msg.payload || msg.data;
 					if (!reading?.sensorId) return;
-
-					const now = Date.now();
-					setConnectedSensors((prev) => ({
-						...prev,
-						[reading.sensorId]: reading,
-					}));
-					setLastSeenMap((prev) => ({
-						...prev,
-						[reading.sensorId]: now,
-					}));
+					addReading(reading);
 				}
 			} catch (err) {
 				console.error("Error parseando WS:", err);
@@ -288,37 +280,63 @@ export default function Sensores() {
 			ws.close();
 			wsRef.current = null;
 		};
+	}, [addReading]);
+
+	// === Tick de tiempo para que los activos expiren sin nuevas lecturas ===
+	useEffect(() => {
+		const id = setInterval(() => {
+			setNow(Date.now());
+		}, 5000); // cada 5s recalculamos
+
+		return () => clearInterval(id);
 	}, []);
 
-	// === Actualización de estados de sensores ===
+	// === Cargar sensores desde la API ===
 	useEffect(() => {
-		const interval = setInterval(() => {
-			setSensors((prev) =>
-				prev.map((s) => {
-					const lastSeen = lastSeenMap[s.id];
-					const isActive = lastSeen && Date.now() - lastSeen < 30000;
-					return { ...s, status: isActive ? "active" : "inactive" };
-				})
-			);
-		}, 5000);
-		return () => clearInterval(interval);
-	}, [lastSeenMap]);
-
-	// === Carga inicial ===
-	useEffect(() => {
-		loadSensors();
+		(async () => {
+			try {
+				const data = await api.getSensors();
+				setSensors(data);
+			} catch (error) {
+				console.error("Error cargando sensores:", error);
+			} finally {
+				setLoading(false);
+			}
+		})();
 	}, []);
 
-	const loadSensors = async () => {
-		try {
-			const data = await api.getSensors();
-			setSensors(data);
-		} catch (error) {
-			console.error("Error cargando sensores:", error);
-		} finally {
-			setLoading(false);
-		}
-	};
+	// === Determinar sensores activos en base a datos de la DB + estado global ===
+	useEffect(() => {
+		if (!sensors.length) return;
+
+		const newActiveMap: Record<string, boolean> = {};
+
+		sensors.forEach((sensor) => {
+			// clave consistente entre DB y readings
+			const key = (sensor as any).sensorId ?? sensor.id;
+			const readings = sensorMap.get(key);
+			if (!readings || readings.length === 0) {
+				return;
+			}
+
+			const last = readings[readings.length - 1];
+			if (!last?.timestamp) return;
+
+			const ts =
+				typeof last.timestamp === "string"
+					? Date.parse(last.timestamp)
+					: Number(last.timestamp);
+
+			if (Number.isNaN(ts)) return;
+
+			const diff = now - ts;
+			const isActive = diff < 30000; // 30 segundos
+
+			newActiveMap[key] = isActive;
+		});
+
+		setActiveMap(newActiveMap);
+	}, [sensors, sensorMap, now]);
 
 	const handleDelete = async (id: string) => {
 		if (!confirm("¿Eliminar este sensor?")) return;
@@ -359,39 +377,72 @@ export default function Sensores() {
 			/>
 
 			<Grid>
-				{filteredSensors.map((sensor) => (
-					<Card key={sensor.id}>
-						<CardHeader>
-							<div>
-								<CardTitle>{sensor.name}</CardTitle>
-								<CardSubtitle>{sensor.type}</CardSubtitle>
-							</div>
-							<Badge $status={sensor.status}>
-								{sensor.status === "active"
-									? "Activo"
-									: sensor.status === "maintenance"
-									? "Mantenimiento"
-									: "Inactivo"}
-							</Badge>
-						</CardHeader>
+				{filteredSensors.map((sensor) => {
+					// la misma clave que usamos en el cálculo de activos
+					const sensorKey = (sensor as any).sensorId ?? sensor.id;
+					const readings = sensorMap.get(sensorKey) || [];
+					const lastReading =
+						readings.length > 0
+							? readings[readings.length - 1]
+							: undefined;
+					const isActive = !!activeMap[sensorKey];
 
-						<Location>📍 {sensor.location}</Location>
+					return (
+						<Card key={sensor.id}>
+							<CardHeader>
+								<div>
+									<CardTitle>{sensor.name}</CardTitle>
+									<CardSubtitle>{sensor.type}</CardSubtitle>
+								</div>
+								<Badge
+									$status={
+										isActive
+											? "active"
+											: sensor.status || "inactive"
+									}>
+									{isActive
+										? "Activo"
+										: sensor.status === "maintenance"
+										? "Mantenimiento"
+										: "Inactivo"}
+								</Badge>
+							</CardHeader>
 
-						<ButtonGroup>
-							<SecondaryButton
-								onClick={() => {
-									setEditingSensor(sensor);
-									setShowForm(true);
-								}}>
-								Editar
-							</SecondaryButton>
-							<DangerButton
-								onClick={() => handleDelete(sensor.id)}>
-								Eliminar
-							</DangerButton>
-						</ButtonGroup>
-					</Card>
-				))}
+							<Location>📍 {sensor.location}</Location>
+
+							{lastReading && (
+								<p
+									style={{
+										color: "#6b7280",
+										fontSize: "0.875rem",
+										marginBottom: "0.5rem",
+									}}>
+									Última lectura:{" "}
+									{new Date(
+										typeof lastReading.timestamp ===
+										"string"
+											? lastReading.timestamp
+											: lastReading.timestamp
+									).toLocaleTimeString()}
+								</p>
+							)}
+
+							<ButtonGroup>
+								<SecondaryButton
+									onClick={() => {
+										setEditingSensor(sensor);
+										setShowForm(true);
+									}}>
+									Editar
+								</SecondaryButton>
+								<DangerButton
+									onClick={() => handleDelete(sensor.id)}>
+									Eliminar
+								</DangerButton>
+							</ButtonGroup>
+						</Card>
+					);
+				})}
 			</Grid>
 
 			{showForm && (
@@ -401,8 +452,9 @@ export default function Sensores() {
 						setShowForm(false);
 						setEditingSensor(null);
 					}}
-					onSave={() => {
-						loadSensors();
+					onSave={async () => {
+						const data = await api.getSensors();
+						setSensors(data);
 						setShowForm(false);
 						setEditingSensor(null);
 					}}
@@ -412,7 +464,7 @@ export default function Sensores() {
 	);
 }
 
-// === Subcomponente: Editor de Métricas Dinámico ===
+// === Subcomponente: MetricsConfigEditor ===
 function MetricsConfigEditor({
 	value,
 	onChange,
@@ -466,7 +518,7 @@ function MetricsConfigEditor({
 
 	useEffect(() => {
 		onChange(config);
-	}, [config]);
+	}, [config, onChange]);
 
 	return (
 		<div>
@@ -553,7 +605,7 @@ function MetricsConfigEditor({
 	);
 }
 
-// === Subcomponente: Formulario ===
+// === Subcomponente: SensorForm ===
 function SensorForm({
 	sensor,
 	onClose,
@@ -568,7 +620,7 @@ function SensorForm({
 		type: sensor?.type || "",
 		location: sensor?.location || "",
 		status: sensor?.status || "active",
-		metricsConfig: sensor || {},
+		metricsConfig: (sensor as any)?.metricsConfig || {},
 	});
 
 	const handleSubmit = async (e: React.FormEvent) => {
@@ -658,7 +710,10 @@ function SensorForm({
 						<MetricsConfigEditor
 							value={formData.metricsConfig}
 							onChange={(cfg) =>
-								setFormData({ ...formData, metricsConfig: cfg })
+								setFormData({
+									...formData,
+									metricsConfig: cfg,
+								})
 							}
 						/>
 					</FormGroup>
