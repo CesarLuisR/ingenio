@@ -4,7 +4,6 @@ services:
       context: ./apps/web
       dockerfile: Dockerfile
     image: ingenio/web:latest
-    container_name: ingenio-web
     environment:
       - NODE_ENV=production
     ports:
@@ -17,7 +16,6 @@ services:
       context: ./apps/api
       dockerfile: Dockerfile
     image: ingenio/api:latest
-    container_name: ingenio-api
     environment:
       - NODE_ENV=production
       - PORT=5000
@@ -35,7 +33,6 @@ services:
 
   mongo:
     image: mongo:7
-    container_name: ingenio-mongo
     ports:
       - "27017:27017"
     volumes:
@@ -43,7 +40,6 @@ services:
 
   redis:
     image: redis:7
-    container_name: ingenio-redis
     ports:
       - "6379:6379"
     command: ["redis-server", "--appendonly", "yes"]
@@ -52,7 +48,6 @@ services:
 
   postgres:
     image: postgres:16
-    container_name: ingenio-postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -67,7 +62,6 @@ services:
       context: ./apps/sensor-mock
       dockerfile: Dockerfile
     image: ingenio/sensor-mock:latest
-    container_name: ingenio-sensor
     environment:
       - NODE_ENV=production
       - API=http://api:5000
@@ -80,7 +74,6 @@ services:
       context: ./apps/ia-mock
       dockerfile: Dockerfile
     image: ingenio/ia-mock:latest
-    container_name: ingenio-ia
     environment:
       - NODE_ENV=production
     ports:
