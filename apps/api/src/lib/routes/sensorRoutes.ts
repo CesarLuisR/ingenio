@@ -5,13 +5,11 @@ import {
   createSensor,
   updateSensor,
   deleteSensor,
-  getActiveSensors
 } from "../controllers/sensorCtrl";
 
 const router = Router();
 
 router.get("/", getAllSensors);
-router.get("/activeSensors", getActiveSensors);
 router.get("/:id", getSensorById);
 router.post("/", createSensor);
 router.put("/:id", updateSensor);

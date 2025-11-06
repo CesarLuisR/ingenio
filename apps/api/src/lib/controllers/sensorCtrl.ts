@@ -8,11 +8,6 @@ export const getAllSensors = async (req: Request, res: Response) => {
     res.json(sensors);
 };
 
-export const getActiveSensors = async (req: Request, res: Response) => {
-    const sensors = null;
-    res.json(sensors);
-}
-
 export const getSensorById = async (req: Request, res: Response) => {
     const { id } = req.params;
     const sensor = await prisma.sensor.findUnique({
