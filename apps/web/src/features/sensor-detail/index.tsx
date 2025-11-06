@@ -1,0 +1,31 @@
+import { useParams } from "react-router-dom";
+import { Page } from "./styled";
+import { useSensorDetail } from "./hooks/useSensorDetail";
+import { SensorHeader } from "./components/SensorHeader";
+import { SensorCharts } from "./components/SensorChart";
+import { SensorMaintenances } from "./components/SensorMaintenances";
+import { SensorFailures } from "./components/SensorFailures";
+import { SensorAnalysis } from "./components/SensorAnalysis";
+
+export default function SensorDetail() {
+	const { id } = useParams<{ id: string }>();
+	const { sensorName, maintenances, failures, analysis, latest } =
+		useSensorDetail(id);
+
+	return (
+		<Page>
+			<SensorHeader name={sensorName} id={id} status={latest?.status} />
+
+			{latest ? (
+				<>
+					<SensorCharts sensorId={id!} />
+					<SensorMaintenances items={maintenances} />
+					<SensorFailures items={failures} />
+					<SensorAnalysis data={analysis} />
+				</>
+			) : (
+				<p>Esperando lecturas...</p>
+			)}
+		</Page>
+	);
+}

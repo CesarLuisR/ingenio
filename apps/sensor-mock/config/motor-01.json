@@ -2,7 +2,7 @@
 	"sensorId": "motor-01",
 	"type": "induction-motor",
 	"location": "Planta A - Línea 2",
-	"intervalMs": 20000,
+	"intervalMs": 4000,
 	"metricsConfig": {
 		"electrical": {
 			"current": { "min": 2.5, "max": 5.0 },

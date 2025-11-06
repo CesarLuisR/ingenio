@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
-import { useReadingsStore } from "../context/readingState"; // 👈 importamos tu store
+import { useReadingsStore } from "../store/readingState"; // 👈 importamos tu store
 import type { Reading } from "../lib/api";
 
 // === estilos ===
@@ -102,7 +102,10 @@ export default function Dashboard() {
 			console.log("🔴 Conexión cerrada. Reintentando en 3s...");
 			setStatus("closed");
 			setTimeout(() => {
-				if (!wsRef.current || wsRef.current.readyState === WebSocket.CLOSED) {
+				if (
+					!wsRef.current ||
+					wsRef.current.readyState === WebSocket.CLOSED
+				) {
 					console.log("🔁 Reintentando conexión WebSocket...");
 					wsRef.current = null;
 					setStatus("connecting");
@@ -163,13 +166,23 @@ export default function Dashboard() {
 							to={`/sensor/${reading.sensorId}`}
 							style={{ textDecoration: "none" }}>
 							<Card>
-								<h2 style={{ fontSize: "1.25rem", fontWeight: 600 }}>
+								<h2
+									style={{
+										fontSize: "1.25rem",
+										fontWeight: 600,
+									}}>
 									{reading.sensorId}
 								</h2>
 
-								<p style={{ color: "#6b7280", marginBottom: "0.5rem" }}>
+								<p
+									style={{
+										color: "#6b7280",
+										marginBottom: "0.5rem",
+									}}>
 									Última actualización:{" "}
-									{new Date(reading.timestamp).toLocaleTimeString()}
+									{new Date(
+										reading.timestamp
+									).toLocaleTimeString()}
 								</p>
 
 								<Status status={reading.status}>

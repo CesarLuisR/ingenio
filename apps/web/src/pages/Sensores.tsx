@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import styled from "styled-components";
 import { api, type Sensor, type Reading } from "../lib/api";
-import { useReadingsStore } from "../context/readingState"; // ✅ Zustand
+import { useReadingsStore } from "../store/readingState"; // ✅ Zustand
 
 // === Styled Components ===
 const Container = styled.div``;

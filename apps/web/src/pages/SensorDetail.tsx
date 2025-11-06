@@ -18,7 +18,7 @@ import {
 	type Failure,
 	type AnalysisResponse,
 } from "../lib/api";
-import { useReadingsStore } from "../context/readingState";
+import { useReadingsStore } from "../store/readingState";
 
 const MAX_POINTS = 30;
 
