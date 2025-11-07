@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Reading } from "../lib/api";
+import type { Reading } from "../types";
 
 interface ReadingState {
     sensorMap: Map<string, Reading[]>;

@@ -1,43 +1,95 @@
 import prisma from "../../database/postgres.db";
 import { Request, Response } from "express";
 
+// GET /sensors
 export const getAllSensors = async (req: Request, res: Response) => {
-    const sensors = await prisma.sensor.findMany({
-        include: { maintenances: true, failures: true },
-    });
-    res.json(sensors);
+	try {
+		const sensors = await prisma.sensor.findMany({
+			include: { maintenances: true, failures: true },
+		});
+		res.json(sensors);
+	} catch (error) {
+		console.error("Error fetching sensors:", error);
+		res.status(500).json({ error: "Internal server error" });
+	}
 };
 
+// GET /sensors/:sensorId
 export const getSensorById = async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const sensor = await prisma.sensor.findUnique({
-        where: { id: Number(id) },
-        include: { maintenances: true, failures: true },
-    });
-    if (!sensor) return res.status(404).json({ message: "Sensor not found" });
-    res.json(sensor);
+	try {
+		const { sensorId } = req.params;
+
+		const sensor = await prisma.sensor.findUnique({
+			where: { sensorId },
+			include: { maintenances: true, failures: true },
+		});
+
+		if (!sensor) {
+			return res.status(404).json({ message: "Sensor not found" });
+		}
+
+		res.json(sensor);
+	} catch (error) {
+		console.error("Error fetching sensor:", error);
+		res.status(500).json({ error: "Internal server error" });
+	}
 };
 
-export const createSensor = async (req: Request, res: Response) => {
-    const { sensorId, name, type, metricsConfig } = req.body;
-    const sensor = await prisma.sensor.create({
-        data: { sensorId, name, type, metricsConfig },
-    });
-    res.status(201).json(sensor);
-};
-
+// PUT /sensors/:sensorId
 export const updateSensor = async (req: Request, res: Response) => {
-    const { id } = req.params;
-    const data = req.body;
-    const sensor = await prisma.sensor.update({
-        where: { id: Number(id) },
-        data,
-    });
-    res.json(sensor);
+	try {
+		const { sensorId } = req.params;
+		const data = req.body;
+
+		if (data.config && typeof data.config !== "object") {
+			return res.status(400).json({ error: "Invalid config format" });
+		}
+
+		const sensor = await prisma.sensor.update({
+			where: { sensorId },
+			data: {
+				name: data.name,
+				type: data.type,
+				location: data.location,
+				config: data.config,
+				lastSeen: data.lastSeen ? new Date(data.lastSeen) : undefined,
+				active: data.active ?? true,
+			},
+		});
+
+		res.json(sensor);
+	} catch (error: any) {
+		console.error("Error updating sensor:", error);
+
+		if (error.code === "P2025") {
+			return res.status(404).json({ error: "Sensor not found" });
+		}
+
+		res.status(500).json({ error: "Internal server error" });
+	}
 };
 
-export const deleteSensor = async (req: Request, res: Response) => {
-    const { id } = req.params;
-    await prisma.sensor.delete({ where: { id: Number(id) } });
-    res.status(204).send();
+// PATCH /sensors/:sensorId/deactivate
+export const deactivateSensor = async (req: Request, res: Response) => {
+	try {
+		const { sensorId } = req.params;
+
+		const sensor = await prisma.sensor.update({
+			where: { sensorId },
+			data: { active: false },
+		});
+
+		res.json({
+			message: `Sensor ${sensorId} deactivated successfully.`,
+			sensor,
+		});
+	} catch (error: any) {
+		console.error("Error deactivating sensor:", error);
+
+		if (error.code === "P2025") {
+			return res.status(404).json({ error: "Sensor not found" });
+		}
+
+		res.status(500).json({ error: "Internal server error" });
+	}
 };

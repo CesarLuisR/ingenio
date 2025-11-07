@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
-import type { Reading } from "../../../lib/api";
 import { Card, Status } from "../styled";
+import type { Reading } from "../../../types";
 
 export function SensorCard({ reading }: { reading: Reading }) {
 	return (

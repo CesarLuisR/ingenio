@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import styled from "styled-components";
 import { useReadingsStore } from "../store/readingState"; // 👈 importamos tu store
-import type { Reading } from "../lib/api";
+import type { Reading } from "../types";
 
 // === estilos ===
 const Container = styled.div`

@@ -1,5 +1,6 @@
 export interface ConfigData {
     sensorId: string;
+    name: string | null;
     type: string;
     location: string;
     intervalMs: number;

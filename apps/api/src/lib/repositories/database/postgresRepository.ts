@@ -1,33 +1,50 @@
 import { DBRepository } from ".";
 import prisma from "../../../database/postgres.db";
 import { ConfigData } from "../../../types/sensorTypes";
+import { Sensor } from "@prisma/client";
 
-// version inicial
 class PostgresRepository implements DBRepository {
-    async findSensorById(sensorId: string): Promise<any | null> {
-        const sensor = await prisma.sensor.findFirst({ where: { sensorId } });
-        return sensor;
-    }
+	async findSensorById(sensorId: string): Promise<Sensor | null> {
+		return prisma.sensor.findUnique({
+			where: { sensorId },
+		});
+	}
 
-    async upsertSensorConfig(sensorConfig: ConfigData): Promise<any> {
-        const sensor = await prisma.sensor.upsert({
-            where: { sensorId: sensorConfig.sensorId },
-            update: {
-                type: sensorConfig.type,
-                metricsConfig: sensorConfig.metricsConfig,
-                updatedAt: sensorConfig.lastSeen,
-            },
-            create: {
-                sensorId: sensorConfig.sensorId,
-                name: sensorConfig.sensorId,
-                type: sensorConfig.type,
-                metricsConfig: sensorConfig.metricsConfig,
-                createdAt: sensorConfig.createdAt,
-                updatedAt: sensorConfig.lastSeen,
-            },
-        });
-        return sensor;
-    }
+	async upsertSensorConfig(sensorConfig: ConfigData): Promise<Sensor> {
+		return prisma.sensor.upsert({
+			where: { sensorId: sensorConfig.sensorId },
+			update: {
+				name: sensorConfig.name || sensorConfig.sensorId,
+				type: sensorConfig.type,
+				location: sensorConfig.location,
+				config: sensorConfig,
+				lastSeen: sensorConfig.lastSeen
+					? new Date(sensorConfig.lastSeen)
+					: undefined,
+			},
+			create: {
+				sensorId: sensorConfig.sensorId,
+				name: sensorConfig.name || sensorConfig.sensorId,
+				type: sensorConfig.type,
+				location: sensorConfig.location,
+				config: sensorConfig,
+				lastSeen: sensorConfig.lastSeen
+					? new Date(sensorConfig.lastSeen)
+					: undefined,
+				createdAt: new Date(sensorConfig.createdAt),
+			},
+		});
+	}
+
+	async updateSensorConfig(sensorId: string, config: ConfigData): Promise<Sensor> {
+		return prisma.sensor.update({
+			where: { sensorId },
+			data: {
+				config,
+				lastSeen: config.lastSeen ? new Date(config.lastSeen) : undefined,
+			},
+		});
+	}
 }
 
 export default PostgresRepository;

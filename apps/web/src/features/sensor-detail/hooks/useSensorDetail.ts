@@ -1,131 +1,95 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  api,
-  type Reading,
-  type Maintenance,
-  type Failure,
-  type AnalysisResponse,
-} from "../../../lib/api";
+	type Maintenance,
+	type Failure,
+	type AnalysisResponse,
+} from "../../../types";
 import { useReadingsStore } from "../../../store/readingState";
+import { useWebSocketReadings } from "../../shared/hooks/useWebSocketReadings";
+import { api } from "../../../lib/api";
 
 const MAX_POINTS = 30;
 
 export function useSensorDetail(id?: string) {
-  const [sensorName, setSensorName] = useState<string>("");
-  const [maintenances, setMaintenances] = useState<Maintenance[]>([]);
-  const [failures, setFailures] = useState<Failure[]>([]);
-  const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
-  const [chartData, setChartData] = useState<Record<string, any[]>>({});
-  const wsRef = useRef<WebSocket | null>(null);
+	const [sensorName, setSensorName] = useState<string>("");
+	const [maintenances, setMaintenances] = useState<Maintenance[]>([]);
+	const [failures, setFailures] = useState<Failure[]>([]);
+	const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
+	const [chartData, setChartData] = useState<Record<string, any[]>>({});
 
-  const addReading = useReadingsStore((s) => s.addReading);
-  const sensorMap = useReadingsStore((s) => s.sensorMap);
+	const sensorMap = useReadingsStore((s) => s.sensorMap);
 
-  useEffect(() => {
-    if (!id) return;
+	useWebSocketReadings({ filterSensorId: id });
 
-    const loadBaseData = async () => {
-      try {
-        const sensor = await api.getSensor(String(id));
-        setSensorName(sensor.name);
+	useEffect(() => {
+		if (!id) return;
 
-        const [maints, fails, anal] = await Promise.all([
-          api.getMaintenances(),
-          api.getFailures(),
-          api.analyzeData([String(id)]),
-        ]);
+		const loadBaseData = async () => {
+			try {
+				const sensor = await api.getSensor(String(id));
+				setSensorName(sensor.name);
 
-        setMaintenances(maints.filter((m) => m.sensorId === sensor.id));
-        setFailures(fails.filter((f) => f.sensorId === sensor.id));
-        setAnalysis(anal);
-      } catch (err) {
-        console.error("Error cargando datos base:", err);
-      }
-    };
+				const [maints, fails, anal] = await Promise.all([
+					api.getMaintenances(),
+					api.getFailures(),
+					api.analyzeData([String(id)]),
+				]);
 
-    loadBaseData();
-  }, [id]);
+				setMaintenances(maints.filter((m) => m.sensorId === sensor.id));
+				setFailures(fails.filter((f) => f.sensorId === sensor.id));
+				setAnalysis(anal);
+			} catch (err) {
+				console.error("Error cargando datos base:", err);
+			}
+		};
 
-  useEffect(() => {
-    if (!id) return;
+		loadBaseData();
+	}, [id]);
 
-    const wsUrl =
-      window.location.hostname === "localhost"
-        ? "ws://localhost:5000/ws"
-        : "ws://api:5000/ws";
+	const history = sensorMap.get(String(id)) || [];
 
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+	useEffect(() => {
+		if (history.length === 0) return;
 
-    ws.onopen = () => console.log("✅ WebSocket conectado (detalle sensor)");
-    ws.onerror = (err) => console.error("❌ WebSocket error:", err);
+		const newChartData: Record<string, any[]> = {};
 
-    ws.onmessage = (ev) => {
-      try {
-        const msg = JSON.parse(ev.data);
-        const reading: Reading = msg.payload || msg.data;
-        if (msg.type === "reading" && reading?.sensorId === id) {
-          addReading(reading);
-        }
-      } catch (e) {
-        console.error("Error procesando WS:", e);
-      }
-    };
+		history.forEach((reading) => {
+			const time =
+				typeof reading.timestamp === "string"
+					? new Date(reading.timestamp).toLocaleTimeString()
+					: new Date(Number(reading.timestamp)).toLocaleTimeString();
 
-    return () => {
-      ws.close();
-      wsRef.current = null;
-    };
-  }, [id, addReading]);
+			Object.entries(reading.metrics || {}).forEach(([category, metrics]) => {
+				if (!newChartData[category]) newChartData[category] = [];
 
-  const history = sensorMap.get(String(id)) || [];
+				const point: any = { time };
+				Object.entries(metrics).forEach(([metric, val]) => {
+					const value =
+						typeof val === "object" && val !== null && "value" in val
+							? (val as any).value
+							: val;
+					point[metric] = value;
+				});
 
-  useEffect(() => {
-    if (history.length === 0) return;
+				newChartData[category].push(point);
+			});
+		});
 
-    const newChartData: Record<string, any[]> = {};
+		Object.keys(newChartData).forEach((key) => {
+			newChartData[key] = newChartData[key].slice(-MAX_POINTS);
+		});
 
-    history.forEach((reading) => {
-      const time =
-        typeof reading.timestamp === "string"
-          ? new Date(reading.timestamp).toLocaleTimeString()
-          : new Date(Number(reading.timestamp)).toLocaleTimeString();
+		setChartData(newChartData);
+	}, [history]);
 
-      Object.entries(reading.metrics || {}).forEach(
-        ([category, metrics]) => {
-          if (!newChartData[category]) newChartData[category] = [];
+	const latest = history[history.length - 1];
 
-          const point: any = { time };
-          Object.entries(metrics).forEach(([metric, val]) => {
-            const value =
-              typeof val === "object" &&
-                val !== null &&
-                "value" in val
-                ? (val as any).value
-                : val;
-            point[metric] = value;
-          });
-
-          newChartData[category].push(point);
-        }
-      );
-    });
-
-    Object.keys(newChartData).forEach((key) => {
-      newChartData[key] = newChartData[key].slice(-MAX_POINTS);
-    });
-
-    setChartData(newChartData);
-  }, [history]);
-
-  const latest = history[history.length - 1];
-
-  return {
-    sensorName,
-    maintenances,
-    failures,
-    analysis,
-    chartData,
-    latest,
-  };
+	return {
+		sensorName,
+		maintenances,
+		failures,
+		analysis,
+		chartData,
+		latest,
+	};
 }
