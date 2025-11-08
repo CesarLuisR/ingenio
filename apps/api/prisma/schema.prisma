@@ -22,7 +22,6 @@ model Sensor {
   failures     Failure[]
 }
 
-
 model Maintenance {
   id          Int        @id @default(autoincrement())
   sensorId    Int

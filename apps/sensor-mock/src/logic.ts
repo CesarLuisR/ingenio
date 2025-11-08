@@ -1,4 +1,5 @@
 import { ConfigData, ReadingData } from "./types";
+import fs from "fs/promises";
 
 export function createRandomReading(config: ConfigData) {
     const reading: ReadingData = {
@@ -28,9 +29,9 @@ export function createRandomReading(config: ConfigData) {
     return reading;
 }
 
-export async function sendReading(url: string, reading: ReadingData) {
+export async function sendReading(url: string, reading: ReadingData, configPath: string, interval: number): Promise<ConfigData | null> {
     console.log("Enviando datos a: ", url);
-    console.log(reading);
+    console.log(reading, interval);
 
     try {
         const res = await fetch(`${url}/ingest`, {
@@ -40,11 +41,26 @@ export async function sendReading(url: string, reading: ReadingData) {
             },
             body: JSON.stringify(reading)
         });
+
+        const data = await res.json();
+        if (data.config) {
+            console.log("Nueva configuración recibida. Guardando en:", configPath);
+
+            // Guardar con formato bonito y reemplazar el archivo existente
+            await fs.writeFile(configPath, JSON.stringify(data.config, null, 2), "utf-8");
+            console.log("Configuración actualizada exitosamente.");
+            console.log("Respuesta: ", res.status);
+
+            return data.config;
+        }
+
         console.log("Respuesta: ", res.status);
+        return null;
     } catch (e: any) {
         if (e.code === "ECONNREFUSED")
             console.error("Conexion rechazada. Revise el estado del servidor");
         else console.error("Error desconocido", e.message);
+        return null;
     }
 }
 

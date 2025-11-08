@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { api } from "../../../lib/api";
 import {
 	CancelButton,
@@ -25,12 +25,12 @@ export default function SensorForm({
 	onClose: () => void;
 	onSave: () => void;
 }) {
-	// Extract config and metricsConfig safely
+	// Config base
 	const baseConfig = sensor?.config || {};
 	const baseMetrics = baseConfig.metricsConfig || {};
 
 	const [formData, setFormData] = useState({
-		name: sensor?.name || baseConfig.name || "",
+		name: sensor?.name || baseConfig.sensorId || "",
 		type: sensor?.type || baseConfig.type || "",
 		location: sensor?.location || baseConfig.location || "",
 		active: sensor?.active ?? baseConfig.active ?? true,
@@ -38,48 +38,54 @@ export default function SensorForm({
 		metricsConfig: baseMetrics,
 	});
 
-	// Ensure consistency between top-level and nested config
+	// Cuando cambia el sensor que se edita
 	useEffect(() => {
-		setFormData((prev) => ({
-			...prev,
-			config: {
-				name: prev.name,
-				type: prev.type,
-				location: prev.location,
-				active: prev.active,
-				intervalMs: prev.intervalMs,
-				metricsConfig: prev.metricsConfig,
-			},
-		}));
-	}, [
-		formData.name,
-		formData.type,
-		formData.location,
-		formData.active,
-		formData.intervalMs,
-		formData.metricsConfig,
-	]);
+		setFormData({
+			name: sensor?.name || baseConfig.sensorId || "",
+			type: sensor?.type || baseConfig.type || "",
+			location: sensor?.location || baseConfig.location || "",
+			active: sensor?.active ?? baseConfig.active ?? true,
+			intervalMs: baseConfig.intervalMs || 1000,
+			metricsConfig: baseMetrics,
+		});
+	}, [sensor]);
+
+	// Callback para actualizar métricas sin provocar renders excesivos
+	const handleMetricsChange = useCallback((cfg: any) => {
+		setFormData((prev) => ({ ...prev, metricsConfig: cfg }));
+	}, []);
 
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
+
 		try {
+			// Generar config consistente con la estructura del sensor físico
+			const config = {
+				sensorId: formData.name, // sensorId sincronizado con el nombre
+				type: formData.type,
+				location: formData.location,
+				intervalMs: formData.intervalMs,
+				metricsConfig: formData.metricsConfig,
+				active: formData.active,
+				configVersion: sensor?.config?.configVersion || "v1",
+				createdAt: sensor?.config?.createdAt || new Date().toISOString(),
+				lastSeen: sensor?.lastSeen || null,
+			};
+
+			// Payload unificado
 			const payload = {
 				name: formData.name,
 				type: formData.type,
 				location: formData.location,
 				active: formData.active,
-				config: {
-					name: formData.name,
-					type: formData.type,
-					location: formData.location,
-					active: formData.active,
-					intervalMs: formData.intervalMs,
-					metricsConfig: formData.metricsConfig,
-				},
+				config,
 			};
 
 			if (sensor) {
 				await api.updateSensor(sensor.sensorId, payload);
+			} else {
+				console.error("No se proporcionó sensor para actualizar");
+				return;
 			}
 
 			onSave();
@@ -98,13 +104,16 @@ export default function SensorForm({
 
 				<Form onSubmit={handleSubmit}>
 					<FormGroup>
-						<Label>Nombre</Label>
+						<Label>Nombre (Sensor ID)</Label>
 						<Input
 							type="text"
 							required
 							value={formData.name}
 							onChange={(e) =>
-								setFormData({ ...formData, name: e.target.value })
+								setFormData((prev) => ({
+									...prev,
+									name: e.target.value,
+								}))
 							}
 						/>
 					</FormGroup>
@@ -116,7 +125,10 @@ export default function SensorForm({
 							required
 							value={formData.type}
 							onChange={(e) =>
-								setFormData({ ...formData, type: e.target.value })
+								setFormData((prev) => ({
+									...prev,
+									type: e.target.value,
+								}))
 							}
 						/>
 					</FormGroup>
@@ -128,7 +140,10 @@ export default function SensorForm({
 							required
 							value={formData.location}
 							onChange={(e) =>
-								setFormData({ ...formData, location: e.target.value })
+								setFormData((prev) => ({
+									...prev,
+									location: e.target.value,
+								}))
 							}
 						/>
 					</FormGroup>
@@ -138,10 +153,10 @@ export default function SensorForm({
 						<Select
 							value={formData.active ? "active" : "inactive"}
 							onChange={(e) =>
-								setFormData({
-									...formData,
+								setFormData((prev) => ({
+									...prev,
 									active: e.target.value === "active",
-								})
+								}))
 							}>
 							<option value="active">Activo</option>
 							<option value="inactive">Inactivo</option>
@@ -156,10 +171,10 @@ export default function SensorForm({
 							step={100}
 							value={formData.intervalMs}
 							onChange={(e) =>
-								setFormData({
-									...formData,
+								setFormData((prev) => ({
+									...prev,
 									intervalMs: parseInt(e.target.value),
-								})
+								}))
 							}
 						/>
 					</FormGroup>
@@ -167,12 +182,7 @@ export default function SensorForm({
 					<FormGroup>
 						<MetricsConfigEditor
 							value={formData.metricsConfig}
-							onChange={(cfg) =>
-								setFormData({
-									...formData,
-									metricsConfig: cfg,
-								})
-							}
+							onChange={handleMetricsChange}
 						/>
 					</FormGroup>
 

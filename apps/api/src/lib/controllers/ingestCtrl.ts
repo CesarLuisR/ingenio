@@ -7,7 +7,8 @@ import SensorRepository from "../repositories/sensorRepository";
 import RedisRepository from "../repositories/cache/redisRepository";
 import PostgresRepository from "../repositories/database/postgresRepository";
 
-const sensorRepository = new SensorRepository(new RedisRepository(), new PostgresRepository()); 
+const cacheRepository = new RedisRepository();
+const sensorRepository = new SensorRepository(cacheRepository, new PostgresRepository()); 
 
 export function createIngestCtrl(bus: IMessageBus, queue: IReadingQueue): RequestHandler {
     return async (req, res) => {
@@ -30,6 +31,17 @@ export function createIngestCtrl(bus: IMessageBus, queue: IReadingQueue): Reques
 
             const info = await createPublishInfo(data, readingSensorConfig);
             bus.publish("reading", info);
+
+            const newConfig = await cacheRepository.get(`sensor:${data.sensorId}-updated`);
+            if (newConfig) {
+                const parsed = JSON.parse(newConfig || "null");
+                await cacheRepository.delete(`sensor:${data.sensorId}-updated`);
+                await cacheRepository.delete(sensorRepository.getCacheKey(data.sensorId));
+                console.log(`✅ Nueva config para ${data.sensorId} enviada al sensor`);
+                console.log("Nueva config: ", parsed);
+                res.status(202).json({ ok: true, config: parsed });
+                return;
+            }
 
             return res.status(202).json({ ok: true });
         } catch (err) {

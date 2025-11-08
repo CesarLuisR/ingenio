@@ -1,6 +1,8 @@
 import prisma from "../../database/postgres.db";
 import { Request, Response } from "express";
+import RedisRepository from "../repositories/cache/redisRepository";
 
+const cacheRepository = new RedisRepository();
 // GET /sensors
 export const getAllSensors = async (req: Request, res: Response) => {
 	try {
@@ -41,14 +43,11 @@ export const updateSensor = async (req: Request, res: Response) => {
 		const { sensorId } = req.params;
 		const data = req.body;
 
-		if (data.config && typeof data.config !== "object") {
-			return res.status(400).json({ error: "Invalid config format" });
-		}
-
 		const sensor = await prisma.sensor.update({
 			where: { sensorId },
 			data: {
 				name: data.name,
+				sensorId: data.name,
 				type: data.type,
 				location: data.location,
 				config: data.config,
@@ -56,6 +55,9 @@ export const updateSensor = async (req: Request, res: Response) => {
 				active: data.active ?? true,
 			},
 		});
+
+		// todo: typear la data de config
+		cacheRepository.set(`sensor:${sensorId}-updated`, JSON.stringify(data.config));
 
 		res.json(sensor);
 	} catch (error: any) {
