@@ -1,28 +1,45 @@
 import { ConfigData, ReadingData } from "./types";
 import fs from "fs/promises";
 
+const lastValues: Record<string, Record<string, number>> = {};
+
 export function createRandomReading(config: ConfigData) {
     const reading: ReadingData = {
         sensorId: config.sensorId,
         timestamp: new Date().toISOString(),
         metrics: {}
-    }
+    };
 
-    for (const metricGroup of Object.entries(config.metricsConfig)) {
-        const metricGroupName = metricGroup[0]
-        const metricGroupValues = metricGroup[1];
+    for (const [metricGroupName, metricGroupValues] of Object.entries(config.metricsConfig)) {
         reading.metrics[metricGroupName] = {};
 
-        for (const metric of Object.entries(metricGroupValues)) {
-            const metricName = metric[0];
-            const metricValue = metric[1];
+        for (const [metricName, metricValue] of Object.entries(metricGroupValues)) {
+            const min = metricValue.min;
+            const max = metricValue.max;
+            const mid = (min + max) / 2;
 
-            const min = metricValue.min - (metricValue.min * 0.01);
-            const max = metricValue.max + (metricValue.max * 0.01);
+            // Si no hay valor previo, empezamos en el punto medio
+            const last =
+                lastValues[metricGroupName]?.[metricName] ?? mid;
 
-            const randomValue = parseFloat((Math.random() * (max - min) + min).toFixed(2));
+            // Calculamos un cambio relativo de ±10%
+            const changeFactor = 1 + (Math.random() * 0.2 - 0.1); // entre 0.9 y 1.1
+            let newValue = last * changeFactor;
 
-            reading.metrics[metricGroupName][metricName] = randomValue;
+            // Si se sale del rango (±1%), lo limitamos
+            const minBound = min - (min * 0.01);
+            const maxBound = max + (max * 0.01);
+            if (newValue < minBound) newValue = minBound;
+            if (newValue > maxBound) newValue = maxBound;
+
+            // Redondeamos a 2 decimales
+            newValue = parseFloat(newValue.toFixed(2));
+
+            // Guardamos para la siguiente iteración
+            if (!lastValues[metricGroupName]) lastValues[metricGroupName] = {};
+            lastValues[metricGroupName][metricName] = newValue;
+
+            reading.metrics[metricGroupName][metricName] = newValue;
         }
     }
 

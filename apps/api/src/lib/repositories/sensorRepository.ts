@@ -18,7 +18,7 @@ export default class SensorRepository {
         const sensor = await this.dbRepository.findSensorById(sensorId);
         if (!sensor) return null;
 
-        await this.cacheRepository.set(cacheKey, JSON.stringify(sensor));
+        await this.cacheRepository.set(cacheKey, JSON.stringify(sensor.config));
         return sensor;
     }
 

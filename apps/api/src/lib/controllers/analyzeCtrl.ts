@@ -24,6 +24,7 @@ export const getAnalysis: RequestHandler = async (req, res) => {
         // --- Construir payload con sensores y lecturas ---
         for (const sensorId of data) {
             const sensorConfig: ConfigData = await sensorRepository.getSensorConfig(sensorId);
+            console.log("SENSOR CONFIG encontrada en ENDPOINT:", sensorConfig);
             if (!sensorConfig) {
                 console.warn(`⚠️  Sensor no encontrado: ${sensorId}`);
                 continue;

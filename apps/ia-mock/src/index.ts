@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import { IMachineData } from "./types/input";
+import { ConfigData, IMachineData } from "./types/input";
 
 const app = express();
 app.use(cors());
@@ -8,6 +8,7 @@ app.use(express.json({ limit: "10mb" }));
 
 app.use("/analyze", (req, res) => {
     const data: IMachineData[] = req.body;
+    console.log(data);
 
     try {
         if (!Array.isArray(data) || data.length === 0) {
@@ -16,7 +17,9 @@ app.use("/analyze", (req, res) => {
 
         const report: SensorReport[] = data.map(machine => {
             const { config, readings } = machine;
-            const { metricsConfig } = config;
+            const { metricsConfig } = config as ConfigData;
+
+            console.log("METRICS CONFIG:", metricsConfig);
 
             const metricReport: Record<string, any> = {};
             const chartData: ChartData = {};
