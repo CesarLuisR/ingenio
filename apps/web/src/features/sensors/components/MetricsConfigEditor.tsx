@@ -21,65 +21,101 @@ export default function MetricsConfigEditor({
 	onChange: (val: any) => void;
 }) {
 	const [config, setConfig] = useState<Record<string, any>>(value || {});
+	const [newGroupName, setNewGroupName] = useState("");
+	const [newMetricNames, setNewMetricNames] = useState<Record<string, string>>(
+		{}
+	);
 
-	// Evitar renders innecesarios si la referencia no cambió
+	// Sincronizar cuando cambie el value externo
 	useEffect(() => {
 		setConfig(value || {});
 	}, [value]);
 
-	// Notificar al padre solo cuando config realmente cambia
+	// Notificar al padre cuando cambie config
 	useEffect(() => {
 		onChange(config);
 	}, [config, onChange]);
 
-	const addGroup = useCallback(() => {
-		const name = prompt("Nombre del nuevo grupo:");
+	const handleAddGroup = useCallback(() => {
+		const name = newGroupName.trim();
 		if (!name) return;
-		if (config[name]) return alert("Ese grupo ya existe.");
-		setConfig((prev) => ({ ...prev, [name]: {} }));
-	}, [config]);
+		setConfig((prev) => {
+			if (prev[name]) {
+				alert("Ese grupo ya existe.");
+				return prev;
+			}
+			return { ...prev, [name]: {} };
+		});
+		setNewGroupName("");
+	}, [newGroupName]);
 
-	const addMetric = useCallback(
+	const handleAddMetric = useCallback(
 		(group: string) => {
-			const name = prompt(`Nombre de la métrica en ${group}:`);
+			const name = (newMetricNames[group] || "").trim();
 			if (!name) return;
-			if (config[group]?.[name]) return alert("Esa métrica ya existe.");
-			setConfig((prev) => ({
-				...prev,
-				[group]: { ...prev[group], [name]: { min: 0, max: 0 } },
-			}));
+
+			setConfig((prev) => {
+				const groupObj = prev[group] || {};
+				if (groupObj[name]) {
+					alert("Esa métrica ya existe en este grupo.");
+					return prev;
+				}
+				return {
+					...prev,
+					[group]: {
+						...groupObj,
+						[name]: { min: 0, max: 0 },
+					},
+				};
+			});
+
+			setNewMetricNames((prev) => ({ ...prev, [group]: "" }));
 		},
-		[config]
+		[newMetricNames]
 	);
 
 	const updateMetric = useCallback(
 		(group: string, metric: string, field: "min" | "max", value: number) => {
 			if (isNaN(value)) return;
+
 			setConfig((prev) => {
-				const newGroup = {
-					...prev[group],
-					[metric]: { ...prev[group][metric], [field]: value },
+				const currentGroup = prev[group];
+				if (!currentGroup) return prev;
+				const currentMetric = currentGroup[metric];
+				if (!currentMetric) return prev;
+
+				const nextMetric = { ...currentMetric, [field]: value };
+
+				if (nextMetric.max < nextMetric.min) {
+					alert("El valor máximo no puede ser menor que el mínimo.");
+					return prev;
+				}
+
+				return {
+					...prev,
+					[group]: {
+						...currentGroup,
+						[metric]: nextMetric,
+					},
 				};
-				return { ...prev, [group]: newGroup };
 			});
 		},
 		[]
 	);
 
-	const removeMetric = useCallback(
-		(group: string, metric: string) => {
-			if (!confirm(`¿Eliminar la métrica "${metric}" de ${group}?`)) return;
-			setConfig((prev) => {
-				const newGroup = { ...prev[group] };
-				delete newGroup[metric];
-				return { ...prev, [group]: newGroup };
-			});
-		},
-		[]
-	);
+	const removeMetric = useCallback((group: string, metric: string) => {
+		setConfig((prev) => {
+			const currentGroup = prev[group];
+			if (!currentGroup) return prev;
+
+			const newGroup = { ...currentGroup };
+			delete newGroup[metric];
+
+			return { ...prev, [group]: newGroup };
+		});
+	}, []);
 
 	const removeGroup = useCallback((group: string) => {
-		if (!confirm(`¿Eliminar el grupo "${group}" completo?`)) return;
 		setConfig((prev) => {
 			const newConfig = { ...prev };
 			delete newConfig[group];
@@ -93,7 +129,8 @@ export default function MetricsConfigEditor({
 
 			{Object.keys(config).length === 0 && (
 				<p style={{ color: "#6b7280", fontSize: "0.9rem" }}>
-					Aún no hay grupos definidos. Usa el botón para añadir uno nuevo.
+					Aún no hay grupos definidos. Usa el formulario de abajo para añadir uno
+					nuevo.
 				</p>
 			)}
 
@@ -165,14 +202,51 @@ export default function MetricsConfigEditor({
 							);
 						})}
 
-						<AddButton onClick={() => addMetric(group)}>
-							+ Añadir métrica
-						</AddButton>
+						{/* Añadir métrica inline, sin prompt */}
+						<div
+							style={{
+								display: "flex",
+								gap: "0.5rem",
+								alignItems: "center",
+								marginTop: "0.5rem",
+							}}>
+							<InputField
+								type="text"
+								placeholder="Nombre de nueva métrica"
+								value={newMetricNames[group] || ""}
+								onChange={(e) =>
+									setNewMetricNames((prev) => ({
+										...prev,
+										[group]: e.target.value,
+									}))
+								}
+							/>
+							<AddButton type="button" onClick={() => handleAddMetric(group)}>
+								+ Añadir métrica
+							</AddButton>
+						</div>
 					</GroupCard>
 				);
 			})}
 
-			<MetricsButton onClick={addGroup}>+ Añadir grupo</MetricsButton>
+			{/* Añadir grupo inline, sin prompt */}
+			<div
+				style={{
+					marginTop: "1rem",
+					display: "flex",
+					gap: "0.5rem",
+					alignItems: "center",
+				}}>
+				<InputField
+					type="text"
+					placeholder="Nombre del nuevo grupo"
+					value={newGroupName}
+					onChange={(e) => setNewGroupName(e.target.value)}
+				/>
+				<MetricsButton type="button" onClick={handleAddGroup}>
+					+ Añadir grupo
+				</MetricsButton>
+			</div>
 		</EditorContainer>
 	);
 }

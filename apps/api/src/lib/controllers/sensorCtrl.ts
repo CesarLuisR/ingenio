@@ -47,7 +47,6 @@ export const updateSensor = async (req: Request, res: Response) => {
 			where: { sensorId },
 			data: {
 				name: data.name,
-				sensorId: data.name,
 				type: data.type,
 				location: data.location,
 				config: data.config,

@@ -14,5 +14,6 @@ COPY . .
 RUN npx prisma generate
 
 EXPOSE 5000
-CMD ["sh", "-c", "until nc -z mongo 27017; do echo 'Esperando Mongo...'; sleep 2; done; npx prisma migrate deploy && npm run dev"]
+CMD ["sh", "-c", "until nc -z mongo 27017; do echo 'Esperando Mongo...'; sleep 2; done; until nc -z postgres 5432; do echo 'Esperando Postgres...'; sleep 2; done; npx prisma migrate deploy && npm run dev"]
+
 

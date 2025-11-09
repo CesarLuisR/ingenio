@@ -26,22 +26,26 @@ export default function SensorForm({
 	onSave: () => void;
 }) {
 	// Config base
-	const baseConfig = sensor?.config || {};
-	const baseMetrics = baseConfig.metricsConfig || {};
+	const initialConfig = sensor?.config || {};
+	const initialMetrics = initialConfig.metricsConfig || {};
+	const sensorId = sensor?.sensorId || initialConfig.sensorId || "";
 
 	const [formData, setFormData] = useState({
-		name: sensor?.name || baseConfig.sensorId || "",
-		type: sensor?.type || baseConfig.type || "",
-		location: sensor?.location || baseConfig.location || "",
-		active: sensor?.active ?? baseConfig.active ?? true,
-		intervalMs: baseConfig.intervalMs || 1000,
-		metricsConfig: baseMetrics,
+		name: sensor?.name || "",
+		type: sensor?.type || initialConfig.type || "",
+		location: sensor?.location || initialConfig.location || "",
+		active: sensor?.active ?? initialConfig.active ?? true,
+		intervalMs: initialConfig.intervalMs || 1000,
+		metricsConfig: initialMetrics,
 	});
 
 	// Cuando cambia el sensor que se edita
 	useEffect(() => {
+		const baseConfig = sensor?.config || {};
+		const baseMetrics = baseConfig.metricsConfig || {};
+
 		setFormData({
-			name: sensor?.name || baseConfig.sensorId || "",
+			name: sensor?.name || "",
 			type: sensor?.type || baseConfig.type || "",
 			location: sensor?.location || baseConfig.location || "",
 			active: sensor?.active ?? baseConfig.active ?? true,
@@ -50,7 +54,7 @@ export default function SensorForm({
 		});
 	}, [sensor]);
 
-	// Callback para actualizar métricas sin provocar renders excesivos
+	// Callback para actualizar métricas
 	const handleMetricsChange = useCallback((cfg: any) => {
 		setFormData((prev) => ({ ...prev, metricsConfig: cfg }));
 	}, []);
@@ -59,16 +63,18 @@ export default function SensorForm({
 		e.preventDefault();
 
 		try {
-			// Generar config consistente con la estructura del sensor físico
+			const baseConfig = sensor?.config || {};
+
+			// Config consistente con la estructura del sensor físico
 			const config = {
-				sensorId: formData.name, // sensorId sincronizado con el nombre
+				sensorId: sensorId || crypto.randomUUID(), // no editable, pero se respeta el existente
 				type: formData.type,
 				location: formData.location,
 				intervalMs: formData.intervalMs,
 				metricsConfig: formData.metricsConfig,
 				active: formData.active,
-				configVersion: sensor?.config?.configVersion || "v1",
-				createdAt: sensor?.config?.createdAt || new Date().toISOString(),
+				configVersion: baseConfig.configVersion || "v1",
+				createdAt: baseConfig.createdAt || new Date().toISOString(),
 				lastSeen: sensor?.lastSeen || null,
 			};
 
@@ -104,7 +110,7 @@ export default function SensorForm({
 
 				<Form onSubmit={handleSubmit}>
 					<FormGroup>
-						<Label>Nombre (Sensor ID)</Label>
+						<Label>Nombre del Sensor</Label>
 						<Input
 							type="text"
 							required
@@ -117,6 +123,13 @@ export default function SensorForm({
 							}
 						/>
 					</FormGroup>
+
+					{sensorId && (
+						<FormGroup>
+							<Label>ID del Sensor (no editable)</Label>
+							<Input type="text" value={sensorId} readOnly />
+						</FormGroup>
+					)}
 
 					<FormGroup>
 						<Label>Tipo</Label>
