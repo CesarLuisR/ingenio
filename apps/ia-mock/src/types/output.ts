@@ -29,3 +29,4 @@ interface SensorReport {
     resumen: Record<string, CategorySummary>;
     chartData: ChartData;
 }
+

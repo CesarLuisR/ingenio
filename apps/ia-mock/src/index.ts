@@ -8,18 +8,15 @@ app.use(express.json({ limit: "10mb" }));
 
 app.use("/analyze", (req, res) => {
     const data: IMachineData[] = req.body;
-    console.log(data);
 
     try {
         if (!Array.isArray(data) || data.length === 0) {
             return res.status(400).json({ error: "No se recibieron datos válidos" });
         }
 
-        const report: SensorReport[] = data.map(machine => {
+        const report: SensorReport[] = data.map((machine) => {
             const { config, readings } = machine;
             const { metricsConfig } = config as ConfigData;
-
-            console.log("METRICS CONFIG:", metricsConfig);
 
             const metricReport: Record<string, any> = {};
             const chartData: ChartData = {};
@@ -32,7 +29,7 @@ app.use("/analyze", (req, res) => {
                 for (const metricName of Object.keys(metricsConfig[category])) {
                     // Tomamos todos los puntos válidos
                     const points = readings
-                        .map(r => {
+                        .map((r) => {
                             const value = r?.metrics?.[category]?.[metricName];
                             if (typeof value !== "number" || isNaN(value)) return null;
                             return {
@@ -40,7 +37,10 @@ app.use("/analyze", (req, res) => {
                                 y: value,
                             };
                         })
-                        .filter((p): p is { x: number; y: number } => p !== null);
+                        .filter(
+                            (p): p is { x: number; y: number } =>
+                                p !== null && typeof p.y === "number"
+                        );
 
                     if (points.length < 2) {
                         metricReport[category][metricName] = {
@@ -49,37 +49,66 @@ app.use("/analyze", (req, res) => {
                         continue;
                     }
 
-                    // --- Cálculo de regresión lineal simple ---
+                    // --- Cálculo de regresión lineal estable ---
                     const n = points.length;
-                    const meanX = points.reduce((a, p) => a + p.x, 0) / n;
-                    const meanY = points.reduce((a, p) => a + p.y, 0) / n;
-                    const numerator = points.reduce(
+                    const x0 = points[0].x;
+
+                    // Normalizar tiempo en horas desde el inicio
+                    const normalized = points.map((p) => ({
+                        x: (p.x - x0) / (1000 * 60 * 60),
+                        y: p.y,
+                    }));
+
+                    const meanX =
+                        normalized.reduce((a, p) => a + p.x, 0) / n;
+                    const meanY =
+                        normalized.reduce((a, p) => a + p.y, 0) / n;
+
+                    const numerator = normalized.reduce(
                         (s, p) => s + (p.x - meanX) * (p.y - meanY),
                         0
                     );
-                    const denominator = points.reduce(
+                    const denominator = normalized.reduce(
                         (s, p) => s + (p.x - meanX) ** 2,
                         0
                     );
-                    const slope = numerator / denominator;
+
+                    const slope =
+                        denominator !== 0 ? numerator / denominator : 0; // cambio por hora
                     const intercept = meanY - slope * meanX;
 
                     const currentValue = points[n - 1].y;
-                    const { min, max } = metricsConfig[category][metricName];
+                    const { min, max } =
+                        metricsConfig[category][metricName];
 
-                    // Determinar tendencia
+                    // --- Determinar tendencia ---
+                    const threshold = Math.abs(meanY) * 0.005; // 0.5% del valor medio por hora
                     let trend: "subiendo" | "bajando" | "estable";
-                    if (Math.abs(slope) < 1e-6) trend = "estable";
+                    if (Math.abs(slope) < threshold) trend = "estable";
                     else if (slope > 0) trend = "subiendo";
                     else trend = "bajando";
 
-                    // Evaluar urgencia
+                    // --- Evaluar urgencia (detecta AMBOS límites) ---
                     let urgency: MetricAnalysis["urgencia"] = "normal";
                     if (typeof min === "number" && typeof max === "number") {
-                        const proximity = (currentValue - min) / (max - min);
-                        if (proximity >= 1) urgency = "🚨 fuera de rango";
-                        else if (proximity >= 0.9) urgency = "⚠️ muy alta";
-                        else if (proximity >= 0.75) urgency = "moderada";
+                        if (currentValue > max || currentValue < min) {
+                            urgency = "🚨 fuera de rango";
+                        } else {
+                            const range = max - min;
+                            const distanceToMax = max - currentValue;
+                            const distanceToMin = currentValue - min;
+                            const minDistance = Math.min(
+                                distanceToMax,
+                                distanceToMin
+                            );
+                            const proximityRatio = minDistance / range;
+
+                            if (proximityRatio <= 0.1) {
+                                urgency = "⚠️ muy alta";
+                            } else if (proximityRatio <= 0.25) {
+                                urgency = "moderada";
+                            }
+                        }
                     }
 
                     // Guardar análisis
@@ -93,29 +122,36 @@ app.use("/analyze", (req, res) => {
 
                     // --- Muestreo uniforme para reducir datos del gráfico ---
                     const allSeries: ChartPoint[] = readings
-                        .map(r => ({
+                        .map((r) => ({
                             timestamp: r.timestamp,
                             value: r?.metrics?.[category]?.[metricName],
                         }))
-                        .filter(p => typeof p.value === "number");
+                        .filter(
+                            (p): p is ChartPoint =>
+                                typeof p.value === "number"
+                        );
 
                     const MAX_POINTS = 50;
                     let series: ChartPoint[];
 
                     if (allSeries.length <= MAX_POINTS) {
-                        // Si hay pocos puntos, usamos todos
                         series = allSeries;
                     } else {
-                        // Tomamos puntos uniformemente distribuidos
                         const step = allSeries.length / MAX_POINTS;
                         series = [];
                         for (let i = 0; i < MAX_POINTS; i++) {
                             const index = Math.floor(i * step);
                             series.push(allSeries[index]);
                         }
+                        // Asegurar que incluimos el último punto
+                        if (
+                            series[series.length - 1] !==
+                            allSeries[allSeries.length - 1]
+                        ) {
+                            series.push(allSeries[allSeries.length - 1]);
+                        }
                     }
 
-                    // Guardar datos para graficar
                     chartData[category].push({
                         metric: metricName,
                         data: series,
@@ -130,7 +166,6 @@ app.use("/analyze", (req, res) => {
             };
         });
 
-        // --- Respuesta final ---
         const response = {
             timestamp: new Date().toISOString(),
             report,
@@ -143,4 +178,6 @@ app.use("/analyze", (req, res) => {
     }
 });
 
-app.listen(8081, () => console.log(`IA mock listening on port 8081`));
+app.listen(8081, () =>
+    console.log(`✅ IA mock listening on port 8081`)
+);
