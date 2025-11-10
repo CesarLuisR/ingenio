@@ -8,7 +8,7 @@ interface Issue {
 	exceedancePercent: number;
 }
 
-interface PublishInfo {
+interface FormattedInfo {
 	sensorId: string;
 	timestamp: string;
 	status: "ok" | "warning" | "critical"; // estado global
@@ -18,10 +18,10 @@ interface PublishInfo {
 	severityLevel: number;
 }
 
-export async function createPublishInfo(
+export async function createFormattedInfoInfo(
 	data: ReadingData,
 	config: ConfigData
-): Promise<PublishInfo> {
+): Promise<FormattedInfo> {
 	const metricsReport: Record<string, any> = {};
 	const issues: Issue[] = [];
 	let maxSeverity = 0;
@@ -80,8 +80,8 @@ export async function createPublishInfo(
 				metricSeverity === 2
 					? "critical"
 					: metricSeverity === 1
-					? "warning"
-					: "ok";
+						? "warning"
+						: "ok";
 
 			// 🔹 Guardar el estado por métrica
 			metricsReport[category][metricName] = {
