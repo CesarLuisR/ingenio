@@ -1,5 +1,5 @@
 import { InfoSection } from "../styled";
-import type { Maintenance } from "../../../lib/api";
+import type { Maintenance } from "../../../types";
 
 interface SensorMaintenancesProps {
 	items: Maintenance[];
@@ -13,8 +13,8 @@ export function SensorMaintenances({ items }: SensorMaintenancesProps) {
 				<ul>
 					{items.map((m) => (
 						<li key={m.id}>
-							<b>{m.status}</b> — {m.description} (
-							{new Date(m.scheduledDate).toLocaleDateString()})
+							{/* <b>{m.}</b> — {m.description} (
+							{new Date(m.scheduledDate).toLocaleDateString()}) */}
 						</li>
 					))}
 				</ul>

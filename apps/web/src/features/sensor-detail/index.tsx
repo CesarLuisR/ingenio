@@ -9,7 +9,7 @@ import { SensorAnalysis } from "./components/SensorAnalysis";
 
 export default function SensorDetail() {
 	const { id } = useParams<{ id: string }>();
-	const { sensorName, maintenances, failures, analysis, latest } =
+	const { sensorName, maintenances, failures, analysis, latest, chartData } =
 		useSensorDetail(id);
 
 	return (
@@ -18,7 +18,7 @@ export default function SensorDetail() {
 
 			{latest ? (
 				<>
-					<SensorCharts sensorId={id!} />
+					<SensorCharts chartData={chartData} latest={latest} />
 					<SensorMaintenances items={maintenances} />
 					<SensorFailures items={failures} />
 					<SensorAnalysis data={analysis} />

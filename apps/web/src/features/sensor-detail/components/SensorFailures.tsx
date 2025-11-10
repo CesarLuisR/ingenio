@@ -1,5 +1,5 @@
 import { InfoSection } from "../styled";
-import type { Failure } from "../../../lib/api";
+import type { Failure } from "../../../types";
 
 interface SensorFailuresProps {
 	items: Failure[];
@@ -13,7 +13,7 @@ export function SensorFailures({ items }: SensorFailuresProps) {
 				<ul>
 					{items.map((f) => (
 						<li key={f.id}>
-							<b>{f.severity}</b> — {f.description} ({f.status})
+							<b>{f.sensorId}</b> — {f.description} ({f.occurredAt})
 						</li>
 					))}
 				</ul>

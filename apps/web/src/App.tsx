@@ -5,8 +5,8 @@ import Usuarios from "./pages/Usuarios";
 import Analisis from "./pages/Analisis";
 import Dashboard from "./features/dashboard";
 import Layout from "./features/shared/components/Layout";
-import SensorDetail from "./pages/SensorDetail";
 import Sensores from "./features/sensors";
+import SensorDetail from "./features/sensor-detail";
 
 export default function App() {
 	return (
@@ -14,7 +14,7 @@ export default function App() {
 			<Routes>
 				<Route path="/" element={<Layout />}>
 					<Route index element={<Dashboard/>} />{" "}
-					<Route path="/sensor/:id" element={<SensorDetail/>} />
+					<Route path="/sensor/:id" element={<SensorDetail />} />
 					<Route path="sensores" element={<Sensores/>} />
 					<Route path="mantenimientos" element={<Mantenimientos />} />
 					<Route path="fallos" element={<Fallos />} />

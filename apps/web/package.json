@@ -12,6 +12,7 @@
   "dependencies": {
     "@react-spring/web": "^10.0.3",
     "chart.js": "^3.9.1",
+    "chartjs-adapter-date-fns": "^3.0.0",
     "chartjs-plugin-streaming": "^2.0.0",
     "d3": "^7.9.0",
     "d3-interpolate-path": "^2.3.0",

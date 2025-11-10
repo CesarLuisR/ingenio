@@ -7,7 +7,7 @@
     "mechanical": {
       "yaw": {
         "max": 180,
-        "min": -180
+        "min": 0
       },
       "roll": {
         "max": 180,

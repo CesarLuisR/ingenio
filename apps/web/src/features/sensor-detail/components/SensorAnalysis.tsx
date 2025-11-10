@@ -1,5 +1,5 @@
 import { InfoSection, CodeBox } from "../styled";
-import type { AnalysisResponse } from "../../../lib/api";
+import type { AnalysisResponse } from "../../../types";
 
 interface SensorAnalysisProps {
 	data: AnalysisResponse | null;

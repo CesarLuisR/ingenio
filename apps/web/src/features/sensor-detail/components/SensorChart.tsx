@@ -1,31 +1,19 @@
-import { useEffect, useRef } from "react";
 import {
-	Chart,
-	LineController,
-	LineElement,
-	PointElement,
-	LinearScale,
-	TimeScale,
+	LineChart,
+	Line,
+	XAxis,
+	YAxis,
+	CartesianGrid,
 	Tooltip,
 	Legend,
-	Filler,
-} from "chart.js";
-import "chartjs-adapter-date-fns";
-import streamingPlugin from "chartjs-plugin-streaming";
-import { useReadingsStore } from "../../../store/readingState";
-import { Card, ChartHeader } from "../styled";
+	ResponsiveContainer,
+} from "recharts";
+import { Card, ChartHeader, MetricStatus, Status } from "../styled";
 
-Chart.register(
-	LineController,
-	LineElement,
-	PointElement,
-	LinearScale,
-	TimeScale,
-	Tooltip,
-	Legend,
-	Filler,
-	streamingPlugin
-);
+interface SensorChartsProps {
+	chartData: Record<string, any[]>;
+	latest: any;
+}
 
 const COLORS = [
 	"#2563eb",
@@ -38,159 +26,68 @@ const COLORS = [
 	"#14b8a6",
 ];
 
-interface SensorChartsProps {
-	sensorId: string;
+function getStatusLabel(status?: string) {
+	if (!status) return "unknown";
+	if (status === "ok") return "✅ OK";
+	if (status === "warning") return "⚠️ Warning";
+	if (status === "critical") return "🚨 Critical";
+	return "–";
 }
 
-export function SensorCharts({ sensorId }: SensorChartsProps) {
-	const sensorMap = useReadingsStore((s) => s.sensorMap);
-	const chartRefs = useRef<Record<string, Chart>>({});
-
-	useEffect(() => {
-		// Limpieza previa
-		Object.values(chartRefs.current).forEach((chart) => chart.destroy());
-		chartRefs.current = {};
-
-		const readings = sensorMap.get(sensorId);
-		if (!readings || readings.length === 0) return;
-
-		const latest = readings[readings.length - 1];
-		const metricsMap = latest.metrics || {};
-
-		// 🔹 Crear un gráfico por cada métrica individual
-		Object.entries(metricsMap).forEach(([category, metrics]) => {
-			Object.entries(metrics).forEach(([metric, val], i) => {
-				const chartId = `chart-${sensorId}-${category}-${metric}`;
-				const canvas = document.getElementById(
-					chartId
-				) as HTMLCanvasElement | null;
-				if (!canvas) return;
-				const ctx = canvas.getContext("2d");
-				if (!ctx) return;
-
-				// Crea un nuevo gráfico por métrica
-				const chart = new Chart(ctx, {
-					type: "line",
-					data: {
-						datasets: [
-							{
-								label: `${category}.${metric}`,
-								borderColor: COLORS[i % COLORS.length],
-								borderWidth: 2,
-								backgroundColor: "transparent",
-								data: [],
-								fill: false,
-								tension: 0.3,
-							},
-						],
-					},
-					options: {
-						responsive: true,
-						maintainAspectRatio: false,
-						animation: false,
-						scales: {
-							x: {
-								type: "realtime",
-								realtime: {
-									duration: 60000, // 1 min visible
-									refresh: 1000,
-									delay: 2000,
-									frameRate: 30,
-									onRefresh: (chart) => {
-										const readings =
-											sensorMap.get(sensorId);
-										if (!readings || readings.length === 0)
-											return;
-										const last =
-											readings[readings.length - 1];
-										const timestamp = new Date(
-											last.timestamp
-										).getTime();
-										const valueObj =
-											last.metrics?.[category]?.[metric];
-										const value =
-											typeof valueObj === "object" &&
-											valueObj !== null &&
-											"value" in valueObj
-												? (valueObj as any).value
-												: valueObj;
-										chart.data.datasets[0].data.push({
-											x: timestamp,
-											y: value,
-										});
-									},
-								},
-							},
-							y: {
-								min: 0,
-								max: 100, // ajusta según tipo de dato
-								ticks: { stepSize: 10 },
-							},
-						},
-						plugins: {
-							legend: { display: false },
-							tooltip: { mode: "nearest", intersect: false },
-						},
-					},
-				});
-
-				chartRefs.current[chartId] = chart;
-			});
-		});
-
-		return () => {
-			Object.values(chartRefs.current).forEach((chart) =>
-				chart.destroy()
-			);
-			chartRefs.current = {};
-		};
-	}, [sensorId, sensorMap]);
-
-	const readings = sensorMap.get(sensorId);
-	if (!readings || readings.length === 0) return <p>Sin lecturas todavía.</p>;
-
-	const latest = readings[readings.length - 1];
-	const groupedMetrics = Object.entries(latest.metrics || {});
+export function SensorCharts({ chartData, latest }: SensorChartsProps) {
+	if (!chartData || Object.keys(chartData).length === 0)
+		return <p>Sin lecturas todavía.</p>;
 
 	return (
 		<>
-			{groupedMetrics.map(([category, metrics]) => (
+			{Object.entries(chartData).map(([category, data]) => (
 				<Card key={category}>
 					<ChartHeader>
 						<h2>{category.toUpperCase()}</h2>
 					</ChartHeader>
 
-					{Object.keys(metrics).map((metric, i) => {
-						const chartId = `chart-${sensorId}-${category}-${metric}`;
-						return (
-							<div
-								key={metric}
-								style={{
-									marginBottom: "1.5rem",
-									borderLeft: `4px solid ${
-										COLORS[i % COLORS.length]
-									}`,
-									paddingLeft: "0.5rem",
-								}}>
-								<h3
-									style={{
-										fontSize: "0.9rem",
-										color: "#444",
-									}}>
-									{metric.toUpperCase()}
-								</h3>
-								<div style={{ height: 200, width: "100%" }}>
-									<canvas
-										id={chartId}
+					<ResponsiveContainer width="100%" height={300}>
+						<LineChart data={data}>
+							<CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+							<XAxis dataKey="time" />
+							<YAxis />
+							<Tooltip />
+							<Legend />
+							{Object.keys(latest.metrics[category] || {}).map((metric, i) => (
+								<Line
+									key={metric}
+									type="monotone"
+									dataKey={metric}
+									stroke={COLORS[i % COLORS.length]}
+									strokeWidth={2.5}
+									dot={false}
+									isAnimationActive={true}
+									animationDuration={800}
+								/>
+							))}
+						</LineChart>
+					</ResponsiveContainer>
+
+					<MetricStatus>
+						{Object.entries(latest.metrics[category] || {}).map(
+							([metric, val]: [string, any], i) => {
+								const status =
+									typeof val === "object" && val !== null && "status" in val
+										? val.status
+										: latest.status || "ok";
+								return (
+									<Status
+										key={metric}
+										status={status}
 										style={{
-											width: "100%",
-											height: "100%",
-										}}
-									/>
-								</div>
-							</div>
-						);
-					})}
+											border: `2px solid ${COLORS[i % COLORS.length]}`,
+										}}>
+										{metric}: {getStatusLabel(status)}
+									</Status>
+								);
+							}
+						)}
+					</MetricStatus>
 				</Card>
 			))}
 		</>
