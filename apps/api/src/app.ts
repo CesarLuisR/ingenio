@@ -10,7 +10,6 @@ import maintenanceRoutes from "./lib/routes/maintenanceRoutes";
 import failureRoutes from "./lib/routes/failureRoutes";
 import userRoutes from "./lib/routes/userRoutes";
 import analyzeRoutes from "./lib/routes/analyzeRoutes";
-import { ReadingData } from "./types/sensorTypes";
 
 const app = express();
 app.use(cors());

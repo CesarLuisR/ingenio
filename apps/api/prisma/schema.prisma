@@ -22,22 +22,41 @@ model Sensor {
   failures     Failure[]
 }
 
-model Maintenance {
-  id          Int        @id @default(autoincrement())
-  sensorId    Int
-  performedAt DateTime   @default(now())
-  notes       String?
-  sensor      Sensor     @relation(fields: [sensorId], references: [id])
+model Technician {
+  id           Int            @id @default(autoincrement())
+  name         String
+  email        String?         @unique
+  phone        String?
+  active       Boolean         @default(true)
+  maintenances Maintenance[]   @relation("TechnicianMaintenances")
 }
 
 model Failure {
-  id          Int        @id @default(autoincrement())
-  sensorId    Int
-  occurredAt  DateTime   @default(now())
-  description String
-  sensor      Sensor     @relation(fields: [sensorId], references: [id])
+  id             Int          @id @default(autoincrement())
+  sensorId       Int
+  occurredAt     DateTime     @default(now())
+  description    String
+  severity       String
+  status         String        @default("pendiente")
+  resolvedAt     DateTime?
+  maintenanceId  Int?
+  sensor         Sensor        @relation(fields: [sensorId], references: [id])
+  maintenance    Maintenance?  @relation("MaintenanceFailures", fields: [maintenanceId], references: [id])
 }
 
+model Maintenance {
+  id              Int           @id @default(autoincrement())
+  sensorId        Int
+  performedAt     DateTime      @default(now())
+  type            String
+  technicianId    Int?
+  durationMinutes Int?
+  notes           String?
+  cost            Float?
+  sensor          Sensor        @relation(fields: [sensorId], references: [id])
+  technician      Technician?   @relation("TechnicianMaintenances", fields: [technicianId], references: [id])
+  failures        Failure[]     @relation("MaintenanceFailures")
+}
 
 model User {
   id        Int        @id @default(autoincrement())
