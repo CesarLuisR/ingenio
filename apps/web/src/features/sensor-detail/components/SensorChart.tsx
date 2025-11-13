@@ -9,6 +9,7 @@ import {
 	ResponsiveContainer,
 } from "recharts";
 import { Card, ChartHeader, MetricStatus, Status } from "../styled";
+import { useMemo } from "react";
 
 interface SensorChartsProps {
 	chartData: Record<string, any[]>;
@@ -40,56 +41,69 @@ export function SensorCharts({ chartData, latest }: SensorChartsProps) {
 
 	return (
 		<>
-			{Object.entries(chartData).map(([category, data]) => (
-				<Card key={category}>
-					<ChartHeader>
-						<h2>{category.toUpperCase()}</h2>
-					</ChartHeader>
+			{Object.entries(chartData).map(([category, data]) => {
+				// Asegura que el orden de métricas sea estable
+				const metrics = useMemo(
+					() => Object.keys(latest.metrics[category] || {}),
+					[latest, category]
+				);
 
-					<ResponsiveContainer width="100%" height={300}>
-						<LineChart data={data}>
-							<CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-							<XAxis dataKey="time" />
-							<YAxis />
-							<Tooltip />
-							<Legend />
-							{Object.keys(latest.metrics[category] || {}).map((metric, i) => (
-								<Line
-									key={metric}
-									type="monotone"
-									dataKey={metric}
-									stroke={COLORS[i % COLORS.length]}
-									strokeWidth={2.5}
-									dot={false}
-									isAnimationActive={true}
-									animationDuration={800}
+				// Evita renders fuertes en real-time
+				const preparedData = useMemo(() => data.slice(), [data]);
+
+				return (
+					<Card key={category}>
+						<ChartHeader>
+							<h2>{category.toUpperCase()}</h2>
+						</ChartHeader>
+
+						<ResponsiveContainer width="100%" height={300}>
+							<LineChart data={preparedData}>
+								<CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+								<XAxis
+									dataKey="time"
+									tick={{ fontSize: 12 }}
+									minTickGap={20}
 								/>
-							))}
-						</LineChart>
-					</ResponsiveContainer>
+								<YAxis tick={{ fontSize: 12 }} />
+								<Tooltip />
+								<Legend />
 
-					<MetricStatus>
-						{Object.entries(latest.metrics[category] || {}).map(
-							([metric, val]: [string, any], i) => {
+								{metrics.map((metric, i) => (
+									<Line
+										key={metric}
+										type="monotone"
+										dataKey={metric}
+										stroke={COLORS[i % COLORS.length]}
+										strokeWidth={2}
+										dot={false}
+										isAnimationActive={false} // para real-time es esencial
+									/>
+								))}
+							</LineChart>
+						</ResponsiveContainer>
+
+						<MetricStatus>
+							{metrics.map((metric, i) => {
+								const val = latest.metrics[category][metric];
 								const status =
 									typeof val === "object" && val !== null && "status" in val
 										? val.status
 										: latest.status || "ok";
+
 								return (
 									<Status
 										key={metric}
 										status={status}
-										style={{
-											border: `2px solid ${COLORS[i % COLORS.length]}`,
-										}}>
+										style={{ border: `2px solid ${COLORS[i % COLORS.length]}` }}>
 										{metric}: {getStatusLabel(status)}
 									</Status>
 								);
-							}
-						)}
-					</MetricStatus>
-				</Card>
-			))}
+							})}
+						</MetricStatus>
+					</Card>
+				);
+			})}
 		</>
 	);
 }
