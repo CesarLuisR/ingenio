@@ -15,6 +15,7 @@ const sensorRepository = new SensorRepository(redisRepository, postgresRepositor
 export const getAnalysis: RequestHandler = async (req, res) => {
     const IA_API = process.env.IA_API;
     const data: string[] = req.body; // lista de sensorIds
+
     const request: IMachineData[] = [];
 
     if (!IA_API)

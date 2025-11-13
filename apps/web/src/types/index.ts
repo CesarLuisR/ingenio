@@ -43,7 +43,6 @@ export interface Failure {
   maintenance?: Maintenance;
 }
 
-
 export interface User {
 	id: number;
 	email: string;

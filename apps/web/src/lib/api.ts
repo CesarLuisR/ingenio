@@ -164,7 +164,7 @@ class ApiClient {
 	async analyzeData(sensorIds: string[]): Promise<AnalysisResponse> {
 		return this.request<AnalysisResponse>("/api/analyze", {
 			method: "POST",
-			body: JSON.stringify({ sensorIds }),
+			body: JSON.stringify(sensorIds),
 		});
 	}
 

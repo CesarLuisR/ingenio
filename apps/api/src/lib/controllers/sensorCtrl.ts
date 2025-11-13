@@ -6,7 +6,6 @@ const cacheRepository = new RedisRepository();
 // GET /sensors
 export const getAllSensors = async (req: Request, res: Response) => {
 	try {
-		console.log("KLK ESTA ENTRANDO AQUI")
 		const sensors = await prisma.sensor.findMany({
 			include: { maintenances: true, failures: true },
 		});
