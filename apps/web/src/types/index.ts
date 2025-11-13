@@ -12,18 +12,37 @@ export interface Sensor {
 }
 
 export interface Maintenance {
-	id: number;
-	sensorId: number; // foreign key (numeric, matches backend)
-	performedAt: string;
-	notes?: string;
+  id: number;
+  sensorId: number;
+  performedAt: string; // DateTime → string ISO
+  type: string; // "Preventivo" | "Correctivo" | "Predictivo"
+  technicianId?: number | null;
+  durationMinutes?: number | null;
+  notes?: string | null;
+  cost?: number | null;
+
+  // Relaciones opcionales
+  sensor?: Sensor;
+  technician?: Technician;
+  failures?: Failure[];
 }
 
+// --- Failure ---
 export interface Failure {
-	id: number;
-	sensorId: number; // foreign key (numeric)
-	occurredAt: string;
-	description: string;
+  id: number;
+  sensorId: number;
+  occurredAt: string; // DateTime → string ISO
+  description: string;
+  severity?: string | null; // "Alta" | "Media" | "Baja"
+  status?: string | null; // "pendiente" | "en reparación" | "resuelta"
+  resolvedAt?: string | null;
+  maintenanceId?: number | null;
+
+  // Relaciones opcionales
+  sensor?: Sensor;
+  maintenance?: Maintenance;
 }
+
 
 export interface User {
 	id: number;
@@ -93,4 +112,13 @@ export interface Reading {
 	metrics: MetricsMap;
 	totalIssues: number;
 	severityLevel: number;
+}
+
+export interface Technician {
+  id: number;
+  name: string;
+  email?: string;
+  phone?: string;
+  active: boolean;
+  maintenances?: Maintenance[]; // relación opcional
 }

@@ -10,6 +10,7 @@ import maintenanceRoutes from "./lib/routes/maintenanceRoutes";
 import failureRoutes from "./lib/routes/failureRoutes";
 import userRoutes from "./lib/routes/userRoutes";
 import analyzeRoutes from "./lib/routes/analyzeRoutes";
+import technicianRoutes from "./lib/routes/technicianRoutes";
 
 const app = express();
 app.use(cors());
@@ -23,10 +24,11 @@ const messageBus = new WebSocketBus(wss);
 app.use("/ingest", ingestRoutes(messageBus));
 
 // REST CRUD
-app.use("/sensors", sensorRoutes);
-app.use("/maintenances", maintenanceRoutes);
-app.use("/failures", failureRoutes);
-app.use("/users", userRoutes);
-app.use("/analyze", analyzeRoutes);
+app.use("/api/sensors", sensorRoutes);
+app.use("/api/maintenances", maintenanceRoutes);
+app.use("/api/failures", failureRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/analyze", analyzeRoutes);
+app.use("/api/technicians", technicianRoutes); 
 
 export default server;

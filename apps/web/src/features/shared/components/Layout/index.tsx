@@ -39,6 +39,9 @@ export default function Layout() {
 					<NavLinkStyled to="/fallos" $active={isActive("/fallos")}>
 						⚠️ Fallos
 					</NavLinkStyled>
+					<NavLinkStyled to="/tecnicos" $active={isActive("/tecnicos")}>
+						👷‍♂️️ Técnicos 
+					</NavLinkStyled>
 					<NavLinkStyled
 						to="/usuarios"
 						$active={isActive("/usuarios")}>
