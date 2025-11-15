@@ -1,5 +1,6 @@
 export interface ConfigData {
     sensorId: string;
+    ingenioId: number;
     name: string | null;
     type: string;
     location: string;
@@ -10,6 +11,20 @@ export interface ConfigData {
     active: boolean;
     configVersion: string;
 }
+
+export type ConfigDataJson = {
+    sensorId: string;
+    ingenioId: number;
+    name: string | null;
+    type: string;
+    location: string;
+    intervalMs: number;
+    metricsConfig: Record<string, Record<string, { min?: number; max?: number }>>;
+    createdAt: string;   // << Date → string
+    lastSeen: string;    // << Date → string
+    active: boolean;
+    configVersion: string;
+};
 
 export interface ReadingData {
     sensorId: string;
