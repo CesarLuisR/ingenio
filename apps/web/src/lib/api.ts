@@ -33,6 +33,36 @@ class ApiClient {
 		return response.json();
 	}
 
+	// ======================
+	// 🔐 AUTH
+	// ======================
+
+	async login(email: string, password: string): Promise<User> {
+		const data = await this.request<{ user: User }>("/api/login", {
+			method: "POST",
+			body: JSON.stringify({ email, password }),
+		});
+		return data.user;
+	}
+
+	async logout(): Promise<void> {
+		return this.request<void>("/api/logout", {
+			method: "POST",
+		});
+	}
+
+	// Obtiene la sesión actual desde el backend (si existe)
+	async getSession(): Promise<User | null> {
+		try {
+			const data = await this.request<{ user: User | null }>("/api/session", {
+				method: "GET",
+			});
+			return data.user ?? null;
+		} catch {
+			return null;
+		}
+	}
+
 	// --- Sensors ---
 	async getSensors(): Promise<Sensor[]> {
 		return this.request<Sensor[]>("/api/sensors");

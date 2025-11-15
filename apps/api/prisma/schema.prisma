@@ -7,17 +7,39 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Ingenio {
+  id           Int           @id @default(autoincrement())
+  name         String
+  code         String        @unique
+  location     String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  // Relaciones
+  users        User[]
+  sensors      Sensor[]
+  technicians  Technician[]
+  maintenances Maintenance[]
+  failures     Failure[]
+  auditLogs    AuditLog[]
+}
+
 model Sensor {
   id           Int           @id @default(autoincrement())
   sensorId     String        @unique
   name         String
   type         String
   location     String?
-  active       Boolean @default(true)
+  active       Boolean       @default(true)
   config       Json?
   lastSeen     DateTime?
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+
+  // Multi-ingenio
+  ingenioId    Int
+  ingenio      Ingenio       @relation(fields: [ingenioId], references: [id])
+
   maintenances Maintenance[]
   failures     Failure[]
 }
@@ -28,6 +50,11 @@ model Technician {
   email        String?         @unique
   phone        String?
   active       Boolean         @default(true)
+
+  // Multi-ingenio
+  ingenioId    Int
+  ingenio      Ingenio         @relation(fields: [ingenioId], references: [id])
+
   maintenances Maintenance[]   @relation("TechnicianMaintenances")
 }
 
@@ -40,8 +67,13 @@ model Failure {
   status         String        @default("pendiente")
   resolvedAt     DateTime?
   maintenanceId  Int?
+
   sensor         Sensor        @relation(fields: [sensorId], references: [id])
   maintenance    Maintenance?  @relation("MaintenanceFailures", fields: [maintenanceId], references: [id])
+
+  // Multi-ingenio (redundante pero práctico para filtrar directo)
+  ingenioId      Int
+  ingenio        Ingenio       @relation(fields: [ingenioId], references: [id])
 }
 
 model Maintenance {
@@ -53,9 +85,14 @@ model Maintenance {
   durationMinutes Int?
   notes           String?
   cost            Float?
+
   sensor          Sensor        @relation(fields: [sensorId], references: [id])
   technician      Technician?   @relation("TechnicianMaintenances", fields: [technicianId], references: [id])
   failures        Failure[]     @relation("MaintenanceFailures")
+
+  // Multi-ingenio (igual que Failure)
+  ingenioId       Int
+  ingenio         Ingenio       @relation(fields: [ingenioId], references: [id])
 }
 
 model User {
@@ -63,5 +100,26 @@ model User {
   email     String     @unique
   name      String
   role      String
+  passwordHash String 
   createdAt DateTime   @default(now())
+
+  // Multi-ingenio
+  ingenioId Int
+  ingenio   Ingenio    @relation(fields: [ingenioId], references: [id])
+  auditLogs AuditLog[]
+}
+
+model AuditLog {
+  id         Int       @id @default(autoincrement())
+  userId     Int?
+  ingenioId  Int?
+  action     String
+  entity     String?
+  entityId   Int?
+  ip         String?
+  meta       Json?
+  createdAt  DateTime  @default(now())
+
+  user       User?     @relation(fields: [userId], references: [id])
+  ingenio    Ingenio?  @relation(fields: [ingenioId], references: [id])
 }
