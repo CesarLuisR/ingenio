@@ -15,6 +15,7 @@ import {
 } from "../styled";
 
 import type { Technician } from "../../../types";
+import { useSessionStore } from "../../../store/sessionStore";
 
 export default function TechnicianForm({
 	initialData,
@@ -25,6 +26,8 @@ export default function TechnicianForm({
 	onClose: () => void;
 	onSave: () => void;
 }) {
+	const user = useSessionStore((s) => s.user);
+
 	const [formData, setFormData] = useState({
 		name: initialData?.name || "",
 		email: initialData?.email || "",
@@ -36,22 +39,20 @@ export default function TechnicianForm({
 		e.preventDefault();
 
 		try {
+			const payload = {
+				name: formData.name,
+				email: formData.email || undefined,
+				phone: formData.phone || undefined,
+				active: formData.active,
+				ingenioId: user?.ingenioId ?? null, // ← 🔥 multi-tenant fijo
+			};
+
 			if (initialData) {
 				// EDITAR
-				await api.updateTechnician(initialData.id.toString(), {
-					name: formData.name,
-					email: formData.email || undefined,
-					phone: formData.phone || undefined,
-					active: formData.active,
-				});
+				await api.updateTechnician(initialData.id.toString(), payload);
 			} else {
 				// CREAR
-				await api.createTechnician({
-					name: formData.name,
-					email: formData.email || undefined,
-					phone: formData.phone || undefined,
-					active: formData.active,
-				});
+				await api.createTechnician(payload);
 			}
 
 			onSave();

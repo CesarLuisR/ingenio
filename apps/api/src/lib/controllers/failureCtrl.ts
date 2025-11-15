@@ -5,6 +5,7 @@ export const getAllFailures = async (req: Request, res: Response) => {
     try {
         const failures = await prisma.failure.findMany({
             include: { sensor: true, maintenance: true },
+            where: { ingenioId: req.session.user?.ingenioId },
         });
         res.json(failures);
     } catch (error) {
@@ -28,7 +29,7 @@ export const getFailureById = async (req: Request, res: Response) => {
 
 export const createFailure = async (req: Request, res: Response) => {
     try {
-        const { sensorId, description, severity, status, maintenanceId } = req.body;
+        const { sensorId, description, severity, status, maintenanceId, ingenioId } = req.body;
 
         if (!sensorId || !description)
             return res
@@ -42,7 +43,7 @@ export const createFailure = async (req: Request, res: Response) => {
                 severity,
                 status,
                 maintenanceId,
-                ingenioId: 1,
+                ingenioId,
             },
         });
 

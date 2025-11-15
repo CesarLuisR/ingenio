@@ -15,6 +15,17 @@ import {
 } from "../styled";
 import MetricsConfigEditor from "./MetricsConfigEditor";
 import type { Sensor } from "../../../types";
+import { useSessionStore } from "../../../store/sessionStore";
+
+interface SensorFormData {
+	name: string;
+	type: string;
+	location: string;
+	active: boolean;
+	intervalMs: number;
+	metricsConfig: any;
+	ingenioId: number | null;
+}
 
 export default function SensorForm({
 	sensor,
@@ -29,19 +40,21 @@ export default function SensorForm({
 	const initialConfig = sensor?.config || {};
 	const initialMetrics = initialConfig.metricsConfig || {};
 	const sensorId = sensor?.sensorId || initialConfig.sensorId || "";
+	const user = useSessionStore((s) => s.user);
 
-	const [formData, setFormData] = useState({
+	const [formData, setFormData] = useState<SensorFormData>({
 		name: sensor?.name || "",
 		type: sensor?.type || initialConfig.type || "",
 		location: sensor?.location || initialConfig.location || "",
 		active: sensor?.active ?? initialConfig.active ?? true,
 		intervalMs: initialConfig.intervalMs || 1000,
 		metricsConfig: initialMetrics,
-		ingenioId: 1,
+		ingenioId: null,
 	});
 
 	// Cuando cambia el sensor que se edita
 	useEffect(() => {
+		if (!user) return;
 		const baseConfig = sensor?.config || {};
 		const baseMetrics = baseConfig.metricsConfig || {};
 
@@ -52,9 +65,9 @@ export default function SensorForm({
 			active: sensor?.active ?? baseConfig.active ?? true,
 			intervalMs: baseConfig.intervalMs || 1000,
 			metricsConfig: baseMetrics,
-			ingenioId: 1,
+			ingenioId: user.ingenioId ?? null,
 		});
-	}, [sensor]);
+	}, [sensor, user]);
 
 	// Callback para actualizar métricas
 	const handleMetricsChange = useCallback((cfg: any) => {
@@ -78,7 +91,7 @@ export default function SensorForm({
 				configVersion: baseConfig.configVersion || "v1",
 				createdAt: baseConfig.createdAt || new Date().toISOString(),
 				lastSeen: sensor?.lastSeen || null,
-				ingenioId: 1,
+				ingenioId: user?.ingenioId || 1,
 			};
 
 			// Payload unificado

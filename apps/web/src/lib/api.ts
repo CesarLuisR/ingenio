@@ -1,6 +1,7 @@
 import type {
 	AnalysisResponse,
 	Failure,
+	Ingenio,
 	Maintenance,
 	Reading,
 	Sensor,
@@ -55,13 +56,42 @@ class ApiClient {
 	// Obtiene la sesión actual desde el backend (si existe)
 	async getSession(): Promise<User | null> {
 		try {
-			const data = await this.request<{ user: User | null }>("/api/session", {
+			const data = await this.request<{ user: User | null }>("/api/auth/session", {
 				method: "GET",
 			});
 			return data.user ?? null;
 		} catch {
 			return null;
 		}
+	}
+
+	// --- Ingenios ---
+	async getIngenios(): Promise<Ingenio[]> {
+		return this.request<Ingenio[]>("/api/ingenios");
+	}
+
+	async getIngenio(id: number): Promise<Ingenio> {
+		return this.request<Ingenio>(`/api/ingenios/${id}`);
+	}
+
+	async createIngenio(data: Partial<Ingenio>): Promise<Ingenio> {
+		return this.request<Ingenio>("/api/ingenios", {
+			method: "POST",
+			body: JSON.stringify(data),
+		});
+	}
+
+	async updateIngenio(id: number, data: Partial<Ingenio>): Promise<Ingenio> {
+		return this.request<Ingenio>(`/api/ingenios/${id}`, {
+			method: "PUT",
+			body: JSON.stringify(data),
+		});
+	}
+
+	async deleteIngenio(id: number): Promise<void> {
+		return this.request<void>(`/api/ingenios/${id}`, {
+			method: "DELETE",
+		});
 	}
 
 	// --- Sensors ---

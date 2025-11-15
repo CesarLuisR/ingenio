@@ -6,6 +6,7 @@ export const getAllMaintenances = async (req: Request, res: Response) => {
     try {
         const maintenances = await prisma.maintenance.findMany({
             include: { sensor: true, technician: true, failures: true },
+            where: { ingenioId: req.session.user?.ingenioId },
         });
         res.json(maintenances);
     } catch (error) {
@@ -33,7 +34,7 @@ export const getMaintenanceById = async (req: Request, res: Response) => {
 // Crear un nuevo mantenimiento
 export const createMaintenance = async (req: Request, res: Response) => {
     try {
-        const { sensorId, type, technicianId, durationMinutes, notes, cost } =
+        const { sensorId, type, technicianId, durationMinutes, notes, cost, ingenioId } =
             req.body;
 
         if (!sensorId || !type)
@@ -49,7 +50,7 @@ export const createMaintenance = async (req: Request, res: Response) => {
                 durationMinutes,
                 notes,
                 cost,
-                ingenioId: 1,
+                ingenioId,
             },
         });
 

@@ -41,12 +41,13 @@ import requireAuth from "./lib/middlewares/auth";
 app.use("/ingest", ingestRoutes(messageBus));
 
 // REST CRUD
+app.use("/api/auth", authRoutes);
 app.use("/api/sensors", requireAuth, sensorRoutes);
 app.use("/api/maintenances", requireAuth, maintenanceRoutes);
 app.use("/api/failures", requireAuth, failureRoutes);
 app.use("/api/users", requireAuth, userRoutes);
 app.use("/api/analyze", requireAuth, analyzeRoutes);
 app.use("/api/technicians", requireAuth, technicianRoutes); 
-app.use("/api/auth", authRoutes);
+app.use("/api/ingenios", requireAuth, require("./lib/routes/ingenioRoutes").default);
 
 export default server;

@@ -2,8 +2,11 @@ import { useState } from "react";
 import type { Maintenance } from "../../../types";
 import { api } from "../../../lib/api";
 import { safeNumber } from "../utils";
+import { useSessionStore } from "../../../store/sessionStore";
 
 export function useMaintenanceForm(initialData: Maintenance | null, onSave: () => void) {
+	const user = useSessionStore((s) => s.user);
+
 	const [formData, setFormData] = useState({
 		sensorId: initialData?.sensorId?.toString() || "",
 		type: initialData?.type || "Preventivo",
@@ -84,6 +87,9 @@ export function useMaintenanceForm(initialData: Maintenance | null, onSave: () =
 				performedAt: formData.performedAt
 					? new Date(formData.performedAt).toISOString()
 					: new Date().toISOString(),
+
+				// 🔥 Aquí se agrega el ingenioId del usuario autenticado
+				ingenioId: user?.ingenioId ?? null,
 			};
 
 			if (initialData) {

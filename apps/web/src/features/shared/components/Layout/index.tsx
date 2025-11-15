@@ -9,16 +9,33 @@ import {
 	Subtitle,
 	Title,
 } from "./styled";
+import { useSessionStore } from "../../../../store/sessionStore";
+import { useEffect, useState } from "react";
+import { api }from "../../../../lib/api";
+import type { Ingenio } from "../../../../types";
 
 export default function Layout() {
 	const location = useLocation();
 	const isActive = (path: string) => location.pathname === path;
+	const user = useSessionStore((s) => s.user);
+	const [ingenio, setIngenio] = useState<Ingenio>();
+
+	useEffect(() => {
+		const getIngenioInfo = async () => {
+			if (user?.ingenioId) {
+				const ingenio = await api.getIngenio(user?.ingenioId);
+				setIngenio(ingenio);
+			}
+		}
+
+		getIngenioInfo();
+	}, []);
 
 	return (
 		<Container>
 			<Sidebar>
 				<SidebarHeader>
-					<Title>📡 Ingenio</Title>
+					<Title>📡 {ingenio?.name}</Title>
 					<Subtitle>Sistema de Monitoreo</Subtitle>
 				</SidebarHeader>
 

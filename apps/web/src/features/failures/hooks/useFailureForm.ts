@@ -1,11 +1,14 @@
 import { useState } from "react";
 import type { Failure } from "../../../types";
 import { api } from "../../../lib/api";
+import { useSessionStore } from "../../../store/sessionStore";
 
 export default function useFailureForm(
     initialData: Failure | null | undefined,
     onSave: () => void
 ) {
+    const user = useSessionStore((s) => s.user);
+
     const [formData, setFormData] = useState({
         sensorId: initialData?.sensorId?.toString() || "",
         description: initialData?.description || "",
@@ -31,6 +34,9 @@ export default function useFailureForm(
                 : new Date().toISOString(),
             resolvedAt:
                 formData.status === "resuelta" ? new Date().toISOString() : null,
+
+            // 🔥 Aquí entra el ingenio del usuario logueado
+            ingenioId: user?.ingenioId ?? null,
         };
 
         try {

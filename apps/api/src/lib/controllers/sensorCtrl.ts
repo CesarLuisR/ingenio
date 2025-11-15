@@ -8,6 +8,7 @@ export const getAllSensors = async (req: Request, res: Response) => {
 	try {
 		const sensors = await prisma.sensor.findMany({
 			include: { maintenances: true, failures: true },
+            where: { ingenioId: req.session.user?.ingenioId },
 		});
 		res.json(sensors);
 	} catch (error) {

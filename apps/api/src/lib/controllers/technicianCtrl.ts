@@ -5,6 +5,7 @@ export const getAllTechnicians = async (req: Request, res: Response) => {
     try {
         const technicians = await prisma.technician.findMany({
             include: { maintenances: true },
+            where: { ingenioId: req.session.user?.ingenioId },
         });
         res.json(technicians);
     } catch (error) {
@@ -29,13 +30,13 @@ export const getTechnicianById = async (req: Request, res: Response) => {
 
 export const createTechnician = async (req: Request, res: Response) => {
     try {
-        const { name, email, phone, active } = req.body;
+        const { name, email, phone, active, ingenioId } = req.body;
 
         if (!name)
             return res.status(400).json({ error: "El nombre es obligatorio" });
 
         const technician = await prisma.technician.create({
-            data: { name, email, phone, active, ingenioId: 1 },
+            data: { name, email, phone, active, ingenioId },
         });
 
         res.status(201).json(technician);

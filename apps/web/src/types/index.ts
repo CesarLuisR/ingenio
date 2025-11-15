@@ -121,3 +121,12 @@ export interface Technician {
   active: boolean;
   maintenances?: Maintenance[]; // relación opcional
 }
+
+export interface Ingenio {
+	id: number;
+	name: string;
+	code: string;
+	location?: string;
+	createdAt: string;
+	updatedAt: string;
+}
