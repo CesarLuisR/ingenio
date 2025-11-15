@@ -1,7 +1,7 @@
 import os, json, time, datetime, requests
 from sensors.hwt905 import HWT905Sensor
 
-API_URL = os.getenv("API_URL", "http://localhost:5000")
+API_URL = os.getenv("API_URL", "http://localhost:5000/api")
 CONFIG_PATH = os.getenv("CONFIG_PATH", "config.json")
 
 CONFIG = {}

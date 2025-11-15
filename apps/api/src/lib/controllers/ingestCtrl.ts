@@ -62,6 +62,7 @@ export function createIngestCtrl(bus: IMessageBus): RequestHandler {
 
 export const addSensorCtrl: RequestHandler = async (req, res) => {
     const data: ConfigData = req.body;
+    console.log("Received sensor config:", data);
 
     try {
         let sensor = await sensorRepository.getSensorConfig(data.sensorId);

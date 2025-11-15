@@ -14,6 +14,7 @@ const API_BASE_URL =
 class ApiClient {
 	private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
 		const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+			credentials: "include",
 			...options,
 			headers: {
 				"Content-Type": "application/json",
@@ -38,7 +39,7 @@ class ApiClient {
 	// ======================
 
 	async login(email: string, password: string): Promise<User> {
-		const data = await this.request<{ user: User }>("/api/login", {
+		const data = await this.request<{ user: User }>("/api/auth/login", {
 			method: "POST",
 			body: JSON.stringify({ email, password }),
 		});
@@ -46,7 +47,7 @@ class ApiClient {
 	}
 
 	async logout(): Promise<void> {
-		return this.request<void>("/api/logout", {
+		return this.request<void>("/api/auth/logout", {
 			method: "POST",
 		});
 	}

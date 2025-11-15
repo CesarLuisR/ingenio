@@ -3,7 +3,10 @@
 import type React from "react"
 import { useEffect, useState } from "react"
 import styled from "styled-components"
-import { api, type User } from "../lib/api"
+import { api } from "../lib/api"
+import type { User } from "../types/index"
+
+/* ------------------ Estilos ------------------ */
 
 const Container = styled.div`
   padding: 0;
@@ -107,6 +110,8 @@ const LoadingText = styled.div`
   color: #6b7280;
 `
 
+/* ------------------ Modal ------------------ */
+
 const Modal = styled.div`
   position: fixed;
   inset: 0;
@@ -120,24 +125,30 @@ const Modal = styled.div`
 
 const ModalContent = styled.div`
   background: white;
-  border-radius: 8px;
+  border-radius: 12px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-  max-width: 448px;
+  max-width: 460px;
   width: 100%;
-  padding: 24px;
+  padding: 28px;
+  animation: fadeIn 0.2s ease-out;
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 `
 
 const ModalTitle = styled.h2`
-  font-size: 20px;
+  font-size: 22px;
   font-weight: bold;
-  margin: 0 0 16px 0;
+  margin: 0 0 20px 0;
   color: #111827;
 `
 
 const Form = styled.form`
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 18px;
 `
 
 const FormGroup = styled.div`
@@ -146,16 +157,15 @@ const FormGroup = styled.div`
 `
 
 const Label = styled.label`
-  display: block;
   font-size: 14px;
   font-weight: 500;
   color: #374151;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
 `
 
 const Input = styled.input`
   width: 100%;
-  padding: 8px 12px;
+  padding: 10px 12px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   font-size: 14px;
@@ -170,11 +180,10 @@ const Input = styled.input`
 
 const Select = styled.select`
   width: 100%;
-  padding: 8px 12px;
+  padding: 10px 12px;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   font-size: 14px;
-  box-sizing: border-box;
 
   &:focus {
     outline: none;
@@ -186,39 +195,39 @@ const Select = styled.select`
 const ButtonGroup = styled.div`
   display: flex;
   gap: 12px;
-  padding-top: 16px;
+  padding-top: 12px;
 `
 
 const CancelButton = styled.button`
   flex: 1;
-  padding: 8px 16px;
+  padding: 10px 16px;
   border: 1px solid #d1d5db;
   background: white;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
-  transition: background-color 0.2s;
 
   &:hover {
-    background-color: #f9fafb;
+    background-color: #f3f4f6;
   }
 `
 
 const SubmitButton = styled.button`
   flex: 1;
-  padding: 8px 16px;
+  padding: 10px 16px;
   background-color: #2563eb;
   color: white;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
-  transition: background-color 0.2s;
 
   &:hover {
     background-color: #1d4ed8;
   }
 `
+
+/* ------------------ Componente principal ------------------ */
 
 export default function Usuarios() {
   const [users, setUsers] = useState<User[]>([])
@@ -258,21 +267,21 @@ export default function Usuarios() {
               <TableHeader>Nombre</TableHeader>
               <TableHeader>Email</TableHeader>
               <TableHeader>Rol</TableHeader>
+              <TableHeader>Ingenio</TableHeader>
               <TableHeader>Fecha Creación</TableHeader>
             </tr>
           </TableHead>
           <TableBody>
             {users.map((user) => (
               <tr key={user.id}>
-                <TableCell>
-                  <UserName>{user.name}</UserName>
-                </TableCell>
+                <TableCell><UserName>{user.name}</UserName></TableCell>
                 <TableCell>{user.email}</TableCell>
                 <TableCell>
                   <RoleBadge role={user.role}>
                     {user.role === "admin" ? "Administrador" : user.role === "technician" ? "Técnico" : "Visualizador"}
                   </RoleBadge>
                 </TableCell>
+                {/* <TableCell>{user.ingenioId}</TableCell> */}
                 <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
               </tr>
             ))}
@@ -293,15 +302,37 @@ export default function Usuarios() {
   )
 }
 
+/* ------------------ Formulario de creación ------------------ */
+
 function UserForm({ onClose, onSave }: { onClose: () => void; onSave: () => void }) {
+  // const [ingenios, setIngenios] = useState<Ingenio[]>([])
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     role: "viewer" as "admin" | "technician" | "viewer",
+    password: "",
+    ingenioId: 2,
   })
+
+  useEffect(() => {
+    // loadIngenios()
+  }, [])
+
+  // const loadIngenios = async () => {
+  //   try {
+  //     const data = await api.getIngenios()
+  //     setIngenios(data)
+  //     if (data.length > 0) {
+  //       setFormData((prev) => ({ ...prev, ingenioId: data[0].id }))
+  //     }
+  //   } catch (err) {
+  //     console.error("Error cargando ingenios:", err)
+  //   }
+  // }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
     try {
       await api.createUser(formData)
       onSave()
@@ -345,11 +376,32 @@ function UserForm({ onClose, onSave }: { onClose: () => void; onSave: () => void
             </Select>
           </FormGroup>
 
+          <FormGroup>
+            <Label>Contraseña</Label>
+            <Input
+              type="password"
+              required
+              minLength={6}
+              value={formData.password}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+            />
+          </FormGroup>
+
+          <FormGroup>
+            <Label>Ingenio</Label>
+            <Select
+              value={formData.ingenioId}
+              onChange={(e) => setFormData({ ...formData, ingenioId: Number(e.target.value) })}
+            >
+              {/* {ingenios.map((i) => (
+                <option key={i.id} value={i.id}>{i.name}</option>
+              ))} */}
+            </Select>
+          </FormGroup>
+
           <ButtonGroup>
-            <CancelButton type="button" onClick={onClose}>
-              Cancelar
-            </CancelButton>
-            <SubmitButton type="submit">Crear</SubmitButton>
+            <CancelButton type="button" onClick={onClose}>Cancelar</CancelButton>
+            <SubmitButton type="submit">Crear Usuario</SubmitButton>
           </ButtonGroup>
         </Form>
       </ModalContent>

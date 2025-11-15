@@ -10,6 +10,7 @@ export const getAllUsers = async (_req: Request, res: Response) => {
 
 export const createUser = async (req: Request, res: Response) => {
     const { email, name, role, password, ingenioId } = req.body;
+    console.log("Received user creation request:", req.body);
 
     const hash = await hashPassword(password);
     const user = await prisma.user.create({

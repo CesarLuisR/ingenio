@@ -15,7 +15,6 @@ export const loginCtrl: RequestHandler = async (req, res) => {
         return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    // Set user info in session
     req.session.user = {
         id: user.id,
         email: user.email,

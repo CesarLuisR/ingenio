@@ -23,10 +23,10 @@ export default function App() {
 					<Route path="/" element={<Layout />}>
 						<Route index element={<Dashboard />} />
 						<Route path="sensor/:id" element={<SensorDetail />} />
+						<Route path="usuarios" element={<Usuarios />} />
 						<Route path="sensores" element={<Sensores />} />
 						<Route path="mantenimientos" element={<Mantenimientos />} />
 						<Route path="fallos" element={<Fallos />} />
-						<Route path="usuarios" element={<Usuarios />} />
 						<Route path="analisis" element={<Analisis />} />
 						<Route path="tecnicos" element={<Technicians />} />
 						<Route path="*" element={<div>Página no encontrada</div>} />
