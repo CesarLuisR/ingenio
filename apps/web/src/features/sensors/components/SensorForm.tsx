@@ -37,6 +37,7 @@ export default function SensorForm({
 		active: sensor?.active ?? initialConfig.active ?? true,
 		intervalMs: initialConfig.intervalMs || 1000,
 		metricsConfig: initialMetrics,
+		ingenioId: 1,
 	});
 
 	// Cuando cambia el sensor que se edita
@@ -51,6 +52,7 @@ export default function SensorForm({
 			active: sensor?.active ?? baseConfig.active ?? true,
 			intervalMs: baseConfig.intervalMs || 1000,
 			metricsConfig: baseMetrics,
+			ingenioId: 1,
 		});
 	}, [sensor]);
 
@@ -76,6 +78,7 @@ export default function SensorForm({
 				configVersion: baseConfig.configVersion || "v1",
 				createdAt: baseConfig.createdAt || new Date().toISOString(),
 				lastSeen: sensor?.lastSeen || null,
+				ingenioId: 1,
 			};
 
 			// Payload unificado

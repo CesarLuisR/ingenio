@@ -49,6 +49,7 @@ export const createMaintenance = async (req: Request, res: Response) => {
                 durationMinutes,
                 notes,
                 cost,
+                ingenioId: 1,
             },
         });
 

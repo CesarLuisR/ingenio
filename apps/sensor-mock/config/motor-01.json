@@ -1,47 +1,47 @@
 {
-	"sensorId": "motor-01-updated-2",
-	"type": "induction-motor",
-	"location": "Planta A - Línea 2",
-	"intervalMs": 5000,
-	"ingenioId": 2,
-	"metricsConfig": {
-		"thermal": {
-			"motorTemperature": {
-				"max": 35,
-				"min": 25
-			},
-			"ambientTemperature": {
-				"max": 35,
-				"min": 20
-			}
-		},
-		"electrical": {
-			"power": {
-				"max": 900,
-				"min": 400
-			},
-			"current": {
-				"max": 5,
-				"min": 2.5
-			},
-			"voltage": {
-				"max": 240,
-				"min": 220
-			}
-		},
-		"mechanical": {
-			"rpm": {
-				"max": 1850,
-				"min": 1750
-			},
-			"vibrationRMS": {
-				"max": 0.05,
-				"min": 0.01
-			}
-		}
-	},
-	"active": true,
-	"configVersion": "v1",
-	"createdAt": "2025-10-17T12:00:00Z",
-	"lastSeen": "2025-10-17T12:30:00.000Z"
+  "sensorId": "motor-01",
+  "type": "induction-motor",
+  "location": "Planta A - Línea 2",
+  "intervalMs": 2000,
+  "metricsConfig": {
+    "thermal": {
+      "motorTemperature": {
+        "max": 35,
+        "min": 25
+      },
+      "ambientTemperature": {
+        "max": 35,
+        "min": 20
+      }
+    },
+    "electrical": {
+      "power": {
+        "max": 900,
+        "min": 400
+      },
+      "current": {
+        "max": 5,
+        "min": 2.5
+      },
+      "voltage": {
+        "max": 240,
+        "min": 220
+      }
+    },
+    "mechanical": {
+      "rpm": {
+        "max": 1850,
+        "min": 1750
+      },
+      "vibrationRMS": {
+        "max": 0.05,
+        "min": 0.01
+      }
+    }
+  },
+  "active": true,
+  "configVersion": "v1",
+  "createdAt": "2025-10-17T12:00:00.000Z",
+  "lastSeen": "2025-10-17T12:30:00.000Z",
+  "ingenioId": 1
 }

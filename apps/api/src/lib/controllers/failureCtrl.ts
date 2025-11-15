@@ -42,6 +42,7 @@ export const createFailure = async (req: Request, res: Response) => {
                 severity,
                 status,
                 maintenanceId,
+                ingenioId: 1,
             },
         });
 

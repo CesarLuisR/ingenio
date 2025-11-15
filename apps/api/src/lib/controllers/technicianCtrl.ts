@@ -35,7 +35,7 @@ export const createTechnician = async (req: Request, res: Response) => {
             return res.status(400).json({ error: "El nombre es obligatorio" });
 
         const technician = await prisma.technician.create({
-            data: { name, email, phone, active },
+            data: { name, email, phone, active, ingenioId: 1 },
         });
 
         res.status(201).json(technician);
