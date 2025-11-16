@@ -2,7 +2,7 @@
   "sensorId": "motor-01-hwt905",
   "type": "inclinometer",
   "location": "Planta A - L\u00c3\u00adnea 1",
-  "intervalMs": 1000,
+  "intervalMs": 5000,
   "metricsConfig": {
     "mechanical": {
       "yaw": {
@@ -21,6 +21,7 @@
   },
   "active": true,
   "configVersion": "v1",
-  "createdAt": "2025-11-09T00:00:00Z",
-  "lastSeen": "2025-11-09T00:00:00.000Z"
+  "createdAt": "2025-11-09T00:00:00.000Z",
+  "lastSeen": "2025-11-09T00:00:00.000Z",
+  "ingenioId": 1
 }

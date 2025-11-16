@@ -8,6 +8,7 @@ import {
     type Failure,
 } from "../../../types";
 import { findByName, parseHumanDate, normalize } from "../utils";
+import { useSessionStore } from "../../../store/sessionStore";
 
 export function useMaintenancesLogic() {
     const [maintenances, setMaintenances] = useState<Maintenance[]>([]);
@@ -26,10 +27,12 @@ export function useMaintenancesLogic() {
 
     // Filtros
     const [filterSensorId, setFilterSensorId] = useState("");
-       const [filterTechnicianId, setFilterTechnicianId] = useState("");
+    const [filterTechnicianId, setFilterTechnicianId] = useState("");
     const [filterType, setFilterType] = useState("");
     const [filterHasFailures, setFilterHasFailures] = useState("");
     const [filterText, setFilterText] = useState("");
+
+    const user = useSessionStore((s) => s.user);
 
     useEffect(() => {
         loadData();
@@ -70,6 +73,10 @@ export function useMaintenancesLogic() {
         setImporting(true);
 
         try {
+            if (!user) {
+                throw new Error("Usuario no autenticado");
+            }
+
             const buffer = await file.arrayBuffer();
             const workbook = XLSX.read(buffer, { type: "array" });
             const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -153,6 +160,7 @@ export function useMaintenancesLogic() {
                         performedAt: parsedDate.toISOString(),
                         durationMinutes,
                         cost,
+                        ingenioId: user?.ingenioId,
                     };
 
                     await api.createMaintenance(payload);
@@ -181,21 +189,21 @@ export function useMaintenancesLogic() {
                 .map((r) =>
                     r.status === "ok"
                         ? `✔️ Fila ${r.rowIndex}: importada (${JSON.stringify(
-                                r.row,
-                          )})`
+                            r.row,
+                        )})`
                         : `❌ Fila ${r.rowIndex}: ignorada (${r.reason}) → ${JSON.stringify(
-                                r.row,
-                          )}`,
+                            r.row,
+                        )}`,
                 )
                 .join("\n");
 
             setImportSummary(
                 `Importación completada:
-${ok} filas procesadas correctamente,
-${skipped} filas ignoradas.
+                ${ok} filas procesadas correctamente,
+                ${skipped} filas ignoradas.
 
-Detalles:
-${details}`,
+                Detalles:
+                ${details}`,
             );
 
             setShowImport(false);

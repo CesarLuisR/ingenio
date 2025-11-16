@@ -13,7 +13,7 @@ if (!fs.existsSync(configPath)) {
 }
 
 const fileContent = fs.readFileSync(configPath, 'utf-8');
-const explicitConfig: ConfigData = JSON.parse(fileContent);
+export const explicitConfig: ConfigData = JSON.parse(fileContent);
 
 async function run() {
     while (true) {

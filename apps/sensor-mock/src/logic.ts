@@ -1,5 +1,6 @@
 import { ConfigData, ReadingData } from "./types";
 import fs from "fs/promises";
+import { explicitConfig } from ".";
 
 const lastValues: Record<string, Record<string, number>> = {};
 
@@ -59,7 +60,20 @@ export async function sendReading(url: string, reading: ReadingData, configPath:
             body: JSON.stringify(reading)
         });
 
+
+        if (res.status === 404) {
+            console.log("Pidiendo config al sensor mock");
+            await sendSensor(url, explicitConfig);
+            return null;
+        }
+
+        if (res.status !== 200 && res.status !== 202) {
+            console.log("Respuesta: ", res.status);
+            return null;
+        }
+
         const data = await res.json();
+        
         if (data.config) {
             console.log("Nueva configuración recibida. Guardando en:", configPath);
 
@@ -93,7 +107,7 @@ export async function sendSensor(url: string, sensorConfig: ConfigData): Promise
             body: JSON.stringify(sensorConfig)
         });
         console.log("Respuesta: ", res.status);
-        return true;
+        return res.ok;
     } catch (e: any) {
         if (e.code === "ECONNREFUSED")
             console.error("Conexion rechazada. Revise el estado del servidor");

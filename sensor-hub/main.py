@@ -1,7 +1,7 @@
 import os, json, time, datetime, requests
 from sensors.hwt905 import HWT905Sensor
 
-API_URL = os.getenv("API_URL", "http://localhost:5000/api")
+API_URL = os.getenv("API_URL", "http://localhost:5000")
 CONFIG_PATH = os.getenv("CONFIG_PATH", "config.json")
 
 CONFIG = {}
@@ -55,6 +55,12 @@ def send_reading(reading):
 
         # Mostrar siempre código de respuesta
         print(f"📨 Respuesta del servidor: {res.status_code}")
+
+        # Cuando el servidor dice ok=false => reenviar config
+        if res.status_code == 404:
+            print("⚠️ El servidor no reconoce este sensor. Reenviando configuración...")
+            send_sensor(CONFIG)
+            return
 
         # Si no hay contenido, no hacemos nada más
         if not res.content:
