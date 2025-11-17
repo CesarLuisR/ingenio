@@ -10,29 +10,41 @@ import Fallos from "./features/failures";
 import Technicians from "./features/technicians";
 import LoginModule from "./features/auth";
 import ProtectedRoute from "./features/auth/components/ProtectedRoute";
+import { GlobalWebSocketProvider } from "./features/shared/components/WebSocketProvider";
 
 export default function App() {
 	return (
 		<BrowserRouter>
-			<Routes>
-				{/* login no está protegido */}
-				<Route path="/login" element={<LoginModule />} />
+			<GlobalWebSocketProvider>
+				<Routes>
+					{/* login no está protegido */}
+					<Route path="/login" element={<LoginModule />} />
 
-				{/* todo lo demás sí */}
-				<Route element={<ProtectedRoute />}>
-					<Route path="/" element={<Layout />}>
-						<Route index element={<Dashboard />} />
-						<Route path="sensor/:id" element={<SensorDetail />} />
-						<Route path="usuarios" element={<Usuarios />} />
-						<Route path="sensores" element={<Sensores />} />
-						<Route path="mantenimientos" element={<Mantenimientos />} />
-						<Route path="fallos" element={<Fallos />} />
-						<Route path="analisis" element={<Analisis />} />
-						<Route path="tecnicos" element={<Technicians />} />
-						<Route path="*" element={<div>Página no encontrada</div>} />
+					{/* todo lo demás sí */}
+					<Route element={<ProtectedRoute />}>
+						<Route path="/" element={<Layout />}>
+							<Route index element={<Dashboard />} />
+							<Route
+								path="sensor/:id"
+								element={<SensorDetail />}
+							/>
+							<Route path="usuarios" element={<Usuarios />} />
+							<Route path="sensores" element={<Sensores />} />
+							<Route
+								path="mantenimientos"
+								element={<Mantenimientos />}
+							/>
+							<Route path="fallos" element={<Fallos />} />
+							<Route path="analisis" element={<Analisis />} />
+							<Route path="tecnicos" element={<Technicians />} />
+							<Route
+								path="*"
+								element={<div>Página no encontrada</div>}
+							/>
+						</Route>
 					</Route>
-				</Route>
-			</Routes>
+				</Routes>
+			</GlobalWebSocketProvider>
 		</BrowserRouter>
 	);
 }

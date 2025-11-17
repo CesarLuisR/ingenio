@@ -26,6 +26,7 @@ export const useReadingsStore = create<ReadingState>((set, get) => ({
                 newMap.set(sensorId, [reading]);
             }
 
+            console.log(newMap);
             return { sensorMap: newMap };
         });
     },

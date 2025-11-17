@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { api, type Sensor } from "../../../lib/api";
+import { api } from "../../../lib/api";
+import { type Sensor } from "../../../types";
 import { useReadingsStore } from "../../../store/readingState";
 
 export interface SensorWithStatus extends Sensor {
@@ -19,7 +20,7 @@ export function useDashboardData() {
 				const data = await api.getSensors();
 
 				const enriched = data.map((sensor) => {
-					const readings = sensorMap.get(sensor.id);
+					const readings = sensorMap.get(sensor.id.toString());
 					if (!readings || readings.length === 0)
 						return { ...sensor, active: false };
 

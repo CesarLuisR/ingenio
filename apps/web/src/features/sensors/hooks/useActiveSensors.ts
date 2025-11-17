@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useReadingsStore } from "../../../store/readingState";
-import type { Sensor } from "../../../lib/api";
+import type { Sensor } from "../../../types";
 
 export function useActiveSensors(sensors: Sensor[]) {
 	const [activeMap, setActiveMap] = useState<Record<string, boolean>>({});

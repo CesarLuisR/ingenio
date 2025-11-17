@@ -5,7 +5,6 @@ import {
 	type AnalysisResponse,
 } from "../../../types";
 import { useReadingsStore } from "../../../store/readingState";
-import { useWebSocketReadings } from "../../shared/hooks/useWebSocketReadings";
 import { api } from "../../../lib/api";
 
 const MAX_POINTS = 30;
@@ -22,9 +21,6 @@ export function useSensorDetail(id?: string) {
 	const [chartData, setChartData] = useState<Record<string, any[]>>({});
 
 	const sensorMap = useReadingsStore((s) => s.sensorMap);
-
-	// 🔹 Conectamos al WebSocket global (ya gestiona reconexión y parsing)
-	useWebSocketReadings({ filterSensorId: id });
 
 	// 🔹 Cargar datos estáticos e históricos al montar
 	useEffect(() => {

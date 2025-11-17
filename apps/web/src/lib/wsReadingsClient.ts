@@ -57,10 +57,12 @@ function connect() {
 
 	ws.onopen = () => {
 		reconnectAttempt = 0;
+		emitStatus("connected")
 		console.log("✅ WebSocket global conectado");
 	};
 
 	ws.onerror = (err) => {
+		emitStatus("closed")
 		console.error("❌ Error en WebSocket global:", err);
 	};
 
@@ -73,6 +75,8 @@ function connect() {
 		} else {
 			console.log("🔌 WebSocket cerrado y sin listeners, no se reconecta.");
 		}
+
+		emitStatus("closed")
 	};
 }
 
@@ -81,6 +85,24 @@ export function startReadingsSocket() {
 	if (!socket || socket.readyState === WebSocket.CLOSED) {
 		connect();
 	}
+}
+
+let connectionStatus: "connecting" | "connected" | "closed" = "connecting";
+let statusListeners: ((s: typeof connectionStatus) => void)[] = [];
+
+export function subscribeToStatus(listener: (s: typeof connectionStatus) => void) {
+	statusListeners.push(listener);
+	// enviar estado actual por si ya está conectado
+	listener(connectionStatus);
+
+	return () => {
+		statusListeners = statusListeners.filter(l => l !== listener);
+	};
+}
+
+export function emitStatus(s: typeof connectionStatus) {
+	connectionStatus = s;
+	statusListeners.forEach(fn => fn(s));
 }
 
 /**

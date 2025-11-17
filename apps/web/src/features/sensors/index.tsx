@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { useReadingsStore } from "../../store/readingState";
 import { useSensors } from "./hooks/useSensors";
 import { useActiveSensors } from "./hooks/useActiveSensors";
-import { useWebSocketReadings } from "../shared/hooks/useWebSocketReadings";
 import type { Sensor } from "../../types";
 import {
 	Badge,
@@ -26,7 +25,6 @@ import {
 import SensorForm from "./components/SensorForm";
 
 export default function Sensores() {
-	useWebSocketReadings();
 	const navigate = useNavigate();
 
 	const {
