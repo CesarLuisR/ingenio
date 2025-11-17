@@ -60,7 +60,7 @@ model Technician {
 
 model Failure {
   id             Int          @id @default(autoincrement())
-  sensorId       Int
+  sensorId       Int 
   occurredAt     DateTime     @default(now())
   description    String
   severity       String
@@ -95,11 +95,18 @@ model Maintenance {
   ingenio         Ingenio       @relation(fields: [ingenioId], references: [id])
 }
 
+enum UserRole {
+  SUPERADMIN
+  ADMIN
+  TECNICO
+  LECTOR
+}
+
 model User {
   id        Int        @id @default(autoincrement())
   email     String     @unique
   name      String
-  role      String
+  role      UserRole
   passwordHash String 
   createdAt DateTime   @default(now())
 

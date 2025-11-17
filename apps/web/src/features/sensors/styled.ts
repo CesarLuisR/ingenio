@@ -3,8 +3,10 @@ import styled from "styled-components";
 /* --- GENERAL LAYOUT --- */
 export const Container = styled.div`
 	padding: 2rem 1.5rem;
-	max-width: 1200px;
+	max-width: 1300px;
 	margin: 0 auto;
+	background: #f8fafc;
+	min-height: 100vh;
 `;
 
 export const Header = styled.div`
@@ -12,6 +14,8 @@ export const Header = styled.div`
 	justify-content: space-between;
 	align-items: center;
 	margin-bottom: 2rem;
+	padding-bottom: 1rem;
+	border-bottom: 1px solid #e2e8f0;
 	flex-wrap: wrap;
 	gap: 1rem;
 `;
@@ -23,6 +27,7 @@ export const Title = styled.h1`
 	margin: 0;
 `;
 
+/* --- BUTTONS --- */
 export const Button = styled.button`
 	padding: 0.6rem 1.25rem;
 	background-color: #2563eb;
@@ -31,106 +36,13 @@ export const Button = styled.button`
 	border: none;
 	cursor: pointer;
 	font-weight: 500;
-	box-shadow: 0 2px 4px rgba(37, 99, 235, 0.25);
-	transition: all 0.2s ease;
+	box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+	transition: 0.2s ease;
 
 	&:hover {
 		background-color: #1d4ed8;
 		transform: translateY(-1px);
 	}
-`;
-
-export const SearchInput = styled.input`
-	width: 100%;
-	padding: 0.75rem 1rem;
-	border: 1px solid #d1d5db;
-	border-radius: 0.5rem;
-	margin-bottom: 1.5rem;
-	font-size: 1rem;
-
-	&:focus {
-		outline: none;
-		border-color: #2563eb;
-		box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
-	}
-`;
-
-/* --- GRID & CARDS --- */
-export const Grid = styled.div`
-	display: grid;
-	gap: 1.5rem;
-	grid-template-columns: 1fr;
-
-	@media (min-width: 768px) {
-		grid-template-columns: repeat(2, 1fr);
-	}
-	@media (min-width: 1024px) {
-		grid-template-columns: repeat(3, 1fr);
-	}
-`;
-
-export const Card = styled.div`
-	background-color: white;
-	border-radius: 0.75rem;
-	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-	padding: 1.5rem;
-	border: 1px solid #e5e7eb;
-	transition: transform 0.2s;
-
-	&:hover {
-		transform: translateY(-2px);
-	}
-`;
-
-export const CardHeader = styled.div`
-	display: flex;
-	justify-content: space-between;
-	align-items: flex-start;
-	margin-bottom: 0.75rem;
-`;
-
-export const CardTitle = styled.h3`
-	font-weight: 600;
-	font-size: 1.125rem;
-	color: #111827;
-	margin: 0;
-`;
-
-export const CardSubtitle = styled.p`
-	font-size: 0.875rem;
-	color: #6b7280;
-	margin: 0;
-`;
-
-export const Badge = styled.span<{ $status: string }>`
-	padding: 0.35rem 0.6rem;
-	border-radius: 0.4rem;
-	font-size: 0.75rem;
-	font-weight: 500;
-	background-color: ${(p) =>
-		p.$status === "active"
-			? "#d1fae5"
-			: p.$status === "maintenance"
-			? "#fef3c7"
-			: "#f3f4f6"};
-	color: ${(p) =>
-		p.$status === "active"
-			? "#065f46"
-			: p.$status === "maintenance"
-			? "#92400e"
-			: "#374151"};
-`;
-
-export const Location = styled.p`
-	font-size: 0.875rem;
-	color: #4b5563;
-	margin-bottom: 1rem;
-`;
-
-export const ButtonGroup = styled.div`
-	display: flex;
-	gap: 0.75rem;
-	margin-top: 0.5rem;
 `;
 
 export const SecondaryButton = styled(Button)`
@@ -140,6 +52,17 @@ export const SecondaryButton = styled(Button)`
 
 	&:hover {
 		background-color: #e5e7eb;
+	}
+`;
+
+export const FilterButton = styled(SecondaryButton)<{ $active: boolean }>`
+	background-color: ${(p) => (p.$active ? "#2563eb" : "#f3f4f6")};
+	color: ${(p) => (p.$active ? "white" : "#374151")};
+	border: ${(p) => (p.$active ? "1px solid #1d4ed8" : "1px solid #d1d5db")};
+	box-shadow: ${(p) => (p.$active ? "0 0 8px rgba(37, 99, 235, 0.4)" : "none")};
+
+	&:hover {
+		background-color: ${(p) => (p.$active ? "#1d4ed8" : "#e5e7eb")};
 	}
 `;
 
@@ -153,37 +76,148 @@ export const DangerButton = styled(Button)`
 	}
 `;
 
+/* --- SEARCH INPUT --- */
+export const SearchInput = styled.input`
+	width: 100%;
+	max-width: 350px;
+	padding: 0.7rem 1rem;
+	border: 1px solid #d1d5db;
+	border-radius: 0.5rem;
+	font-size: 1rem;
+	background-color: white;
+
+	&:focus {
+		outline: none;
+		border-color: #2563eb;
+		box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+	}
+`;
+
+/* --- GRID --- */
+export const Grid = styled.div`
+	display: grid;
+	gap: 1.5rem;
+	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+`;
+
+/* --- CARD (NUEVO ESTILO PRO) --- */
+export const Card = styled.div`
+	background: linear-gradient(180deg, #ffffff 0%, #f9fafb 100%);
+	border-radius: 0.9rem;
+	padding: 1.6rem;
+	border: 1px solid #e2e8f0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.9rem;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+	transition: all 0.25s ease;
+
+	&:hover {
+		transform: translateY(-4px);
+		box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+		border-color: #cbd5e1;
+	}
+`;
+
+export const CardHeader = styled.div`
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	padding-bottom: 0.8rem;
+	border-bottom: 1px solid #e2e8f0;
+`;
+
+export const CardTitle = styled.h3`
+	font-size: 1.25rem;
+	font-weight: 700;
+	letter-spacing: -0.01em;
+	color: #0f172a;
+	margin: 0;
+`;
+
+export const CardSubtitle = styled.p`
+	font-size: 0.9rem;
+	color: #64748b;
+	margin: 0;
+	font-weight: 500;
+`;
+
+export const Location = styled.p`
+	font-size: 0.9rem;
+	font-weight: 500;
+	color: #475569;
+	margin: 0;
+	opacity: 0.9;
+`;
+
+/* --- BADGE --- */
+export const Badge = styled.span<{ $status: string }>`
+	padding: 0.45rem 0.7rem;
+	border-radius: 0.5rem;
+	font-size: 0.75rem;
+	font-weight: 600;
+	text-transform: capitalize;
+	background-color: ${(p) =>
+		p.$status === "active"
+			? "rgba(16,185,129,0.15)"
+			: p.$status === "inactive"
+			? "rgba(239,68,68,0.15)"
+			: "rgba(148,163,184,0.25)"};
+
+	color: ${(p) =>
+		p.$status === "active"
+			? "#059669"
+			: p.$status === "inactive"
+			? "#dc2626"
+			: "#475569"};
+
+	border: 1px solid ${(p) =>
+		p.$status === "active"
+			? "#10b981"
+			: p.$status === "inactive"
+			? "#ef4444"
+			: "#94a3b8"};
+`;
+
+export const ButtonGroup = styled.div`
+	display: flex;
+	gap: 0.75rem;
+	margin-top: 0.5rem;
+`;
+
+/* --- LOADING --- */
 export const Loading = styled.div`
 	text-align: center;
 	padding: 3rem;
 	color: #6b7280;
-	font-size: 1rem;
+	font-size: 1.1rem;
 `;
+/* -----------------------------------
+   MODAL (TAL CUAL, PERO MÁS ELEGANTE)
+------------------------------------- */
 
-/* --- MODAL --- */
+
 export const Modal = styled.div`
 	position: fixed;
 	inset: 0;
-	background-color: rgba(15, 23, 42, 0.6);
+	background-color: rgba(15, 23, 42, 0.55);
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	padding: 1.5rem;
+	padding: 2rem;
 	z-index: 100;
-	backdrop-filter: blur(3px);
+	backdrop-filter: blur(4px);
 `;
 
 export const ModalContent = styled.div`
 	background-color: #ffffff;
 	border-radius: 0.75rem;
-	box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+	box-shadow: 0 14px 32px rgba(0, 0, 0, 0.15);
 	max-width: 600px;
 	width: 100%;
 	padding: 2rem;
 	max-height: 90vh;
 	overflow-y: auto;
-	display: flex;
-	flex-direction: column;
 `;
 
 export const ModalTitle = styled.h2`
@@ -195,6 +229,7 @@ export const ModalTitle = styled.h2`
 	padding-bottom: 0.5rem;
 `;
 
+/* --- FORM --- */
 export const Form = styled.form`
 	display: flex;
 	flex-direction: column;
@@ -215,7 +250,7 @@ export const Label = styled.label`
 
 export const Input = styled.input`
 	width: 100%;
-	padding: 0.6rem 0.8rem;
+	padding: 0.65rem 0.85rem;
 	border: 1px solid #d1d5db;
 	border-radius: 0.5rem;
 	font-size: 1rem;
@@ -268,7 +303,10 @@ export const SubmitButton = styled(Button)`
 	}
 `;
 
-/* --- METRICS CONFIG EDITOR --- */
+/* ================================ */
+/*      METRICS CONFIG EDITOR       */
+/* ================================ */
+
 export const EditorContainer = styled.div`
 	display: flex;
 	flex-direction: column;
@@ -375,3 +413,4 @@ export const DeleteButton = styled.button`
 		color: #dc2626;
 	}
 `;
+

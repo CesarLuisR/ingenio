@@ -90,6 +90,7 @@ export default function LoginModule() {
 		try {
 			const user = await api.login(email, password);
 			setUser(user);
+			console.log(user);
 			navigate("/");
 		} catch (err: any) {
 			setError(err.message || "Error al iniciar sesión");

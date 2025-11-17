@@ -28,6 +28,8 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: "/ws" });
 const messageBus = new WebSocketBus(wss);
 
+import requireAuth from "./lib/middlewares/auth";
+
 import sensorRoutes from "./lib/routes/sensorRoutes";
 import maintenanceRoutes from "./lib/routes/maintenanceRoutes";
 import failureRoutes from "./lib/routes/failureRoutes";
@@ -35,7 +37,8 @@ import userRoutes from "./lib/routes/userRoutes";
 import analyzeRoutes from "./lib/routes/analyzeRoutes";
 import technicianRoutes from "./lib/routes/technicianRoutes";
 import authRoutes from "./lib/routes/authRoutes";
-import requireAuth from "./lib/middlewares/auth";
+import ingenioRoutes from "./lib/routes/ingenioRoutes";
+import metricsRoutes from "./lib/routes/metricsRoutes";
 
 // Sensor info ingestion
 app.use("/ingest", ingestRoutes(messageBus));
@@ -48,6 +51,7 @@ app.use("/api/failures", requireAuth, failureRoutes);
 app.use("/api/users", requireAuth, userRoutes);
 app.use("/api/analyze", requireAuth, analyzeRoutes);
 app.use("/api/technicians", requireAuth, technicianRoutes); 
-app.use("/api/ingenios", requireAuth, require("./lib/routes/ingenioRoutes").default);
+app.use("/api/ingenios", requireAuth, ingenioRoutes);
+app.use("/api/metrics", requireAuth, metricsRoutes);
 
 export default server;

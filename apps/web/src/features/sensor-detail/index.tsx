@@ -5,11 +5,12 @@ import { SensorHeader } from "./components/SensorHeader";
 import { SensorCharts } from "./components/SensorChart";
 import { SensorMaintenances } from "./components/SensorMaintenances";
 import { SensorFailures } from "./components/SensorFailures";
-import { SensorAnalysis } from "./components/SensorAnalysis";
+import { SensorMetrics } from "./components/SensorMetrics";
+// import { SensorAnalysis } from "./components/SensorAnalysis";
 
 export default function SensorDetail() {
 	const { id } = useParams<{ id: string }>();
-	const { sensorName, maintenances, failures, analysis, latest, chartData } =
+	const { sensorName, maintenances, failures, /*analysis,*/ latest, chartData, sensorIntId } =
 		useSensorDetail(id);
 
 	return (
@@ -19,9 +20,10 @@ export default function SensorDetail() {
 			{latest ? (
 				<>
 					<SensorCharts chartData={chartData} latest={latest} />
+					<SensorMetrics sensorId={sensorIntId} />
 					<SensorMaintenances items={maintenances} />
 					<SensorFailures items={failures} />
-					<SensorAnalysis data={analysis} />
+					{/* <SensorAnalysis data={analysis} /> */}
 				</>
 			) : (
 				<p>Esperando lecturas...</p>

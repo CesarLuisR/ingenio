@@ -22,6 +22,7 @@ class PostgresRepository implements DBRepository {
 				lastSeen: sensorConfig.lastSeen
 					? new Date(sensorConfig.lastSeen)
 					: undefined,
+				active: true
 			},
 			create: {
 				sensorId: sensorConfig.sensorId,

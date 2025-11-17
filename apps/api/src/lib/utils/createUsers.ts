@@ -1,3 +1,4 @@
+import { UserRole } from "@prisma/client";
 import prisma from "../../database/postgres.db";
 
 export async function createUsers() {
@@ -22,7 +23,7 @@ export async function createUsers() {
             data: {
                 name: "admin",
                 email: "admin@admin.com",
-                role: "admin",
+                role: UserRole.ADMIN,
                 passwordHash: "$2b$10$y9EfTvn5iCRn.QvFZO2mO.hwO3wPXXtYBNnu1ONsw5Tv8Og4Eo8ba", //
                 ingenioId: 1
             },

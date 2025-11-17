@@ -4,6 +4,7 @@ import { useReadingsStore } from "../../store/readingState";
 import { useSensors } from "./hooks/useSensors";
 import { useActiveSensors } from "./hooks/useActiveSensors";
 import type { Sensor } from "../../types";
+
 import {
 	Badge,
 	Button,
@@ -21,7 +22,9 @@ import {
 	SearchInput,
 	SecondaryButton,
 	Title,
+	FilterButton,
 } from "./styled";
+
 import SensorForm from "./components/SensorForm";
 
 export default function Sensores() {
@@ -39,12 +42,13 @@ export default function Sensores() {
 
 	const [showForm, setShowForm] = useState(false);
 	const [editingSensor, setEditingSensor] = useState<Sensor | null>(null);
-	const [filterMode, setFilterMode] = useState<"all" | "active" | "inactive" | "recent">("all");
+	const [filterMode, setFilterMode] =
+		useState<"all" | "active" | "inactive" | "recent">("all");
 
 	const sensorMap = useReadingsStore((s) => s.sensorMap);
 	const activeMap = useActiveSensors(sensors);
 
-	// --- Enriquecimiento de sensores (debe ir ANTES del return) ---
+	// Enriquecimiento de sensores
 	const enrichedSensors = useMemo(() => {
 		return filteredSensors.map((sensor) => {
 			const sensorKey = sensor.sensorId ?? sensor.id;
@@ -62,14 +66,12 @@ export default function Sensores() {
 					typeof lastReading.timestamp === "string"
 						? Date.parse(lastReading.timestamp)
 						: Number(lastReading.timestamp);
+
 				lastStatus = lastReading.status ?? "unknown";
-				severity = lastReading.severityLevel.toString() ?? "-";
+				severity = lastReading.severityLevel?.toString() ?? "-";
 				totalIssues = lastReading.totalIssues ?? 0;
 				metricsCount = Object.keys(lastReading.metrics || {}).length;
 			}
-
-			const isActive = !!activeMap[sensorKey];
-			const isEnabled = sensor.active;
 
 			return {
 				...sensor,
@@ -79,8 +81,8 @@ export default function Sensores() {
 				severity,
 				totalIssues,
 				metricsCount,
-				isActive,
-				isEnabled,
+				isActive: !!activeMap[sensorKey],
+				isEnabled: sensor.active,
 			};
 		});
 	}, [filteredSensors, sensorMap, activeMap]);
@@ -100,7 +102,6 @@ export default function Sensores() {
 		}
 	}, [enrichedSensors, filterMode]);
 
-	// --- Render principal ---
 	return (
 		<Container>
 			<Header>
@@ -121,19 +122,20 @@ export default function Sensores() {
 					value={searchTerm}
 					onChange={(e) => setSearchTerm(e.target.value)}
 				/>
+
 				<ButtonGroup>
-					<SecondaryButton onClick={() => setFilterMode("all")}>
+					<FilterButton $active={filterMode === "all"} onClick={() => setFilterMode("all")}>
 						Todos
-					</SecondaryButton>
-					<SecondaryButton onClick={() => setFilterMode("active")}>
+					</FilterButton>
+					<FilterButton $active={filterMode === "active"} onClick={() => setFilterMode("active")}>
 						Activos
-					</SecondaryButton>
-					<SecondaryButton onClick={() => setFilterMode("inactive")}>
+					</FilterButton>
+					<FilterButton $active={filterMode === "inactive"} onClick={() => setFilterMode("inactive")}>
 						Inactivos
-					</SecondaryButton>
-					<SecondaryButton onClick={() => setFilterMode("recent")}>
+					</FilterButton>
+					<FilterButton $active={filterMode === "recent"} onClick={() => setFilterMode("recent")}>
 						Recientes
-					</SecondaryButton>
+					</FilterButton>
 				</ButtonGroup>
 			</div>
 
@@ -157,50 +159,31 @@ export default function Sensores() {
 						return (
 							<Card
 								key={sensor.id}
-								style={{ cursor: "pointer" }}
-								onClick={() => navigate(`/sensor/${sensor.sensorId ?? sensor.id}`)}>
+								onClick={() => navigate(`/sensor/${sensor.sensorId ?? sensor.id}`)}
+							>
 								<CardHeader>
 									<div>
 										<CardTitle>{sensor.name}</CardTitle>
 										<CardSubtitle>{sensor.type}</CardSubtitle>
 									</div>
+
 									<Badge $status={badgeStatus}>{badgeLabel}</Badge>
 								</CardHeader>
 
 								<Location>📍 {sensor.location || "Sin ubicación"}</Location>
 
 								{sensor.lastReadingTime && (
-									<p
-										style={{
-											color: "#6b7280",
-											fontSize: "0.875rem",
-											marginBottom: "0.5rem",
-										}}>
-										Última lectura:{" "}
-										{new Date(sensor.lastReadingTime).toLocaleTimeString()}
+									<p style={{ fontSize: "0.9rem", color: "#475569" }}>
+										Última lectura: {new Date(sensor.lastReadingTime).toLocaleTimeString()}
 									</p>
 								)}
 
-								{/* Info del Dashboard */}
 								{sensor.lastReading && (
-									<div
-										style={{
-											display: "flex",
-											flexDirection: "column",
-											gap: "0.3rem",
-											fontSize: "0.875rem",
-											color: "#4b5563",
-											marginBottom: "0.75rem",
-										}}>
-										<span>
-											Estado:{" "}
-											<strong style={{ textTransform: "uppercase" }}>
-												{sensor.lastStatus}
-											</strong>
-										</span>
-										<span>Severidad: {sensor.severity}</span>
-										<span>Issues: {sensor.totalIssues}</span>
-										<span>Métricas: {sensor.metricsCount}</span>
+									<div style={{ fontSize: "0.85rem", color: "#475569", marginBottom: "0.75rem" }}>
+										<div>Estado: <strong>{sensor.lastStatus}</strong></div>
+										<div>Severidad: {sensor.severity}</div>
+										<div>Issues: {sensor.totalIssues}</div>
+										<div>Métricas: {sensor.metricsCount}</div>
 									</div>
 								)}
 
@@ -213,6 +196,7 @@ export default function Sensores() {
 										}}>
 										Editar
 									</SecondaryButton>
+
 									<DangerButton
 										onClick={(e) => {
 											e.stopPropagation();

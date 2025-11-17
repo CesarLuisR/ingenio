@@ -19,6 +19,7 @@ export function useSensorDetail(id?: string) {
 	const [failures, setFailures] = useState<Failure[]>([]);
 	const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
 	const [chartData, setChartData] = useState<Record<string, any[]>>({});
+	const [sensorIntId, setSensorIntId] = useState<number | null>(null);
 
 	const sensorMap = useReadingsStore((s) => s.sensorMap);
 
@@ -30,16 +31,17 @@ export function useSensorDetail(id?: string) {
 			try {
 				const sensor = await api.getSensor(String(id));
 				setSensorName(sensor.name);
+				setSensorIntId(sensor.id);
 
-				const [maints, fails, anal] = await Promise.all([
+				const [maints, fails, /*anal*/] = await Promise.all([
 					api.getMaintenances(),
 					api.getFailures(),
-					api.analyzeData([String(id)]),
+					// api.analyzeData([String(id)]),
 				]);
 
 				setMaintenances(maints.filter((m) => m.sensorId === sensor.id));
 				setFailures(fails.filter((f) => f.sensorId === sensor.id));
-				setAnalysis(anal);
+				// setAnalysis(anal);
 			} catch (err) {
 				console.error("❌ Error cargando datos base:", err);
 			}
@@ -90,6 +92,7 @@ export function useSensorDetail(id?: string) {
 
 	return {
 		sensorName,
+		sensorIntId,
 		maintenances,
 		failures,
 		analysis,

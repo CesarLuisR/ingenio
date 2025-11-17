@@ -1,66 +1,91 @@
+// src/pages/Dashboard/styled.ts
 import styled from "styled-components";
 
 export const Container = styled.div`
-	padding: 2rem;
-	background-color: #f3f4f6;
+	padding: 2rem 3rem;
+	background: #f3f4f6;
 	min-height: 100vh;
 `;
 
-export const Title = styled.h1`
-	font-size: 1.875rem;
-	font-weight: bold;
-	color: #111827;
+export const Header = styled.div`
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
 	margin-bottom: 2rem;
 `;
 
-export const Grid = styled.div`
+export const Title = styled.h1`
+	font-size: 2rem;
+	font-weight: 700;
+	color: #111827;
+`;
+
+export const Subtitle = styled.p`
+	color: #6b7280;
+	margin-top: 0.25rem;
+`;
+
+export const HealthBadge = styled.div<{ status: "ok" | "warning" | "critical" | "neutral" }>`
+	padding: 8px 14px;
+	border-radius: 12px;
+	font-weight: 600;
+	color: white;
+	${(p) =>
+		p.status === "ok"
+			? `background-color: #16a34a;`
+			: p.status === "warning"
+			? `background-color: #ca8a04;`
+			: p.status === "critical"
+			? `background-color: #dc2626;`
+			: `background-color: #6b7280;`}
+`;
+
+export const MetricsGrid = styled.div`
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
 	gap: 1.5rem;
 `;
 
-export const Empty = styled.div`
-	background-color: white;
-	border-radius: 8px;
-	padding: 3rem;
-	text-align: center;
+export const MetricCard = styled.div`
+	background: white;
+	padding: 1.25rem;
+	border-radius: 16px;
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+`;
+
+export const MetricLabel = styled.div`
+	font-size: 0.85rem;
+	font-weight: 600;
 	color: #6b7280;
-	font-size: 1.125rem;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
 `;
 
-export const Card = styled.div`
-	background-color: white;
+export const MetricValue = styled.div`
+	font-size: 2rem;
+	font-weight: 700;
+	color: #111827;
+	margin-top: 0.25rem;
+`;
+
+export const MetricUnit = styled.div`
+	font-size: 0.8rem;
+	color: #9ca3af;
+	margin-top: 0.15rem;
+`;
+
+export const Loader = styled.div`
+	margin-top: 2rem;
+	font-size: 1rem;
+	color: #4b5563;
+`;
+
+export const ErrorBox = styled.div`
+	margin-top: 2rem;
+	background: #fee2e2;
+	color: #b91c1c;
+	padding: 1.25rem;
 	border-radius: 12px;
-	padding: 16px;
-	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-	cursor: pointer;
-	transition: transform 0.2s ease, box-shadow 0.2s ease;
-
-	&:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-	}
-`;
-
-export const Status = styled.span<{ status: string }>`
-	display: inline-block;
-	padding: 4px 10px;
-	border-radius: 6px;
+	border: 1px solid #fecaca;
 	font-weight: 500;
-	color: ${(p) =>
-		p.status === "ok"
-			? "#065f46"
-			: p.status === "warning"
-			? "#92400e"
-			: p.status === "critical"
-			? "#991b1b"
-			: "#374151"};
-	background-color: ${(p) =>
-		p.status === "ok"
-			? "#d1fae5"
-			: p.status === "warning"
-			? "#fef3c7"
-			: p.status === "critical"
-			? "#fee2e2"
-			: "#e5e7eb"};
 `;

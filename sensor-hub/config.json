@@ -2,12 +2,12 @@
   "sensorId": "motor-01-hwt905",
   "type": "inclinometer",
   "location": "Planta A - L\u00c3\u00adnea 1",
-  "intervalMs": 3000,
+  "intervalMs": 1000,
   "metricsConfig": {
     "mechanical": {
       "yaw": {
         "max": 180,
-        "min": 0
+        "min": -180
       },
       "roll": {
         "max": 180,

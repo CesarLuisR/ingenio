@@ -130,3 +130,12 @@ export interface Ingenio {
 	createdAt: string;
 	updatedAt: string;
 }
+
+export interface BaseMetrics {
+	availability: number | null;
+	reliability: number | null;
+	mtbf: number | null;
+	mttr: number | null;
+	mtta: number | null;
+}
+

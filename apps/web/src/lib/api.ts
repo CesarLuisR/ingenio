@@ -1,5 +1,6 @@
 import type {
 	AnalysisResponse,
+	BaseMetrics,
 	Failure,
 	Ingenio,
 	Maintenance,
@@ -93,6 +94,20 @@ class ApiClient {
 			method: "DELETE",
 		});
 	}
+
+	// --- Metrics ---
+	async getSensorMetrics(sensorId: number): Promise<BaseMetrics> {
+		return this.request(`/api/metrics/sensor/${sensorId}`, {
+			method: "GET",
+		});
+	}
+
+	async getIngenioMetrics(ingenioId: number): Promise<BaseMetrics> {
+		return this.request(`/api/metrics/ingenio/${ingenioId}`, {
+			method: "GET",
+		});
+	}
+
 
 	// --- Sensors ---
 	async getSensors(): Promise<Sensor[]> {
