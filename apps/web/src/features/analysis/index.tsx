@@ -13,7 +13,8 @@ import {
 	Legend,
 	ResponsiveContainer,
 } from "recharts";
-import { api, type AnalysisResponse, type Sensor } from "../lib/api";
+import { api } from "../../lib/api";
+import { type AnalysisResponse, type Sensor } from "../../types";
 
 // === estilos base ===
 const Container = styled.div`

@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Usuarios from "./pages/Usuarios";
-import Analisis from "./pages/Analisis";
+import Analisis from "./features/analysis";
 import Dashboard from "./features/dashboard";
 import Layout from "./features/shared/components/Layout";
 import Sensores from "./features/sensors";
@@ -11,6 +10,7 @@ import Technicians from "./features/technicians";
 import LoginModule from "./features/auth";
 import ProtectedRoute from "./features/auth/components/ProtectedRoute";
 import { GlobalWebSocketProvider } from "./features/shared/components/WebSocketProvider";
+import Usuarios from "./features/users";
 
 export default function App() {
 	return (

@@ -236,6 +236,19 @@ class ApiClient {
 		});
 	}
 
+	async updateUser(id: string, data: Partial<User>): Promise<User> {
+		return this.request<User>(`/api/users/${id}`, {
+			method: "PUT",
+			body: JSON.stringify(data),
+		});
+	}
+
+	async deleteUser(id: string): Promise<void> {
+		return this.request<void>(`/api/users/${id}`, {
+			method: "DELETE",
+		});
+	}
+
 	// --- Analysis ---
 	async analyzeData(sensorIds: string[]): Promise<AnalysisResponse> {
 		return this.request<AnalysisResponse>("/api/analyze", {

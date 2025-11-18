@@ -139,3 +139,9 @@ export interface BaseMetrics {
 	mtta: number | null;
 }
 
+export const ROLES = {
+	SUPERADMIN: "SUPERADMIN",
+	ADMIN: "ADMIN",
+	TECNICO: "TECNICO",
+	LECTOR: "LECTOR"
+};
