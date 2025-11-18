@@ -49,6 +49,49 @@ export const Button = styled.button`
 `;
 
 // =============================
+// FILTROS
+// =============================
+export const FiltersBar = styled.div`
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 12px;
+  background: #f9fafb;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+`;
+
+export const SelectInput = styled.select`
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  background: #ffffff;
+  min-width: 150px;
+
+  &:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37,99,235,0.25);
+  }
+`;
+
+export const TextInput = styled.input`
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  background: #ffffff;
+
+  &:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37,99,235,0.25);
+  }
+`;
+
+// =============================
 // LISTA DE TARJETAS
 // =============================
 export const TechnicianList = styled.div`
@@ -127,7 +170,7 @@ export const InfoList = styled.div`
 `;
 
 // =============================
-// BOTONES DE ACCION
+// BOTONES DE ACCIÓN
 // =============================
 export const Actions = styled.div`
   display: flex;
@@ -241,7 +284,7 @@ export const CloseButton = styled.button`
 `;
 
 // =============================
-// FORMULARIO MODAL
+// FORMULARIO
 // =============================
 export const Form = styled.form`
   display: flex;
@@ -266,6 +309,21 @@ export const Input = styled.input`
   padding: 10px 12px;
   border: 1px solid #d1d5db;
   border-radius: 10px;
+  font-size: 14px;
+  background: #f9fafb;
+
+  &:focus {
+    outline: none;
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37,99,235,0.25);
+    background: white;
+  }
+`;
+
+export const Select = styled.select`
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
   font-size: 14px;
   background: #f9fafb;
 

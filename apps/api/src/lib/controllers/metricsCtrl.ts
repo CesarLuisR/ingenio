@@ -7,18 +7,17 @@ const diffHours = (a: Date, b: Date) => (b.getTime() - a.getTime()) / msPerHour;
 export const getSensorMetrics: RequestHandler = async (req, res) => {
 	try {
 		const id = Number(req.params.id);
+
 		if (!id) throw new Error("Bad request");
 
-		// SENSOR BASE
 		const sensor = await prisma.sensor.findUnique({
-			where: { id },
+			where: { id: id },
 		});
 
 		if (!sensor) {
 			return res.status(404).json({ error: "Sensor no encontrado" });
 		}
 
-		// TODAS LAS FALLAS DEL SENSOR
 		const failures = await prisma.failure.findMany({
 			where: { sensorId: id },
 			orderBy: { occurredAt: "asc" },
@@ -36,7 +35,9 @@ export const getSensorMetrics: RequestHandler = async (req, res) => {
 			});
 		}
 
+		console.log("LLEGA AL 2");
 		// --- MTTR (Mean Time To Repair) ---
+	
 		const resolved = failures.filter((f) => f.resolvedAt);
 		const mttr =
 			resolved.length > 0
@@ -92,6 +93,7 @@ export const getSensorMetrics: RequestHandler = async (req, res) => {
 
 		const availability =
 			totalHours > 0 ? (uptime / totalHours) * 100 : null;
+
 
 		// ------------------------------------------------------------------
 		// 🔥 Confiabilidad (R = MTBF / (MTBF + MTTR))
