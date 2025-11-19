@@ -87,8 +87,8 @@ services:
     build:
       context: ./apps/ia-mock
       dockerfile: Dockerfile
-    volumes:
-      - ./apps/ia-mock:/app
+    # volumes:
+      # - ./apps/ia-mock:/app
 
 volumes:
   mongo_data:
