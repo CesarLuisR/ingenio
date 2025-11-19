@@ -1,5 +1,7 @@
 import { RequestHandler } from "express";
 import prisma from "../../database/postgres.db";
+import hasPermission from "../utils/permissionUtils";
+import { UserRole } from "@prisma/client";
 
 export const getAllIngenios: RequestHandler = async (_, res) => {
     const ingenios = await prisma.ingenio.findMany();
@@ -21,6 +23,9 @@ export const getIngenioById: RequestHandler = async (req, res) => {
 };
 
 export const createIngenio: RequestHandler = async (req, res) => {
+    if (!hasPermission(req.session.user?.role as UserRole, UserRole.SUPERADMIN))
+        return res.status(403).json({ message: "Forbidden access " });
+
     const { name, code, location } = req.body;
 
     if (!name || !code) {
@@ -35,7 +40,14 @@ export const createIngenio: RequestHandler = async (req, res) => {
 };
 
 export const updateIngenio: RequestHandler = async (req, res) => {
+
     const id = Number(req.params.id);
+    if (!hasPermission(
+        req.session.user?.role as UserRole,
+        UserRole.ADMIN, 
+        { user: req.session.user?.ingenioId!, element: id }
+    )) return res.status(403).json({ message: "Forbidden access " });
+
     const { name, code, location } = req.body;
 
     const ingenio = await prisma.ingenio.update({
@@ -47,6 +59,9 @@ export const updateIngenio: RequestHandler = async (req, res) => {
 };
 
 export const deleteIngenio: RequestHandler = async (req, res) => {
+    if (!hasPermission(req.session.user?.role as UserRole, UserRole.SUPERADMIN))
+        return res.status(403).json({ message: "Forbidden access " });
+
     const id = Number(req.params.id);
 
     await prisma.ingenio.delete({

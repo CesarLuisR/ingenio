@@ -1,5 +1,7 @@
 import prisma from "../../database/postgres.db";
 import { Request, Response } from "express";
+import hasPermission from "../utils/permissionUtils";
+import { UserRole } from "@prisma/client";
 
 // Obtener todos los mantenimientos
 export const getAllMaintenances = async (req: Request, res: Response) => {
@@ -33,6 +35,11 @@ export const getMaintenanceById = async (req: Request, res: Response) => {
 
 // Crear un nuevo mantenimiento
 export const createMaintenance = async (req: Request, res: Response) => {
+    if (!hasPermission(
+        req.session.user?.role as UserRole,
+        UserRole.TECNICO, 
+    )) return res.status(403).json({ message: "Forbidden access " });
+
     try {
         const { sensorId, type, technicianId, durationMinutes, notes, cost, ingenioId } =
             req.body;
@@ -63,6 +70,11 @@ export const createMaintenance = async (req: Request, res: Response) => {
 
 // Actualizar mantenimiento
 export const updateMaintenance = async (req: Request, res: Response) => {
+    if (!hasPermission(
+        req.session.user?.role as UserRole,
+        UserRole.TECNICO, 
+    )) return res.status(403).json({ message: "Forbidden access " });
+
     try {
         const { id } = req.params;
         const data = req.body;
@@ -80,6 +92,11 @@ export const updateMaintenance = async (req: Request, res: Response) => {
 
 // Eliminar mantenimiento
 export const deleteMaintenance = async (req: Request, res: Response) => {
+    if (!hasPermission(
+        req.session.user?.role as UserRole,
+        UserRole.TECNICO, 
+    )) return res.status(403).json({ message: "Forbidden access " });
+
     try {
         const { id } = req.params;
         await prisma.maintenance.delete({ where: { id: Number(id) } });

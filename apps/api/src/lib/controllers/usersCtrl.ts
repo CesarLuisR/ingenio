@@ -1,7 +1,8 @@
-import bcrypt from "bcryptjs";
 import prisma from "../../database/postgres.db";
 import { Request, Response } from "express";
 import { hashPassword } from "../utils/bcrypt";
+import hasPermission from "../utils/permissionUtils";
+import { UserRole } from "@prisma/client";
 
 export const getAllUsers = async (req: Request, res: Response) => {
     const users = await prisma.user.findMany({
@@ -11,6 +12,11 @@ export const getAllUsers = async (req: Request, res: Response) => {
 };
 
 export const createUser = async (req: Request, res: Response) => {
+    if (!hasPermission(
+        req.session.user?.role as UserRole,
+        UserRole.ADMIN, 
+    )) return res.status(403).json({ message: "Forbidden access " });
+
     const { email, name, role, password, ingenioId } = req.body;
 
     const hash = await hashPassword(password);
@@ -24,6 +30,11 @@ export const createUser = async (req: Request, res: Response) => {
    PUT: Editar usuario (solo admin)
 ------------------------------------------- */
 export const updateUser = async (req: Request, res: Response) => {
+    if (!hasPermission(
+        req.session.user?.role as UserRole,
+        UserRole.ADMIN, 
+    )) return res.status(403).json({ message: "Forbidden access " });
+    
     const userId = Number(req.params.id);
 
     const currentUser = req.session.user;
@@ -68,8 +79,14 @@ export const updateUser = async (req: Request, res: Response) => {
    DELETE: Eliminar usuario (solo admin)
 ------------------------------------------- */
 export const deleteUser = async (req: Request, res: Response) => {
+    if (!hasPermission(
+        req.session.user?.role as UserRole,
+        UserRole.ADMIN, 
+    )) return res.status(403).json({ message: "Forbidden access " });
+
     const userId = Number(req.params.id);
 
+    // todo: Mira aqui todas las validaciones que debe de hacer la funcion
     const currentUser = req.session.user;
 
     if (!currentUser) {

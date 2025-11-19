@@ -1,5 +1,7 @@
 import prisma from "../../database/postgres.db";
 import { Request, Response } from "express";
+import hasPermission from "../utils/permissionUtils";
+import { UserRole } from "@prisma/client";
 
 export const getAllFailures = async (req: Request, res: Response) => {
     try {
@@ -28,6 +30,9 @@ export const getFailureById = async (req: Request, res: Response) => {
 };
 
 export const createFailure = async (req: Request, res: Response) => {
+    if (!hasPermission(req.session.user?.role as UserRole, UserRole.TECNICO))
+        return res.status(403).json({ message: "Forbidden access " });
+
     try {
         const { sensorId, description, severity, status, maintenanceId, ingenioId } = req.body;
 
@@ -54,6 +59,9 @@ export const createFailure = async (req: Request, res: Response) => {
 };
 
 export const updateFailure = async (req: Request, res: Response) => {
+    if (!hasPermission(req.session.user?.role as UserRole, UserRole.TECNICO))
+        return res.status(403).json({ message: "Forbidden access " });
+
     try {
         const { id } = req.params;
         const data = req.body;
@@ -68,6 +76,9 @@ export const updateFailure = async (req: Request, res: Response) => {
 };
 
 export const deleteFailure = async (req: Request, res: Response) => {
+    if (!hasPermission(req.session.user?.role as UserRole, UserRole.TECNICO))
+        return res.status(403).json({ message: "Forbidden access " });
+
     try {
         const { id } = req.params;
         await prisma.failure.delete({ where: { id: Number(id) } });

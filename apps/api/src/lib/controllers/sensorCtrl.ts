@@ -1,6 +1,8 @@
 import prisma from "../../database/postgres.db";
 import { Request, Response } from "express";
 import RedisRepository from "../repositories/cache/redisRepository";
+import hasPermission from "../utils/permissionUtils";
+import { UserRole } from "@prisma/client";
 
 const cacheRepository = new RedisRepository();
 // GET /sensors
@@ -40,6 +42,13 @@ export const getSensorById = async (req: Request, res: Response) => {
 
 // PUT /sensors/:sensorId
 export const updateSensor = async (req: Request, res: Response) => {
+	// todo: Aqui habria que ver como hacemos para salvaguardar el ingenio
+
+    if (!hasPermission(
+        req.session.user?.role as UserRole,
+        UserRole.ADMIN, 
+    )) return res.status(403).json({ message: "Forbidden access " });
+
 	try {
 		const { sensorId } = req.params;
 		const data = req.body;
@@ -73,6 +82,11 @@ export const updateSensor = async (req: Request, res: Response) => {
 
 // PATCH /sensors/:sensorId/deactivate
 export const deactivateSensor = async (req: Request, res: Response) => {
+    if (!hasPermission(
+        req.session.user?.role as UserRole,
+        UserRole.ADMIN, 
+    )) return res.status(403).json({ message: "Forbidden access " });
+
 	try {
 		const { sensorId } = req.params;
 

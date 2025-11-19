@@ -1,5 +1,7 @@
 import prisma from "../../database/postgres.db";
 import { Request, Response } from "express";
+import hasPermission from "../utils/permissionUtils";
+import { UserRole } from "@prisma/client";
 
 export const getAllTechnicians = async (req: Request, res: Response) => {
     try {
@@ -29,6 +31,11 @@ export const getTechnicianById = async (req: Request, res: Response) => {
 };
 
 export const createTechnician = async (req: Request, res: Response) => {
+    if (!hasPermission(
+        req.session.user?.role as UserRole,
+        UserRole.ADMIN, 
+    )) return res.status(403).json({ message: "Forbidden access " });
+
     try {
         const { name, email, phone, active, ingenioId } = req.body;
 
@@ -46,6 +53,11 @@ export const createTechnician = async (req: Request, res: Response) => {
 };
 
 export const updateTechnician = async (req: Request, res: Response) => {
+    if (!hasPermission(
+        req.session.user?.role as UserRole,
+        UserRole.ADMIN, 
+    )) return res.status(403).json({ message: "Forbidden access " });
+
     try {
         const { id } = req.params;
         const data = req.body;
@@ -60,6 +72,11 @@ export const updateTechnician = async (req: Request, res: Response) => {
 };
 
 export const deleteTechnician = async (req: Request, res: Response) => {
+    if (!hasPermission(
+        req.session.user?.role as UserRole,
+        UserRole.ADMIN, 
+    )) return res.status(403).json({ message: "Forbidden access " });
+
     try {
         const { id } = req.params;
         await prisma.technician.delete({ where: { id: Number(id) } });

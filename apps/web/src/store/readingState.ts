@@ -19,7 +19,7 @@ export const useReadingsStore = create<ReadingState>((set, get) => ({
 
             if (foundSensor) {
                 const updatedList = [...foundSensor];
-                if (updatedList.length === 10) updatedList.shift();
+                if (updatedList.length === 30) updatedList.shift();
                 updatedList.push(reading);
                 newMap.set(sensorId, updatedList);
             } else {
