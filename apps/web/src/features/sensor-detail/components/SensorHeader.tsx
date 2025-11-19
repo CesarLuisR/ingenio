@@ -21,11 +21,11 @@ export function SensorHeader({ name, id, status }: SensorHeaderProps) {
 	return (
 		<>
 			<Title>
-				{name || "Sensor"} {id ? `(${id})` : null}
+				{name || "Sensor"} 
 			</Title>
 			<Sub>
 				Estado actual:{" "}
-				<StatusBadge status={status || "unknown"}>
+				<StatusBadge status={status || "Inactivo"}>
 					{getStatusLabel(status)}
 				</StatusBadge>
 			</Sub>
