@@ -23,7 +23,6 @@ import {
     ModalTitle,
     CloseIconButton,
     SelectInput,
-    SensorName,
     SimpleTag,
     TagRow,
     TextInput,

@@ -18,7 +18,6 @@ import {
 	MachineList,
 	LoadingText,
 	ErrorBox,
-	ListHeaderRow,
 	EmptyState,
 	FiltersBar,
 	FiltersRight,
@@ -33,7 +32,7 @@ type SortField = "name" | "code" | "createdAt";
 export default function MachinesPage() {
 	const navigate = useNavigate();
 	const { user } = useSessionStore();
-	const { machines, loading, error, reload, setMachines } = useMachines();
+	const { machines, loading, error, setMachines } = useMachines();
 
 	const [search, setSearch] = useState("");
 	const [onlyActive, setOnlyActive] = useState(false);

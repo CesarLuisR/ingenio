@@ -7,11 +7,11 @@ const fadeIn = keyframes`
   to { opacity: 1; transform: translateY(0); }
 `;
 
-const pulse = keyframes`
-  0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
-  70% { box-shadow: 0 0 0 6px rgba(37, 99, 235, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
-`;
+// const pulse = keyframes`
+//   0% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.4); }
+//   70% { box-shadow: 0 0 0 6px rgba(37, 99, 235, 0); }
+//   100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0); }
+// `;
 
 // --- Layout General ---
 

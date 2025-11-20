@@ -19,7 +19,7 @@ import {
 } from "../styled";
 import { ROLES } from "../../../types";
 import { useSessionStore } from "../../../store/sessionStore";
-import { useMemo } from "react";
+// import { useMemo } from "react";
 
 interface MachineCardProps {
     machine: MachineWithRelations;
@@ -44,11 +44,11 @@ export function MachineCard({
     const maintCount = machine.maintenances?.length ?? 0;
     const failCount = machine.failures?.length ?? 0;
 
-    const statusText = useMemo(() => {
-        if (!machine.active) return "Fuera de servicio";
-        if (failCount > 0) return "Incidencias";
-        return "Normal";
-    }, [machine.active, failCount]);
+    // const statusText = useMemo(() => {
+    //     if (!machine.active) return "Fuera de servicio";
+    //     if (failCount > 0) return "Incidencias";
+    //     return "Normal";
+    // }, [machine.active, failCount]);
 
     return (
         // Pasamos el prop data-active para la barra de color lateral

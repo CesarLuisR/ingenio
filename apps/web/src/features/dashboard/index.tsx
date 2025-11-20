@@ -34,7 +34,7 @@ import {
     SectionTitle,
     SensorsGrid
 } from "./styled";
-import { useDashboardData, type SensorWithStatus } from "./hooks/useDashboardData";
+import { useDashboardData } from "./hooks/useDashboardData";
 import { useDashboardStatus } from "./hooks/useDashboardStatus";
 import { SensorCard } from "./components/SensorCard";
 import type { BaseMetrics } from "../../types";

@@ -1,7 +1,5 @@
 {
   "sensorId": "motor-01",
-  "machineId": 1,
-  "ingenioId": 1,
   "type": "induction-motor",
   "location": "Planta A - Línea 2",
   "intervalMs": 3000,
@@ -36,7 +34,7 @@
         "min": 1750
       },
       "vibrationRMS": {
-        "max": 0.05,
+        "max": 5.05,
         "min": 0.01
       }
     }
@@ -44,5 +42,7 @@
   "active": true,
   "configVersion": "v1",
   "createdAt": "2025-10-17T12:00:00.000Z",
-  "lastSeen": "2025-10-17T12:30:00.000Z"
+  "lastSeen": "2025-10-17T12:30:00.000Z",
+  "ingenioId": 1,
+  "machineId": 1
 }

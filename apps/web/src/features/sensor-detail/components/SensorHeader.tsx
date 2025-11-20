@@ -17,7 +17,7 @@ interface SensorHeaderProps {
 	status?: string;
 }
 
-export function SensorHeader({ name, id, status }: SensorHeaderProps) {
+export function SensorHeader({ name, status }: SensorHeaderProps) {
 	return (
 		<>
 			<Title>
