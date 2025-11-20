@@ -1,26 +1,24 @@
 import TechnicianForm from "./components/TechnicianForm";
-
+import useTechnicians from "./hooks/useTechnicians";
+import { api } from "../../lib/api";
 import {
-    Button,
-    CardHeader,
     Container,
     Header,
-    InfoList,
-    LoadingText,
     Title,
-    TechnicianCard,
-    TechnicianList,
-    Name,
-    StatusBadge,
-    Actions,
-    ActionButton,
+    Button,
     FiltersBar,
     SelectInput,
     TextInput,
+    TechnicianList,
+    TechnicianCard,
+    CardHeader,
+    Name,
+    StatusBadge,
+    InfoList,
+    Actions,
+    ActionButton,
+    LoadingText,
 } from "./styled";
-
-import useTechnicians from "./hooks/useTechnicians";
-import { api } from "../../lib/api";
 
 export default function Technicians() {
     const {
@@ -44,7 +42,10 @@ export default function Technicians() {
     return (
         <Container>
             <Header>
-                <Title>Técnicos</Title>
+                <div>
+                    <Title>Equipo Técnico</Title>
+                    <p style={{color: '#64748b', margin: '8px 0 0 0'}}>Gestión del personal de mantenimiento</p>
+                </div>
 
                 <Button
                     onClick={() => {
@@ -57,6 +58,12 @@ export default function Technicians() {
 
             {/* FILTROS */}
             <FiltersBar>
+                <TextInput
+                    placeholder="🔍 Buscar por nombre o email..."
+                    value={filterText}
+                    onChange={(e) => setFilterText(e.target.value)}
+                />
+                
                 <SelectInput
                     value={filterStatus}
                     onChange={(e) => setFilterStatus(e.target.value)}>
@@ -64,12 +71,6 @@ export default function Technicians() {
                     <option value="activo">Activos</option>
                     <option value="inactivo">Inactivos</option>
                 </SelectInput>
-
-                <TextInput
-                    placeholder="Buscar texto..."
-                    value={filterText}
-                    onChange={(e) => setFilterText(e.target.value)}
-                />
             </FiltersBar>
 
             {/* LISTA */}
@@ -84,9 +85,11 @@ export default function Technicians() {
                         </CardHeader>
 
                         <InfoList>
-                            {t.email && <p>📧 {t.email}</p>}
-                            {t.phone && <p>📞 {t.phone}</p>}
-                            <p>🧰 Asignaciones: {t.maintenances?.length || 0}</p>
+                            {t.email && <p title="Email">📧 {t.email}</p>}
+                            {t.phone && <p title="Teléfono">📞 {t.phone}</p>}
+                            <p title="Mantenimientos asignados">
+                                🧰 <strong>{t.maintenances?.length || 0}</strong> asignaciones
+                            </p>
                         </InfoList>
 
                         <Actions>
@@ -95,17 +98,21 @@ export default function Technicians() {
                                     setEditing(t);
                                     setShowForm(true);
                                 }}>
-                                ✏️ Editar
+                                Editar
                             </ActionButton>
 
                             <ActionButton
                                 $danger
                                 onClick={async () => {
-                                    if (!confirm("¿Eliminar técnico permanentemente?")) return;
-                                    await api.deleteTechnician(t.id.toString());
-                                    loadData();
+                                    if (!confirm(`¿Seguro que deseas eliminar a ${t.name}?`)) return;
+                                    try {
+                                        await api.deleteTechnician(t.id.toString());
+                                        loadData();
+                                    } catch (e) {
+                                        alert("Error al eliminar técnico");
+                                    }
                                 }}>
-                                🗑 Eliminar
+                                Eliminar
                             </ActionButton>
                         </Actions>
                     </TechnicianCard>

@@ -1,13 +1,18 @@
-import { Table, TableHead, TableHeader, TableBody, TableCell } from "./styledTable";
 import {
     Container,
     Header,
     Title,
     Button,
     LoadingText,
+    TableContainer,
+    Table,
+    TableHead,
+    TableHeader,
+    TableBody,
+    TableRow,
+    TableCell,
     UserName,
     RoleBadge,
-    TableContainer,
     Actions,
     ActionButton,
 } from "./styled";
@@ -34,7 +39,6 @@ export default function Usuarios() {
         <Container>
             <Header>
                 <Title>Gestión de Usuarios</Title>
-
                 <Button
                     onClick={() => {
                         setEditing(null);
@@ -52,6 +56,7 @@ export default function Usuarios() {
                             <TableHeader>Nombre</TableHeader>
                             <TableHeader>Email</TableHeader>
                             <TableHeader>Rol</TableHeader>
+                            <TableHeader>Ingenio ID</TableHeader>
                             <TableHeader>Fecha Creación</TableHeader>
                             <TableHeader>Acciones</TableHeader>
                         </tr>
@@ -59,7 +64,7 @@ export default function Usuarios() {
 
                     <TableBody>
                         {users.map((u) => (
-                            <tr key={u.id}>
+                            <TableRow key={u.id}>
                                 <TableCell>
                                     <UserName>{u.name}</UserName>
                                 </TableCell>
@@ -68,14 +73,16 @@ export default function Usuarios() {
 
                                 <TableCell>
                                     <RoleBadge role={u.role}>
-                                        {
-                                            u.role === ROLES.ADMIN
-                                                ? "Administrador"
-                                                : u.role === ROLES.TECNICO
-                                                    ? "Técnico"
-                                                    : "Lector"
-                                        }
+                                        {u.role === ROLES.ADMIN ? "Administrador" :
+                                         u.role === ROLES.TECNICO ? "Técnico" :
+                                         "Visualizador"}
                                     </RoleBadge>
+                                </TableCell>
+
+                                <TableCell>
+                                    <span style={{color: '#64748b', fontSize: 13}}>
+                                        #{u.ingenioId ?? "-"}
+                                    </span>
                                 </TableCell>
 
                                 <TableCell>
@@ -95,13 +102,17 @@ export default function Usuarios() {
 
                                         <ActionButton
                                             $danger
-                                            onClick={() => deleteUser(u.id)}
+                                            onClick={() => {
+                                                if(confirm('¿Estás seguro de eliminar este usuario?')) {
+                                                    deleteUser(u.id);
+                                                }
+                                            }}
                                         >
                                             Eliminar
                                         </ActionButton>
                                     </Actions>
                                 </TableCell>
-                            </tr>
+                            </TableRow>
                         ))}
                     </TableBody>
                 </Table>

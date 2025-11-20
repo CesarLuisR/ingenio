@@ -1,8 +1,7 @@
-// src/pages/Usuarios/components/UserForm.tsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { api } from "../../../lib/api";
 import {
-    Modal,
+    ModalOverlay,
     ModalContent,
     ModalTitle,
     Form,
@@ -13,9 +12,11 @@ import {
     ButtonGroup,
     CancelButton,
     SubmitButton,
-} from "./styledModal";
-import type { User } from "../../../types";
+} from "../styled";
+import { ROLES, type User } from "../../../types";
 import { useSessionStore } from "../../../store/sessionStore";
+
+type Role = typeof ROLES[keyof typeof ROLES];
 
 export default function UserForm({
     initialData,
@@ -28,15 +29,40 @@ export default function UserForm({
 }) {
     const sessionUser = useSessionStore((s) => s.user);
 
-    const [formData, setFormData] = useState({
-        name: initialData?.name || "",
-        email: initialData?.email || "",
-        role: (initialData?.role as any) || "viewer",
+    const [formData, setFormData] = useState<{
+        name: string;
+        email: string;
+        role: Role; // <--- Aquí usamos el tipo, no el objeto
+        password: string;
+        ingenioId: number | null;
+    }>({
+        name: "",
+        email: "",
+        role: ROLES.LECTOR, // Valor por defecto seguro
         password: "",
-        ingenioId: sessionUser?.ingenioId ?? null,
+        ingenioId: sessionUser?.ingenioId ?? 1,
     });
 
-    const isEditing = Boolean(initialData);
+    useEffect(() => {
+        if (initialData) {
+            setFormData({
+                name: initialData.name,
+                email: initialData.email,
+                role: initialData.role as Role, 
+                password: "",
+                ingenioId: initialData.ingenioId ?? sessionUser?.ingenioId ?? 1,
+            });
+        } else {
+            // Reset para nuevo usuario
+            setFormData({
+                name: "",
+                email: "",
+                role: ROLES.LECTOR,
+                password: "",
+                ingenioId: sessionUser?.ingenioId ?? 1,
+            });
+        }
+    }, [initialData, sessionUser]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -46,15 +72,18 @@ export default function UserForm({
                 name: formData.name,
                 email: formData.email,
                 role: formData.role,
-                ingenioId: formData.ingenioId,
+                ingenioId: Number(formData.ingenioId),
             };
 
             if (formData.password.trim()) {
                 payload.password = formData.password;
+            } else if (!initialData) {
+                alert("La contraseña es obligatoria para nuevos usuarios");
+                return;
             }
 
-            if (isEditing) {
-                await api.updateUser(initialData!.id.toString(), payload);
+            if (initialData) {
+                await api.updateUser(initialData.id.toString(), payload);
             } else {
                 await api.createUser(payload);
             }
@@ -62,19 +91,21 @@ export default function UserForm({
             onSave();
         } catch (err) {
             console.error("Error guardando usuario:", err);
+            alert("Error al guardar el usuario. Verifica los datos.");
         }
     };
 
     return (
-        <Modal onClick={onClose}>
+        <ModalOverlay onClick={onClose}>
             <ModalContent onClick={(e) => e.stopPropagation()}>
-                <ModalTitle>{isEditing ? "Editar Usuario" : "Nuevo Usuario"}</ModalTitle>
+                <ModalTitle>{initialData ? "Editar Usuario" : "Nuevo Usuario"}</ModalTitle>
 
                 <Form onSubmit={handleSubmit}>
                     <FormGroup>
-                        <Label>Nombre</Label>
+                        <Label>Nombre Completo</Label>
                         <Input
                             required
+                            placeholder="Ej: Juan Pérez"
                             value={formData.name}
                             onChange={(e) =>
                                 setFormData({ ...formData, name: e.target.value })
@@ -83,10 +114,11 @@ export default function UserForm({
                     </FormGroup>
 
                     <FormGroup>
-                        <Label>Email</Label>
+                        <Label>Correo Electrónico</Label>
                         <Input
                             required
                             type="email"
+                            placeholder="juan@empresa.com"
                             value={formData.email}
                             onChange={(e) =>
                                 setFormData({ ...formData, email: e.target.value })
@@ -95,28 +127,32 @@ export default function UserForm({
                     </FormGroup>
 
                     <FormGroup>
-                        <Label>Rol</Label>
+                        <Label>Rol en el sistema</Label>
                         <Select
                             value={formData.role}
                             onChange={(e) =>
                                 setFormData({
                                     ...formData,
-                                    role: e.target.value as any,
+                                    // 3. CASTEO CORRECTO: Convertimos string -> Role
+                                    role: e.target.value as Role,
                                 })
                             }
                         >
-                            <option value="viewer">Visualizador</option>
-                            <option value="technician">Técnico</option>
-                            <option value="admin">Administrador</option>
+                            {/* 4. USAMOS LAS CONSTANTES: Para que los values coincidan con el tipo */}
+                            <option value={ROLES.LECTOR}>Visualizador (Solo lectura)</option>
+                            <option value={ROLES.TECNICO}>Técnico (Gestión básica)</option>
+                            <option value={ROLES.ADMIN}>Administrador (Control total)</option>
                         </Select>
                     </FormGroup>
 
                     <FormGroup>
-                        <Label>Contraseña {isEditing && "(opcional)"}</Label>
+                        <Label>
+                            Contraseña {initialData && <span style={{fontWeight: 400, color: '#94a3b8'}}>(Dejar en blanco para mantener)</span>}
+                        </Label>
                         <Input
                             type="password"
-                            minLength={isEditing ? 0 : 6}
-                            placeholder={isEditing ? "Dejar vacío para no cambiar" : ""}
+                            minLength={initialData ? 0 : 6}
+                            placeholder="******"
                             value={formData.password}
                             onChange={(e) =>
                                 setFormData({ ...formData, password: e.target.value })
@@ -124,17 +160,27 @@ export default function UserForm({
                         />
                     </FormGroup>
 
+                    {sessionUser?.role === ROLES.SUPERADMIN && (
+                         <FormGroup>
+                            <Label>ID Ingenio</Label>
+                            <Input 
+                                type="number"
+                                value={formData.ingenioId || ''}
+                                onChange={(e) => setFormData({...formData, ingenioId: Number(e.target.value)})}
+                            />
+                         </FormGroup>
+                    )}
+
                     <ButtonGroup>
                         <CancelButton type="button" onClick={onClose}>
                             Cancelar
                         </CancelButton>
-
                         <SubmitButton type="submit">
-                            {isEditing ? "Guardar Cambios" : "Crear Usuario"}
+                            {initialData ? "Guardar Cambios" : "Crear Usuario"}
                         </SubmitButton>
                     </ButtonGroup>
                 </Form>
             </ModalContent>
-        </Modal>
+        </ModalOverlay>
     );
 }

@@ -1,243 +1,177 @@
 import React, { useMemo } from "react";
 import {
-	LineChart,
-	Line,
-	XAxis,
-	YAxis,
-	CartesianGrid,
-	Tooltip,
-	Legend,
-	ResponsiveContainer,
+    AreaChart,
+    Area,
+    XAxis,
+    YAxis,
+    CartesianGrid,
+    Tooltip,
+    ResponsiveContainer,
 } from "recharts";
-import { Card, ChartHeader, MetricStatus, Status } from "../styled";
+import {
+    CategorySection,
+    CategoryTitle,
+    ChartGrid,
+    ChartCard,
+    MetricHeader,
+} from "../styled";
 
 interface SensorChartsProps {
-	chartData: Record<string, any[]>;
-	latest: any;
+    chartData: Record<string, any[]>;
+    latest: any;
 }
 
+// Paleta de colores moderna para rotar entre gráficas
 const COLORS = [
-	"#4C7FF0",
-	"#E45A5A",
-	"#41B883",
-	"#F0C14C",
-	"#9B6DFF",
-	"#F36BA0",
-	"#4CB5E6",
-	"#3ED1C3",
+    { stroke: "#3b82f6", fill: "#3b82f6" }, // Blue
+    { stroke: "#10b981", fill: "#10b981" }, // Emerald
+    { stroke: "#f59e0b", fill: "#f59e0b" }, // Amber
+    { stroke: "#8b5cf6", fill: "#8b5cf6" }, // Violet
+    { stroke: "#ec4899", fill: "#ec4899" }, // Pink
+    { stroke: "#06b6d4", fill: "#06b6d4" }, // Cyan
 ];
 
-function getStatusLabel(status?: string) {
-	if (!status) return "unknown";
-	if (status === "ok") return "✅ OK";
-	if (status === "warning") return "⚠️ Warning";
-	if (status === "critical") return "🚨 Critical";
-	return "–";
+// Función para mejorar el rango del eje Y
+function computeDomain(data: any[], dataKey: string) {
+    if (!data.length) return [0, 100];
+    let min = Infinity;
+    let max = -Infinity;
+    
+    data.forEach(d => {
+        const val = Number(d[dataKey]);
+        if (!isNaN(val)) {
+            if (val < min) min = val;
+            if (val > max) max = val;
+        }
+    });
+
+    if (!isFinite(min) || !isFinite(max)) return [0, 100];
+    
+    const padding = (max - min) * 0.2; // 20% de padding
+    if (padding === 0) return [min - 10, max + 10];
+
+    return [Math.floor(min - padding), Math.ceil(max + padding)];
 }
 
-const MIN_RANGE = 1; // evita ejes planos
+/**
+ * Componente para una sola métrica (Ej: Temperatura)
+ */
+const SingleMetricChart = ({ title, dataKey, data, colorIndex, latestValue }: any) => {
+    const color = COLORS[colorIndex % COLORS.length];
+    const domain = useMemo(() => computeDomain(data, dataKey), [data, dataKey]);
 
-// Hace que el eje Y tenga números "bonitos" (redondeados)
-function computeNiceDomain(min: number, max: number): [number, number] {
-	if (!isFinite(min) || !isFinite(max)) return [0, 1];
+    return (
+        <ChartCard>
+            <MetricHeader>
+                <h3>{title}</h3>
+                <div className="current-value">
+                    {latestValue !== undefined && !isNaN(Number(latestValue))
+                        ? Number(latestValue).toFixed(2)
+                        : "--"}
+                </div>
+            </MetricHeader>
 
-	let range = max - min;
-	if (range < MIN_RANGE) range = MIN_RANGE;
+            <div style={{ height: 200, width: "100%" }}>
+                <ResponsiveContainer>
+                    <AreaChart data={data}>
+                        <defs>
+                            <linearGradient id={`color-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor={color.fill} stopOpacity={0.3} />
+                                <stop offset="95%" stopColor={color.fill} stopOpacity={0} />
+                            </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                        <XAxis 
+                            dataKey="time" 
+                            hide 
+                        />
+                        <YAxis 
+                            domain={domain} 
+                            tick={{ fontSize: 11, fill: "#94a3b8" }}
+                            axisLine={false}
+                            tickLine={false}
+                            width={30}
+                        />
+                        <Tooltip
+                            contentStyle={{
+                                backgroundColor: "rgba(255, 255, 255, 0.9)",
+                                borderRadius: "8px",
+                                border: "1px solid #e2e8f0",
+                                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                                fontSize: "12px",
+                                fontWeight: 600,
+                            }}
+                            itemStyle={{ color: "#1e293b" }}
+                            cursor={{ stroke: "#94a3b8", strokeWidth: 1, strokeDasharray: "4 4" }}
+                        />
+                        <Area
+                            type="monotone"
+                            dataKey={dataKey}
+                            stroke={color.stroke}
+                            strokeWidth={3}
+                            fillOpacity={1}
+                            fill={`url(#color-${dataKey})`}
+                            isAnimationActive={false} // Mejor rendimiento en tiempo real
+                        />
+                    </AreaChart>
+                </ResponsiveContainer>
+            </div>
+        </ChartCard>
+    );
+};
 
-	// orden de magnitud del rango
-	const magnitude = Math.pow(10, Math.floor(Math.log10(range)));
-	// step base: la mitad de la magnitud, da algo tipo 0.5, 5, 50...
-	const step = magnitude / 2;
-
-	const niceMin = Math.floor(min / step) * step;
-	const niceMax = Math.ceil(max / step) * step;
-
-	return [niceMin, niceMax];
-}
-
-/* ============================================================
-   CategoryChart — eje Y estable + números bonitos + puntos
-   ============================================================ */
-const CategoryChart = React.memo(
-	function CategoryChart({ category, data, latest }: any) {
-		if (!data || data.length === 0) {
-			return (
-				<Card>
-					<ChartHeader>
-						<h2>{category.toUpperCase()}</h2>
-					</ChartHeader>
-					<p style={{ padding: "20px", textAlign: "center", color: "#94a3b8" }}>
-						No hay datos disponibles.
-					</p>
-				</Card>
-			);
-		}
-
-		const metrics = useMemo(
-			() => Object.keys(latest?.metrics?.[category] || {}),
-			[latest, category]
-		);
-
-		const preparedData = useMemo(() => data.slice(), [data]);
-
-		// Cálculo de min y max reales según los datos
-		const rawDomain = useMemo(() => {
-			let min = Infinity;
-			let max = -Infinity;
-
-			for (const point of preparedData) {
-				for (const metric of metrics) {
-					const v = Number(point[metric]);
-					if (!isNaN(v)) {
-						if (v < min) min = v;
-						if (v > max) max = v;
-					}
-				}
-			}
-
-			if (!isFinite(min) || !isFinite(max)) {
-				return [0, 1] as [number, number];
-			}
-
-			return [min, max] as [number, number];
-		}, [preparedData, metrics]);
-
-		// Dominio "bonito" para el eje Y
-		const yDomain = useMemo<[number, number]>(
-			() => computeNiceDomain(rawDomain[0], rawDomain[1]),
-			[rawDomain]
-		);
-
-		return (
-			<Card
-				style={{
-					boxShadow: "0 8px 24px rgba(0,0,0,0.08)",
-					borderRadius: "14px",
-					paddingBottom: "10px",
-				}}
-			>
-				<ChartHeader>
-					<h2 style={{ fontWeight: 700 }}>{category.toUpperCase()}</h2>
-					<span style={{ fontSize: "12px", color: "#94a3b8" }}>
-						{preparedData.length} lecturas
-					</span>
-				</ChartHeader>
-
-				<ResponsiveContainer width="100%" height={320}>
-					<LineChart
-						data={preparedData}
-						margin={{ top: 10, right: 20, left: 0, bottom: 20 }}
-					>
-						<CartesianGrid strokeDasharray="4 4" stroke="#e2e8f0" opacity={0.7} />
-
-						<XAxis
-							dataKey="time"
-							tick={{ fontSize: 11, fill: "#64748b" }}
-							minTickGap={20}
-							angle={-35}
-							textAnchor="end"
-							height={60}
-						/>
-
-						{/* EJE Y CON NÚMEROS CORREGIDOS Y "BONITOS" */}
-						<YAxis
-							domain={yDomain}
-							tick={{ fontSize: 12, fill: "#475569" }}
-							tickFormatter={(value: any, index: number) => {
-								// redondeo suave: sin mil decimales
-								if (Math.abs(value) >= 100) {
-									return Math.round(value); // enteros para valores grandes
-								}
-								return value.toFixed(2); // 2 decimales para valores normales
-							}}
-							tickCount={6}
-						/>
-
-						<Tooltip
-							contentStyle={{
-								background: "rgba(255,255,255,0.8)",
-								backdropFilter: "blur(6px)",
-								border: "1px solid #e2e8f0",
-								borderRadius: "10px",
-								boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
-							}}
-							labelStyle={{ fontWeight: 600, color: "#334155" }}
-						/>
-
-						<Legend wrapperStyle={{ fontSize: "12px", paddingTop: "10px" }} />
-
-						{/* Líneas con puntos visibles pero fluidos en tiempo real */}
-						{metrics.map((metric, i) => (
-							<Line
-								key={metric}
-								type="monotone"
-								dataKey={metric}
-								stroke={COLORS[i % COLORS.length]}
-								strokeWidth={2.3}
-								dot={{
-									r: 3,
-									strokeWidth: 1.5,
-									fill: "#ffffff",
-									stroke: COLORS[i % COLORS.length],
-								}}
-								activeDot={{
-									r: 6,
-									strokeWidth: 2,
-									stroke: COLORS[i % COLORS.length],
-									fill: "#ffffff",
-								}}
-								isAnimationActive={false}
-								connectNulls
-							/>
-						))}
-					</LineChart>
-				</ResponsiveContainer>
-
-				<MetricStatus>
-					{metrics.map((metric, i) => {
-						const val = latest?.metrics?.[category]?.[metric];
-						const status =
-							typeof val === "object" && val !== null && "status" in val
-								? val.status
-								: latest?.status || "ok";
-
-						return (
-							<Status
-								key={`${category}-${metric}`}
-								status={status}
-								style={{
-									border: `2px solid ${COLORS[i % COLORS.length]}`,
-								}}
-							>
-								{metric}: {getStatusLabel(status)}
-							</Status>
-						);
-					})}
-				</MetricStatus>
-			</Card>
-		);
-	},
-	(prev, next) => prev.data === next.data && prev.latest === next.latest
-);
-
-/* ============================================================
-   Componente principal
-   ============================================================ */
+/**
+ * Componente Principal de Gráficos
+ */
 export function SensorCharts({ chartData, latest }: SensorChartsProps) {
-	const entries = useMemo(() => Object.entries(chartData), [chartData]);
+    const categories = Object.keys(chartData);
 
-	if (!entries.length) return <p>Sin lecturas todavía.</p>;
+    if (categories.length === 0) {
+        return <div style={{ padding: 20, color: "#94a3b8" }}>Esperando datos del sensor...</div>;
+    }
 
-	return (
-		<>
-			{entries.map(([category, data]) => (
-				<CategoryChart
-					key={category}
-					category={category}
-					data={data}
-					latest={latest}
-				/>
-			))}
-		</>
-	);
+    let globalColorIndex = 0;
+
+    return (
+        <>
+            {categories.map((category) => {
+                const data = chartData[category];
+                if (!data.length) return null;
+
+                // Obtener las métricas disponibles en esta categoría (keys que no sean 'time')
+                const samplePoint = data[0];
+                const metrics = Object.keys(samplePoint).filter((k) => k !== "time");
+
+                return (
+                    <CategorySection key={category}>
+                        <CategoryTitle>{category.toUpperCase()}</CategoryTitle>
+                        
+                        <ChartGrid>
+                            {metrics.map((metric) => {
+                                const currentIndex = globalColorIndex++;
+                                
+                                // Extraer el valor más reciente para mostrarlo en el header
+                                let latestVal = 0;
+                                try {
+                                    const metricObj = latest?.metrics?.[category]?.[metric];
+                                    latestVal = typeof metricObj === 'object' ? metricObj.value : metricObj;
+                                } catch (e) {}
+
+                                return (
+                                    <SingleMetricChart
+                                        key={metric}
+                                        title={metric}
+                                        dataKey={metric}
+                                        data={data}
+                                        colorIndex={currentIndex}
+                                        latestValue={latestVal}
+                                    />
+                                );
+                            })}
+                        </ChartGrid>
+                    </CategorySection>
+                );
+            })}
+        </>
+    );
 }

@@ -1,327 +1,271 @@
-import type React from "react";
 import MaintenanceForm from "./components/MaintenanceForm";
 import { useMaintenancesLogic } from "./hooks/useMaintenanceLogic";
 import {
-	Button,
-	CardHeader,
-	CloseIconButton,
-	Container,
-	Description,
-	EditButton,
-	ErrorText,
-	FailureTag,
-	Field,
-	FiltersBar,
-	Header,
-	ImportButton,
-	InfoList,
-	LoadingText,
-	MaintenanceCard,
-	MaintenanceList,
-	Modal,
-	ModalContent,
-	ModalTitle,
-	SelectInput,
-	SensorName,
-	Tag,
-	TagRow,
-	TextInput,
-	Title,
-	TypeTag,
+    Button,
+    CardHeader,
+    CardTitleBlock,
+    DateText,
+    Container,
+    EditButton,
+    ErrorText,
+    Field,
+    FiltersBar,
+    Header,
+    ImportButton,
+    InfoGrid,
+    InfoItem,
+    LoadingText,
+    MachineGroupHeader,
+    MaintenanceCard,
+    MaintenanceList,
+    Modal,
+    ModalContent,
+    ModalTitle,
+    CloseIconButton,
+    SelectInput,
+    SensorName,
+    SimpleTag,
+    TagRow,
+    TextInput,
+    Title,
+    TypeTag,
+    NoteBox,
+	Label,
 } from "./styled";
 import { formatMoney } from "./utils";
 
 export default function Mantenimientos() {
-	const {
-		loading,
-		machines,
-		technicians,
-		failures,
-		editing,
-		showForm,
-		handleEdit,
-		setShowForm,
-		filteredMaintenances,
-		loadData,
+    const {
+        loading,
+        machines,
+        technicians,
+        failures,
+        editing,
+        showForm,
+        handleEdit,
+        setShowForm,
+        filteredMaintenances,
+        loadData,
 
-		// importación
-		showImport,
-		setShowImport,
-		importing,
-		importError,
-		importSummary,
-		handleImportExcel,
+        // importación
+        showImport,
+        setShowImport,
+        importing,
+        importError,
+        importSummary,
+        handleImportExcel,
 
-		// filtros
-		filterMachineId,
-		setFilterMachineId,
-		filterTechnicianId,
-		setFilterTechnicianId,
-		filterType,
-		setFilterType,
-		filterHasFailures,
-		setFilterHasFailures,
-		filterText,
-		setFilterText,
-	} = useMaintenancesLogic();
+        // filtros
+        filterMachineId,
+        setFilterMachineId,
+        filterTechnicianId,
+        setFilterTechnicianId,
+        filterType,
+        setFilterType,
+        filterHasFailures,
+        setFilterHasFailures,
+        filterText,
+        setFilterText,
+    } = useMaintenancesLogic();
 
-	if (loading) {
-		return <LoadingText>Cargando mantenimientos...</LoadingText>;
-	}
+    if (loading) {
+        return <LoadingText>Cargando registros...</LoadingText>;
+    }
 
-	return (
-		<Container>
-			<Header>
-				<Title>Mantenimientos</Title>
-				<div style={{ display: "flex", gap: "12px" }}>
-					<ImportButton onClick={() => setShowImport(true)}>
-						Importar desde Excel
-					</ImportButton>
-					<Button
-						onClick={() => {
-							handleEdit(null as any);
-						}}>
-						+ Nuevo Mantenimiento
-					</Button>
-				</div>
-			</Header>
+    // Agrupar mantenimientos por máquina
+    const maintenancesByMachine = machines.map((machine) => {
+        const machineMaintenances = filteredMaintenances
+            .filter((m) => m.machineId === machine.id)
+            .sort((a, b) => new Date(b.performedAt).getTime() - new Date(a.performedAt).getTime())
+            .slice(0, 3);
 
-			{importSummary && (
-				<p
-					style={{
-						fontSize: 13,
-						color: "#4b5563",
-						marginBottom: 12,
-						whiteSpace: "pre-wrap",
-					}}>
-					{importSummary}
-				</p>
-			)}
+        return {
+            machine,
+            maintenances: machineMaintenances,
+        };
+    }).filter(group => group.maintenances.length > 0); // Ocultar máquinas sin mantenimientos
 
-			{/* Filtros */}
-			<FiltersBar>
-				{/* Filtro por máquina */}
-				<SelectInput
-					value={filterMachineId}
-					onChange={(e) => setFilterMachineId(e.target.value)}>
-					<option value="">Todas las máquinas</option>
-					{machines.map((m) => (
-						<option key={m.id} value={m.id}>
-							{m.name}
-							{m.code ? ` (${m.code})` : ""}
-						</option>
-					))}
-				</SelectInput>
+    return (
+        <Container>
+            <Header>
+                <div>
+                    <Title>Gestión de Mantenimientos</Title>
+                    <p style={{color: '#64748b', margin: '4px 0 0 0'}}>Registro histórico y programación de actividades</p>
+                </div>
+                <div style={{ display: "flex", gap: "12px" }}>
+                    <ImportButton onClick={() => setShowImport(true)}>
+                        📊 Importar Excel
+                    </ImportButton>
+                    <Button
+                        onClick={() => {
+                            handleEdit(null as any);
+                        }}>
+                        + Nuevo Registro
+                    </Button>
+                </div>
+            </Header>
 
-				<SelectInput
-					value={filterTechnicianId}
-					onChange={(e) => setFilterTechnicianId(e.target.value)}>
-					<option value="">Todos los técnicos</option>
-					{technicians.map((t) => (
-						<option key={t.id} value={t.id}>
-							{t.name}
-						</option>
-					))}
-				</SelectInput>
+            {importSummary && (
+                <div style={{background: '#eff6ff', padding: 16, borderRadius: 8, marginBottom: 20, color: '#1e40af', border: '1px solid #dbeafe'}}>
+                    {importSummary}
+                </div>
+            )}
 
-				<SelectInput
-					value={filterType}
-					onChange={(e) => setFilterType(e.target.value)}>
-					<option value="">Todos los tipos</option>
-					<option value="Preventivo">Preventivo</option>
-					<option value="Correctivo">Correctivo</option>
-					<option value="Predictivo">Predictivo</option>
-				</SelectInput>
+            {/* Barra de Filtros Mejorada */}
+            <FiltersBar>
+                <SelectInput
+                    value={filterMachineId}
+                    onChange={(e) => setFilterMachineId(e.target.value)}>
+                    <option value="">Todas las máquinas</option>
+                    {machines.map((m) => (
+                        <option key={m.id} value={m.id}>
+                            {m.name} {m.code ? `(${m.code})` : ""}
+                        </option>
+                    ))}
+                </SelectInput>
 
-				<SelectInput
-					value={filterHasFailures}
-					onChange={(e) => setFilterHasFailures(e.target.value)}>
-					<option value="">Con / sin fallas</option>
-					<option value="yes">Con fallas</option>
-					<option value="no">Sin fallas</option>
-				</SelectInput>
+                <SelectInput
+                    value={filterTechnicianId}
+                    onChange={(e) => setFilterTechnicianId(e.target.value)}>
+                    <option value="">Todos los técnicos</option>
+                    {technicians.map((t) => (
+                        <option key={t.id} value={t.id}>
+                            {t.name}
+                        </option>
+                    ))}
+                </SelectInput>
 
-				<TextInput
-					placeholder="Buscar..."
-					value={filterText}
-					onChange={(e) => setFilterText(e.target.value)}
-				/>
-			</FiltersBar>
+                <SelectInput
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value)}>
+                    <option value="">Todos los tipos</option>
+                    <option value="Preventivo">Preventivo</option>
+                    <option value="Correctivo">Correctivo</option>
+                    <option value="Predictivo">Predictivo</option>
+                </SelectInput>
 
-			<MaintenanceList>
-				{filteredMaintenances.map((m) => {
-					const machine = machines.find((mc) => mc.id === m.machineId) ?? m.machine;
-					const tech =
-						m.technician ??
-						technicians.find((t) => t.id === m.technicianId);
+                <SelectInput
+                    value={filterHasFailures}
+                    onChange={(e) => setFilterHasFailures(e.target.value)}>
+                    <option value="">Estado de fallas</option>
+                    <option value="yes">Con fallas asociadas</option>
+                    <option value="no">Sin fallas</option>
+                </SelectInput>
 
-					const relatedFailures = failures.filter(
-						(f) =>
-							f.machineId === m.machineId ||
-							f.maintenanceId === m.id
-					);
+                <TextInput
+                    placeholder="🔍 Buscar notas o detalles..."
+                    value={filterText}
+                    onChange={(e) => setFilterText(e.target.value)}
+                />
+            </FiltersBar>
 
-					return (
-						<MaintenanceCard key={m.id}>
-							<CardHeader>
-								<SensorName>
-									{machine?.name || `Máquina ${m.machineId}`}
-									{machine?.code ? ` (${machine.code})` : ""}
-								</SensorName>
-								<EditButton onClick={() => handleEdit(m)}>
-									Editar
-								</EditButton>
-							</CardHeader>
+            <MaintenanceList>
+                {maintenancesByMachine.map(({ machine, maintenances }) => (
+                    <div key={machine.id}>
+                        <MachineGroupHeader>
+                            🏭 {machine.name} <span style={{color: '#94a3b8', fontWeight: 400}}>— {maintenances.length} registros recientes</span>
+                        </MachineGroupHeader>
 
-							<TagRow>
-								<TypeTag $type={m.type}>Tipo: {m.type}</TypeTag>
-								{tech && <Tag>👤 {tech.name}</Tag>}
-								{m.durationMinutes != null && (
-									<Tag>⏱ {m.durationMinutes} min</Tag>
-								)}
-								{m.cost != null && (
-									<Tag>💰 {formatMoney(m.cost)}</Tag>
-								)}
-							</TagRow>
+                        <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: 16}}>
+                            {maintenances.map((m) => {
+                                const tech = m.technician ?? technicians.find((t) => t.id === m.technicianId);
+                                const relatedFailures = failures.filter(
+                                    (f) => f.machineId === m.machineId || f.maintenanceId === m.id
+                                );
 
-							<Description>
-								📅 Realizado:{" "}
-								{new Date(m.performedAt).toLocaleString()}
-							</Description>
+                                return (
+                                    <MaintenanceCard key={m.id} $type={m.type}>
+                                        <CardHeader>
+                                            <CardTitleBlock>
+                                                <TypeTag $type={m.type}>{m.type}</TypeTag>
+                                                <DateText>
+                                                    {new Date(m.performedAt).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' })}
+                                                </DateText>
+                                            </CardTitleBlock>
+                                            <EditButton onClick={() => handleEdit(m)}>
+                                                Editar
+                                            </EditButton>
+                                        </CardHeader>
 
-							<InfoList>
-								{m.notes && (
-									<p>
-										<span>📝 Notas:</span>
-										<span>{m.notes}</span>
-									</p>
-								)}
+                                        <InfoGrid>
+                                            <InfoItem>
+                                                <span>Técnico</span>
+                                                <span>{tech ? tech.name : "—"}</span>
+                                            </InfoItem>
+                                            <InfoItem>
+                                                <span>Duración</span>
+                                                <span>{m.durationMinutes ? `${m.durationMinutes} min` : "—"}</span>
+                                            </InfoItem>
+                                            <InfoItem>
+                                                <span>Costo</span>
+                                                <span>{m.cost ? formatMoney(m.cost) : "—"}</span>
+                                            </InfoItem>
+                                        </InfoGrid>
 
-								{relatedFailures.length > 0 && (
-									<p>
-										<span>⚠️ Fallas:</span>
-										<span>
-											{relatedFailures.length} registrada
-											{relatedFailures.length > 1 && "s"}
-										</span>
-									</p>
-								)}
-							</InfoList>
+                                        {m.notes && (
+                                            <NoteBox>
+                                                📝 {m.notes}
+                                            </NoteBox>
+                                        )}
 
-							{relatedFailures.length > 0 && (
-								<div
-									style={{
-										marginTop: 8,
-										borderTop: "1px dashed #e5e7eb",
-										paddingTop: 6,
-									}}>
-									<div
-										style={{
-											fontSize: 12,
-											color: "#6b7280",
-											marginBottom: 4,
-										}}>
-										Detalle de fallas
-									</div>
+                                        {relatedFailures.length > 0 && (
+                                            <TagRow style={{marginTop: 8}}>
+                                                <SimpleTag style={{color: '#dc2626', borderColor: '#fecaca', background: '#fef2f2'}}>
+                                                    ⚠️ {relatedFailures.length} falla(s) asociada(s)
+                                                </SimpleTag>
+                                            </TagRow>
+                                        )}
+                                    </MaintenanceCard>
+                                );
+                            })}
+                        </div>
+                    </div>
+                ))}
+            </MaintenanceList>
 
-									{relatedFailures.map((f) => (
-										<div
-											key={f.id}
-											style={{
-												display: "flex",
-												flexWrap: "wrap",
-												gap: 6,
-												alignItems: "center",
-												fontSize: 12,
-												color: "#4b5563",
-											}}>
-											<FailureTag $status={f.status}>
-												{f.status || "sin estado"}
-											</FailureTag>
-											{f.severity && (
-												<Tag>{f.severity}</Tag>
-											)}
-											<span>
-												{f.description} —{" "}
-												{new Date(
-													f.occurredAt
-												).toLocaleDateString()}
-											</span>
-											{f.resolvedAt && (
-												<span
-													style={{
-														color: "#16a34a",
-													}}>
-													(Resuelta el{" "}
-													{new Date(
-														f.resolvedAt
-													).toLocaleDateString()}
-													)
-												</span>
-											)}
-										</div>
-									))}
-								</div>
-							)}
-						</MaintenanceCard>
-					);
-				})}
-			</MaintenanceList>
+            {showForm && (
+                <MaintenanceForm
+                    machines={machines}
+                    technicians={technicians}
+                    initialData={editing}
+                    onClose={() => {
+                        setShowForm(false);
+                    }}
+                    onSave={() => {
+                        loadData();
+                        setShowForm(false);
+                    }}
+                />
+            )}
 
-			{showForm && (
-				<MaintenanceForm
-					machines={machines}
-					technicians={technicians}
-					initialData={editing}
-					onClose={() => {
-						setShowForm(false);
-					}}
-					onSave={() => {
-						loadData();
-						setShowForm(false);
-					}}
-				/>
-			)}
+            {showImport && (
+                <Modal>
+                    <ModalContent onClick={(e) => e.stopPropagation()}>
+                        <CloseIconButton onClick={() => setShowImport(false)}>×</CloseIconButton>
+                        <ModalTitle>Importar Mantenimientos</ModalTitle>
 
-			{showImport && (
-				<Modal onClick={() => setShowImport(false)}>
-					<ModalContent onClick={(e) => e.stopPropagation()}>
-						<CloseIconButton
-							aria-label="Cerrar"
-							onClick={() => setShowImport(false)}>
-							×
-						</CloseIconButton>
+                        <Field>
+                            <Label>Archivo Excel</Label>
+                            <div style={{padding: 20, border: '2px dashed #cbd5e1', borderRadius: 8, textAlign: 'center', background: '#f8fafc'}}>
+                                <input
+                                    type="file"
+                                    accept=".xlsx,.xls"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) handleImportExcel(file);
+                                    }}
+                                />
+                            </div>
+                            <div style={{ fontSize: 12, color: "#64748b", marginTop: 8 }}>
+                                Columnas requeridas: machine, type, technician, performedAt, durationMinutes, cost, notes
+                            </div>
+                        </Field>
 
-						<ModalTitle>Importar Mantenimientos</ModalTitle>
-
-						<Field>
-							<label>Archivo Excel</label>
-							<TextInput
-								as="input"
-								type="file"
-								accept=".xlsx,.xls"
-								onChange={(
-									e: React.ChangeEvent<HTMLInputElement>
-								) => {
-									const file = e.target.files?.[0];
-									if (file) handleImportExcel(file);
-								}}
-							/>
-
-							<small style={{ fontSize: 11, color: "#6b7280" }}>
-								Columnas esperadas:{" "}
-								<strong>
-									machine, type, technician, performedAt,
-									durationMinutes, cost, notes
-								</strong>
-							</small>
-						</Field>
-
-						{importing && <p>Procesando archivo...</p>}
-						{importError && <ErrorText>{importError}</ErrorText>}
-					</ModalContent>
-				</Modal>
-			)}
-		</Container>
-	);
+                        {importing && <p style={{textAlign: 'center', color: '#2563eb'}}>Procesando archivo...</p>}
+                        {importError && <ErrorText>{importError}</ErrorText>}
+                    </ModalContent>
+                </Modal>
+            )}
+        </Container>
+    );
 }

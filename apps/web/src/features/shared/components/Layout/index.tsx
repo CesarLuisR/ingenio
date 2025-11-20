@@ -1,85 +1,110 @@
 import { Outlet, useLocation } from "react-router-dom";
 import {
-	Container,
-	MainContent,
-	Nav,
-	NavLinkStyled,
-	Sidebar,
-	SidebarHeader,
-	Subtitle,
-	Title,
+    Container,
+    MainContent,
+    Nav,
+    NavLinkStyled,
+    Sidebar,
+    SidebarHeader,
+    Subtitle,
+    Title,
+    SidebarFooter,
+    UserAvatar,
+    UserInfo,
 } from "./styled";
 import { useSessionStore } from "../../../../store/sessionStore";
 import { useEffect, useState } from "react";
-import { api }from "../../../../lib/api";
+import { api } from "../../../../lib/api";
 import type { Ingenio } from "../../../../types";
 
 export default function Layout() {
-	const location = useLocation();
-	const isActive = (path: string) => location.pathname === path;
-	const user = useSessionStore((s) => s.user);
-	const [ingenio, setIngenio] = useState<Ingenio>();
+    const location = useLocation();
+    // Detectar si la ruta empieza con el path (para subrutas activas)
+    const isActive = (path: string) => {
+        if (path === "/") return location.pathname === "/";
+        return location.pathname.startsWith(path);
+    };
 
-	useEffect(() => {
-		const getIngenioInfo = async () => {
-			if (user?.ingenioId) {
-				const ingenio = await api.getIngenio(user?.ingenioId);
-				setIngenio(ingenio);
-			}
-		}
+    const user = useSessionStore((s) => s.user);
+    const [ingenio, setIngenio] = useState<Ingenio>();
 
-		getIngenioInfo();
-	}, []);
+    useEffect(() => {
+        const getIngenioInfo = async () => {
+            if (user?.ingenioId) {
+                try {
+                    const data = await api.getIngenio(user?.ingenioId);
+                    setIngenio(data);
+                } catch (e) {
+                    console.error("Error cargando ingenio", e);
+                }
+            }
+        }
+        getIngenioInfo();
+    }, [user?.ingenioId]);
 
-	return (
-		<Container>
-			<Sidebar>
-				<SidebarHeader>
-					<Title>📡 {ingenio?.name}</Title>
-					<Subtitle>Sistema de Monitoreo</Subtitle>
-				</SidebarHeader>
+    // Obtener iniciales del usuario para el avatar
+    const initials = user?.name 
+        ? user.name.split(' ').map(n => n[0]).slice(0, 2).join('').toUpperCase() 
+        : "U";
 
-				<Nav>
-					<NavLinkStyled to="/" $active={isActive("/")}>
-						🏠 Dashboard
-					</NavLinkStyled>
-					<NavLinkStyled
-						to="/maquinas"
-						$active={isActive("/maquinas")}>
-						⚙️ Maquinas 
-					</NavLinkStyled>
-					<NavLinkStyled
-						to="/sensores"
-						$active={isActive("/sensores")}>
-						📊 Sensores
-					</NavLinkStyled>
-					<NavLinkStyled
-						to="/mantenimientos"
-						$active={isActive("/mantenimientos")}>
-						🔧 Mantenimientos
-					</NavLinkStyled>
-					<NavLinkStyled to="/fallos" $active={isActive("/fallos")}>
-						⚠️ Fallos
-					</NavLinkStyled>
-					<NavLinkStyled to="/tecnicos" $active={isActive("/tecnicos")}>
-						👷‍♂️️ Técnicos 
-					</NavLinkStyled>
-					<NavLinkStyled
-						to="/usuarios"
-						$active={isActive("/usuarios")}>
-						👥 Usuarios
-					</NavLinkStyled>
-					<NavLinkStyled
-						to="/analisis"
-						$active={isActive("/analisis")}>
-						📈 Análisis
-					</NavLinkStyled>
-				</Nav>
-			</Sidebar>
+    return (
+        <Container>
+            <Sidebar>
+                <SidebarHeader>
+                    <Title>
+                        <span>📡</span>
+                        {ingenio?.name || "Cargando..."}
+                    </Title>
+                    <Subtitle>Sistema de Monitoreo</Subtitle>
+                </SidebarHeader>
 
-			<MainContent>
-				<Outlet />
-			</MainContent>
-		</Container>
-	);
+                <Nav>
+                    <NavLinkStyled to="/" $active={isActive("/")}>
+                        <span>🏠</span> Dashboard
+                    </NavLinkStyled>
+                    
+                    <NavLinkStyled to="/maquinas" $active={isActive("/maquinas")}>
+                        <span>⚙️</span> Máquinas
+                    </NavLinkStyled>
+                    
+                    <NavLinkStyled to="/sensores" $active={isActive("/sensores")}>
+                        <span>📊</span> Sensores
+                    </NavLinkStyled>
+                    
+                    <NavLinkStyled to="/mantenimientos" $active={isActive("/mantenimientos")}>
+                        <span>🔧</span> Mantenimientos
+                    </NavLinkStyled>
+                    
+                    <NavLinkStyled to="/fallos" $active={isActive("/fallos")}>
+                        <span>⚠️</span> Fallos
+                    </NavLinkStyled>
+                    
+                    <NavLinkStyled to="/tecnicos" $active={isActive("/tecnicos")}>
+                        <span>👷‍♂️</span> Técnicos
+                    </NavLinkStyled>
+                    
+                    <NavLinkStyled to="/usuarios" $active={isActive("/usuarios")}>
+                        <span>👥</span> Usuarios
+                    </NavLinkStyled>
+                    
+                    <NavLinkStyled to="/analisis" $active={isActive("/analisis")}>
+                        <span>📈</span> Análisis
+                    </NavLinkStyled>
+                </Nav>
+
+                {/* Footer con información del usuario logueado */}
+                <SidebarFooter>
+                    <UserAvatar>{initials}</UserAvatar>
+                    <UserInfo>
+                        <span className="name">{user?.name || "Usuario"}</span>
+                        <span className="role">{user?.role || "Invitado"}</span>
+                    </UserInfo>
+                </SidebarFooter>
+            </Sidebar>
+
+            <MainContent>
+                <Outlet />
+            </MainContent>
+        </Container>
+    );
 }

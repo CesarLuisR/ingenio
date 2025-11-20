@@ -1,4 +1,4 @@
-import { Title, Sub, Status as StatusBadge } from "../styled";
+import { Title, Sub, StatusBadge } from "../styled";
 
 export const STATUS_LABELS: Record<string, string> = {
 	ok: "✅ OK",

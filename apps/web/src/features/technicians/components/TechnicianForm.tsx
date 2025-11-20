@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../../../lib/api";
+import type { Technician } from "../../../types";
 import {
     Modal,
     ModalContent,
-    ModalTitle,
     CloseButton,
+    ModalTitle,
     Form,
     FormGroup,
     Label,
@@ -15,105 +16,95 @@ import {
     SubmitButton,
 } from "../styled";
 
-import type { Technician } from "../../../types";
-import { useSessionStore } from "../../../store/sessionStore";
-
-export default function TechnicianForm({
-    initialData,
-    onClose,
-    onSave,
-}: {
+interface Props {
     initialData?: Technician | null;
     onClose: () => void;
     onSave: () => void;
-}) {
-    const user = useSessionStore((s) => s.user);
+}
 
+export default function TechnicianForm({ initialData, onClose, onSave }: Props) {
     const [formData, setFormData] = useState({
-        name: initialData?.name || "",
-        email: initialData?.email || "",
-        phone: initialData?.phone || "",
-        active: initialData?.active ?? true,
+        name: "",
+        email: "",
+        phone: "",
+        active: true,
     });
+
+    useEffect(() => {
+        if (initialData) {
+            setFormData({
+                name: initialData.name,
+                email: initialData.email || "",
+                phone: initialData.phone || "",
+                active: initialData.active,
+            });
+        }
+    }, [initialData]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
         try {
-            const payload = {
-                name: formData.name,
-                email: formData.email || undefined,
-                phone: formData.phone || undefined,
-                active: formData.active,
-                ingenioId: user?.ingenioId ?? null,
-            };
-
             if (initialData) {
-                await api.updateTechnician(initialData.id.toString(), payload);
+                await api.updateTechnician(initialData.id.toString(), formData);
             } else {
-                await api.createTechnician(payload);
+                await api.createTechnician({ ...formData, ingenioId: 1 }); // Ajustar ingenioId según contexto
             }
-
             onSave();
-        } catch (err) {
-            console.error("Error guardando técnico:", err);
+        } catch (error) {
+            console.error(error);
+            alert("Error al guardar el técnico");
         }
     };
 
     return (
-        <Modal onClick={onClose}>
-            <ModalContent onClick={(e) => e.stopPropagation()}>
+        <Modal>
+            <ModalContent>
                 <CloseButton onClick={onClose}>×</CloseButton>
-
                 <ModalTitle>
                     {initialData ? "Editar Técnico" : "Registrar Técnico"}
                 </ModalTitle>
 
                 <Form onSubmit={handleSubmit}>
                     <FormGroup>
-                        <Label>Nombre</Label>
+                        <Label>Nombre Completo</Label>
                         <Input
                             required
                             value={formData.name}
-                            onChange={(e) =>
-                                setFormData({ ...formData, name: e.target.value })
-                            }
+                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            placeholder="Ej. Juan Pérez"
                         />
                     </FormGroup>
 
                     <FormGroup>
-                        <Label>Email</Label>
+                        <Label>Correo Electrónico</Label>
                         <Input
                             type="email"
                             value={formData.email}
-                            onChange={(e) =>
-                                setFormData({ ...formData, email: e.target.value })
-                            }
+                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                            placeholder="juan@empresa.com"
                         />
                     </FormGroup>
 
                     <FormGroup>
                         <Label>Teléfono</Label>
                         <Input
+                            type="tel"
                             value={formData.phone}
-                            onChange={(e) =>
-                                setFormData({ ...formData, phone: e.target.value })
-                            }
+                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                            placeholder="+1 809 000 0000"
                         />
                     </FormGroup>
 
                     <FormGroup>
                         <Label>Estado</Label>
                         <Select
-                            value={formData.active ? "activo" : "inactivo"}
+                            value={formData.active ? "active" : "inactive"}
                             onChange={(e) =>
-                                setFormData({
-                                    ...formData,
-                                    active: e.target.value === "activo",
-                                })
-                            }>
-                            <option value="activo">Activo</option>
-                            <option value="inactivo">Inactivo</option>
+                                setFormData({ ...formData, active: e.target.value === "active" })
+                            }
+                        >
+                            <option value="active">Activo</option>
+                            <option value="inactive">Inactivo</option>
                         </Select>
                     </FormGroup>
 
@@ -121,9 +112,8 @@ export default function TechnicianForm({
                         <CancelButton type="button" onClick={onClose}>
                             Cancelar
                         </CancelButton>
-
                         <SubmitButton type="submit">
-                            {initialData ? "Guardar cambios" : "Registrar"}
+                            {initialData ? "Guardar Cambios" : "Crear Técnico"}
                         </SubmitButton>
                     </ButtonGroup>
                 </Form>
