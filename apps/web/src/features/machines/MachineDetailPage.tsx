@@ -27,10 +27,18 @@ import {
     EmptyMessage,
 } from "./detailStyled";
 
+// --- FUNCIÓN DE AYUDA PARA FORMATEAR KPIS ---
+// Si es undefined devuelve "-", si es número lo redondea a 2 decimales
+const formatMetric = (value: number | undefined | null, suffix: string = "") => {
+    if (value === undefined || value === null) return "-";
+    return `${Number(value).toFixed(2)}${suffix}`;
+};
+
 export default function MachineDetailPage() {
     const { id } = useParams();
     const machineId = Number(id);
 
+    // Extraemos "reload" del hook
     const {
         machine,
         sensors,
@@ -39,6 +47,7 @@ export default function MachineDetailPage() {
         metrics,
         loading,
         error,
+        reload,
     } = useMachineDetail(machineId);
 
     const [tab, setTab] = useState<"mantenimientos" | "fallas" | "sensores">("mantenimientos");
@@ -64,7 +73,7 @@ export default function MachineDetailPage() {
 
     return (
         <Container>
-            {/* HEADER COMPACTO PERO INFORMATIVO */}
+            {/* HEADER */}
             <Header>
                 <HeaderTop>
                     <div>
@@ -91,7 +100,7 @@ export default function MachineDetailPage() {
             </Header>
 
             <ContentGrid>
-                {/* COLUMNA IZQUIERDA: CONTENIDO DINÁMICO (TABS) */}
+                {/* COLUMNA IZQUIERDA: CONTENIDO (TABS) */}
                 <div>
                     <TabsRow>
                         <TabButton $active={tab === "mantenimientos"} onClick={() => setTab("mantenimientos")}>
@@ -105,12 +114,19 @@ export default function MachineDetailPage() {
                         </TabButton>
                     </TabsRow>
 
-                    {/* CONTENIDO DE LAS PESTAÑAS */}
-                    
                     {/* --- MANTENIMIENTOS --- */}
                     {tab === "mantenimientos" && (
                         <Section>
-                            <SectionTitle>Registro de intervenciones</SectionTitle>
+                            <SectionTitle>
+                                Registro de intervenciones
+                                {/* Botón para actualizar manualmente si editas un técnico */}
+                                <button 
+                                    onClick={() => reload()} 
+                                    style={{ marginLeft: 'auto', fontSize: 12, cursor: 'pointer', padding: '4px 8px' }}
+                                >
+                                    ↻ Actualizar
+                                </button>
+                            </SectionTitle>
                             {maintenances.length === 0 ? (
                                 <EmptyMessage>No hay mantenimientos registrados.</EmptyMessage>
                             ) : (
@@ -122,7 +138,8 @@ export default function MachineDetailPage() {
                                                 <span className="date">{new Date(mt.performedAt).toLocaleDateString()}</span>
                                             </div>
                                             <div className="meta">
-                                                <span>Técnico: <strong>{mt.technician?.name ?? "N/A"}</strong></span>
+                                                {/* Mostrar técnico correctamente */}
+                                                <span>Técnico: <strong>{mt.technician?.name ? mt.technician.name : "Sin asignar"}</strong></span>
                                                 <span>Duración: <strong>{mt.durationMinutes ?? 0} min</strong></span>
                                             </div>
                                             {mt.notes && <div className="notes">{mt.notes}</div>}
@@ -175,7 +192,7 @@ export default function MachineDetailPage() {
                                         <InfoCard key={s.id}>
                                             <div className="header">
                                                 <span className="title">{s.name}</span>
-                                                <span className="date" style={{background: s.active ? '#ecfdf5' : '#f1f5f9', color: s.active ? '#059669' : '#64748b'}}>
+                                                <span className="date" style={{ background: s.active ? '#ecfdf5' : '#f1f5f9', color: s.active ? '#059669' : '#64748b' }}>
                                                     {s.active ? 'Activo' : 'Inactivo'}
                                                 </span>
                                             </div>
@@ -194,20 +211,22 @@ export default function MachineDetailPage() {
                     )}
                 </div>
 
-                {/* COLUMNA DERECHA: SIDEBAR STICKY */}
+                {/* COLUMNA DERECHA: SIDEBAR */}
                 <Sidebar>
-                    {/* CARD: INFORMACIÓN GENERAL */}
+                    {/* CARD: INFO GENERAL */}
                     <SidebarCard>
-                        <SectionTitle style={{marginBottom: 16}}>Ficha Técnica</SectionTitle>
+                        <SectionTitle style={{ marginBottom: 16 }}>Ficha Técnica</SectionTitle>
                         <InfoList>
                             <div><span>Nombre</span> <span>{machine.name}</span></div>
                             <div><span>Código</span> <span>{machine.code}</span></div>
                             <div><span>Tipo</span> <span>{machine.type ?? "-"}</span></div>
                             <div><span>Ubicación</span> <span>{machine.location ?? "-"}</span></div>
-                            <div><span>Estado</span> <span style={{color: machine.active ? '#16a34a' : '#dc2626'}}>{machine.active ? "Activa" : "Inactiva"}</span></div>
+                            <div><span>Fecha de Registro</span> <span>{new Date(machine.createdAt).toLocaleString()}</span></div>
+                            <div><span>Fecha de Actualización</span> <span>{new Date(machine.updatedAt).toLocaleString()}</span></div>
+                            <div><span>Estado</span> <span style={{ color: machine.active ? '#16a34a' : '#dc2626' }}>{machine.active ? "Activa" : "Inactiva"}</span></div>
                         </InfoList>
                         {machine.description && (
-                            <div style={{marginTop: 16, fontSize: 13, color: '#64748b', lineHeight: 1.5, background: '#f8fafc', padding: 10, borderRadius: 8}}>
+                            <div style={{ marginTop: 16, fontSize: 13, color: '#64748b', lineHeight: 1.5, background: '#f8fafc', padding: 10, borderRadius: 8 }}>
                                 {machine.description}
                             </div>
                         )}
@@ -215,29 +234,72 @@ export default function MachineDetailPage() {
 
                     {/* CARD: KPIs / MÉTRICAS */}
                     <SidebarCard>
-                        <SectionTitle style={{marginBottom: 16}}>KPIs de Rendimiento</SectionTitle>
+                        <SectionTitle style={{ marginBottom: 16 }}>KPIs de Rendimiento</SectionTitle>
                         {!metrics ? (
-                            <div style={{color: '#94a3b8', fontSize: 13, textAlign: 'center'}}>Sin datos métricos</div>
+                            <div style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center' }}>Sin datos métricos</div>
                         ) : (
                             <MetricsGrid>
                                 <MetricCard>
                                     <MetricLabel>Disponibilidad</MetricLabel>
-                                    <MetricValue>{metrics.availability ?? "-"}</MetricValue>
+                                    {/* Usamos title para mostrar valor completo al pasar mouse */}
+                                    <MetricValue title={String(metrics.availability)}>
+                                        {formatMetric(metrics.availability, "%")}
+                                    </MetricValue>
                                 </MetricCard>
                                 <MetricCard>
                                     <MetricLabel>Confiabilidad</MetricLabel>
-                                    <MetricValue>{metrics.reliability ?? "-"}</MetricValue>
+                                    <MetricValue title={String(metrics.reliability)}>
+                                        {formatMetric(metrics.reliability, "%")}
+                                    </MetricValue>
                                 </MetricCard>
                                 <MetricCard>
                                     <MetricLabel>MTBF</MetricLabel>
-                                    <MetricValue>{metrics.mtbf ?? "-"}</MetricValue>
+                                    <MetricValue title={String(metrics.mtbf)}>
+                                        {formatMetric(metrics.mtbf, "h")}
+                                    </MetricValue>
                                 </MetricCard>
                                 <MetricCard>
                                     <MetricLabel>MTTR</MetricLabel>
-                                    <MetricValue>{metrics.mttr ?? "-"}</MetricValue>
+                                    <MetricValue title={String(metrics.mttr)}>
+                                        {formatMetric(metrics.mttr, "h")}
+                                    </MetricValue>
                                 </MetricCard>
                             </MetricsGrid>
                         )}
+                    </SidebarCard>
+
+                    {/* CARD: ÚLTIMO REPORTE (Mockup) */}
+                    <SidebarCard>
+                        <SectionTitle style={{ marginBottom: 12 }}>Último Reporte</SectionTitle>
+                        <div style={{
+                            background: '#f0f9ff',
+                            border: '1px solid #bae6fd',
+                            borderRadius: 8,
+                            padding: 12,
+                            marginBottom: 12
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                                <span style={{ fontSize: 18 }}>📋</span>
+                                <span style={{ fontWeight: 700, color: '#0369a1', fontSize: 14 }}>Análisis Diario</span>
+                            </div>
+                            <p style={{ fontSize: 12, color: '#0c4a6e', margin: 0, lineHeight: 1.4 }}>
+                                El rendimiento es estable. No se detectan anomalías críticas recientes.
+                            </p>
+                        </div>
+                        <button style={{
+                            width: '100%',
+                            padding: '8px',
+                            background: 'white',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: 6,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: '#475569',
+                            cursor: 'not-allowed',
+                            opacity: 0.7
+                        }} disabled>
+                            Ver reporte completo (Próximamente)
+                        </button>
                     </SidebarCard>
                 </Sidebar>
             </ContentGrid>

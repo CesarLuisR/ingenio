@@ -7,7 +7,6 @@ import {
     DateText,
     Container,
     EditButton,
-    ErrorText,
     Field,
     FiltersBar,
     Header,
@@ -29,7 +28,15 @@ import {
     Title,
     TypeTag,
     NoteBox,
-	Label,
+    Label,
+    ReportContainer,
+    ReportHeader,
+    ReportStats,
+    StatBadge,
+    ReportContent,
+    LogRow,
+    ReportActions,
+    ActionButton
 } from "./styled";
 import { formatMoney } from "./utils";
 
@@ -50,28 +57,49 @@ export default function Mantenimientos() {
         showImport,
         setShowImport,
         importing,
-        importError,
-        importSummary,
+        importReport,     // <--- Usamos el nuevo estado
+        setImportReport,  // <--- Para poder cerrar el reporte
         handleImportExcel,
 
         // filtros
-        filterMachineId,
-        setFilterMachineId,
-        filterTechnicianId,
-        setFilterTechnicianId,
-        filterType,
-        setFilterType,
-        filterHasFailures,
-        setFilterHasFailures,
-        filterText,
-        setFilterText,
+        filterMachineId, setFilterMachineId,
+        filterTechnicianId, setFilterTechnicianId,
+        filterType, setFilterType,
+        filterHasFailures, setFilterHasFailures,
+        filterText, setFilterText,
     } = useMaintenancesLogic();
+
+    // --- FUNCIÓN PARA DESCARGAR EL REPORTE ---
+    const downloadReportLog = () => {
+        if (!importReport) return;
+
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+        const lines = [
+            `REPORTE DE IMPORTACIÓN - ${new Date().toLocaleString()}`,
+            `Total procesado: ${importReport.total}`,
+            `Exitosos: ${importReport.success}`,
+            `Fallidos: ${importReport.failed}`,
+            `--------------------------------------------------`,
+            `DETALLES:`,
+            ...importReport.logs.map(log => 
+                `[${log.status.toUpperCase()}] Fila ${log.row}: ${log.message} ${log.status === 'error' ? JSON.stringify(log.data) : ''}`
+            )
+        ];
+
+        const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `importacion-mantenimientos-${timestamp}.txt`;
+        a.click();
+        window.URL.revokeObjectURL(url);
+    };
 
     if (loading) {
         return <LoadingText>Cargando registros...</LoadingText>;
     }
 
-    // Agrupar mantenimientos por máquina
+    // Agrupar mantenimientos por máquina (Igual que antes)
     const maintenancesByMachine = machines.map((machine) => {
         const machineMaintenances = filteredMaintenances
             .filter((m) => m.machineId === machine.id)
@@ -82,7 +110,7 @@ export default function Mantenimientos() {
             machine,
             maintenances: machineMaintenances,
         };
-    }).filter(group => group.maintenances.length > 0); // Ocultar máquinas sin mantenimientos
+    }).filter(group => group.maintenances.length > 0);
 
     return (
         <Container>
@@ -95,23 +123,62 @@ export default function Mantenimientos() {
                     <ImportButton onClick={() => setShowImport(true)}>
                         📊 Importar Excel
                     </ImportButton>
-                    <Button
-                        onClick={() => {
-                            handleEdit(null as any);
-                        }}>
+                    <Button onClick={() => handleEdit(null as any)}>
                         + Nuevo Registro
                     </Button>
                 </div>
             </Header>
 
-            {importSummary && (
-                <div style={{background: '#eff6ff', padding: 16, borderRadius: 8, marginBottom: 20, color: '#1e40af', border: '1px solid #dbeafe'}}>
-                    {importSummary}
-                </div>
+            {/* --- NUEVA SECCIÓN DE REPORTE DE IMPORTACIÓN --- */}
+            {importReport && (
+                <ReportContainer>
+                    <ReportHeader>
+                        <h3>📋 Resultado de Importación</h3>
+                        <ReportStats>
+                            <StatBadge type="info">Total: {importReport.total}</StatBadge>
+                            {importReport.success > 0 && (
+                                <StatBadge type="success">Exitosos: {importReport.success}</StatBadge>
+                            )}
+                            {importReport.failed > 0 && (
+                                <StatBadge type="error">Fallidos: {importReport.failed}</StatBadge>
+                            )}
+                        </ReportStats>
+                    </ReportHeader>
+                    
+                    <ReportContent>
+                        {importReport.logs.length === 0 ? (
+                            <div style={{padding: 20, textAlign: 'center', color: '#94a3b8'}}>
+                                No se generaron registros de log.
+                            </div>
+                        ) : (
+                            importReport.logs.map((log, idx) => (
+                                <LogRow key={idx} type={log.status}>
+                                    <span style={{minWidth: 20}}>
+                                        {log.status === 'success' ? '✅' : '❌'}
+                                    </span>
+                                    <strong style={{color: '#475569'}}>Fila {log.row}:</strong>
+                                    <span style={{flex: 1, color: log.status === 'error' ? '#b91c1c' : '#166534'}}>
+                                        {log.message}
+                                    </span>
+                                </LogRow>
+                            ))
+                        )}
+                    </ReportContent>
+
+                    <ReportActions>
+                        <ActionButton variant="primary" onClick={downloadReportLog}>
+                            📥 Descargar Log (.txt)
+                        </ActionButton>
+                        <ActionButton variant="secondary" onClick={() => setImportReport(null)}>
+                            Cerrar Reporte
+                        </ActionButton>
+                    </ReportActions>
+                </ReportContainer>
             )}
 
-            {/* Barra de Filtros Mejorada */}
+            {/* Barra de Filtros (Igual que antes) */}
             <FiltersBar>
+               {/* ... código existente de filtros ... */}
                 <SelectInput
                     value={filterMachineId}
                     onChange={(e) => setFilterMachineId(e.target.value)}>
@@ -122,35 +189,22 @@ export default function Mantenimientos() {
                         </option>
                     ))}
                 </SelectInput>
-
-                <SelectInput
-                    value={filterTechnicianId}
-                    onChange={(e) => setFilterTechnicianId(e.target.value)}>
+                {/* ... Resto de filtros ... */}
+                <SelectInput value={filterTechnicianId} onChange={(e) => setFilterTechnicianId(e.target.value)}>
                     <option value="">Todos los técnicos</option>
-                    {technicians.map((t) => (
-                        <option key={t.id} value={t.id}>
-                            {t.name}
-                        </option>
-                    ))}
+                    {technicians.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </SelectInput>
-
-                <SelectInput
-                    value={filterType}
-                    onChange={(e) => setFilterType(e.target.value)}>
+                <SelectInput value={filterType} onChange={(e) => setFilterType(e.target.value)}>
                     <option value="">Todos los tipos</option>
                     <option value="Preventivo">Preventivo</option>
                     <option value="Correctivo">Correctivo</option>
                     <option value="Predictivo">Predictivo</option>
                 </SelectInput>
-
-                <SelectInput
-                    value={filterHasFailures}
-                    onChange={(e) => setFilterHasFailures(e.target.value)}>
+                <SelectInput value={filterHasFailures} onChange={(e) => setFilterHasFailures(e.target.value)}>
                     <option value="">Estado de fallas</option>
                     <option value="yes">Con fallas asociadas</option>
                     <option value="no">Sin fallas</option>
                 </SelectInput>
-
                 <TextInput
                     placeholder="🔍 Buscar notas o detalles..."
                     value={filterText}
@@ -168,9 +222,7 @@ export default function Mantenimientos() {
                         <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: 16}}>
                             {maintenances.map((m) => {
                                 const tech = m.technician ?? technicians.find((t) => t.id === m.technicianId);
-                                const relatedFailures = failures.filter(
-                                    (f) => f.machineId === m.machineId || f.maintenanceId === m.id
-                                );
+                                const relatedFailures = failures.filter((f) => f.machineId === m.machineId || f.maintenanceId === m.id);
 
                                 return (
                                     <MaintenanceCard key={m.id} $type={m.type}>
@@ -181,9 +233,7 @@ export default function Mantenimientos() {
                                                     {new Date(m.performedAt).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' })}
                                                 </DateText>
                                             </CardTitleBlock>
-                                            <EditButton onClick={() => handleEdit(m)}>
-                                                Editar
-                                            </EditButton>
+                                            <EditButton onClick={() => handleEdit(m)}>Editar</EditButton>
                                         </CardHeader>
 
                                         <InfoGrid>
@@ -201,11 +251,7 @@ export default function Mantenimientos() {
                                             </InfoItem>
                                         </InfoGrid>
 
-                                        {m.notes && (
-                                            <NoteBox>
-                                                📝 {m.notes}
-                                            </NoteBox>
-                                        )}
+                                        {m.notes && <NoteBox>📝 {m.notes}</NoteBox>}
 
                                         {relatedFailures.length > 0 && (
                                             <TagRow style={{marginTop: 8}}>
@@ -227,9 +273,7 @@ export default function Mantenimientos() {
                     machines={machines}
                     technicians={technicians}
                     initialData={editing}
-                    onClose={() => {
-                        setShowForm(false);
-                    }}
+                    onClose={() => setShowForm(false)}
                     onSave={() => {
                         loadData();
                         setShowForm(false);
@@ -260,8 +304,7 @@ export default function Mantenimientos() {
                             </div>
                         </Field>
 
-                        {importing && <p style={{textAlign: 'center', color: '#2563eb'}}>Procesando archivo...</p>}
-                        {importError && <ErrorText>{importError}</ErrorText>}
+                        {importing && <p style={{textAlign: 'center', color: '#2563eb', fontWeight: 600}}>Procesando archivo...</p>}
                     </ModalContent>
                 </Modal>
             )}

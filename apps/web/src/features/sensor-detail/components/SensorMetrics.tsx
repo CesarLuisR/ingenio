@@ -56,10 +56,9 @@ const KpiCard = ({ label, value, color, bg }: any) => (
             {label}
         </span>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <div style={{ width: 40, height: 40, borderRadius: '8px', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: color }}>
-                {/* Podrías poner un icono aquí */}
+            {/* <div style={{ width: 40, height: 40, borderRadius: '8px', background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: color }}>
                 Start
-            </div>
+            </div> */}
             <span style={{ fontSize: "18px", fontWeight: 700, color: "#0f172a" }}>
                 {value}
             </span>

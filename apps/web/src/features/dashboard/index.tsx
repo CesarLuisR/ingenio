@@ -32,11 +32,9 @@ import {
     DashboardGrid,
     ChartContainer,
     SectionTitle,
-    SensorsGrid
 } from "./styled";
 import { useDashboardData } from "./hooks/useDashboardData";
 import { useDashboardStatus } from "./hooks/useDashboardStatus";
-import { SensorCard } from "./components/SensorCard";
 import type { BaseMetrics } from "../../types";
 
 const INGENIO_ID = 1;
@@ -204,14 +202,6 @@ export default function Dashboard() {
                             </ResponsiveContainer>
                         </ChartContainer>
                     </DashboardGrid>
-
-                    {/* --- SENSORS GRID --- */}
-                    <SectionTitle>Sensores Monitoreados ({sensors.length})</SectionTitle>
-                    <SensorsGrid>
-                        {sensors.map(sensor => (
-                            <SensorCard key={sensor.id} sensor={sensor} />
-                        ))}
-                    </SensorsGrid>
                 </>
             )}
         </Container>

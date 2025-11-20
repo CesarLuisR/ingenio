@@ -19,7 +19,7 @@ export const Page = styled.div`
   }
 `;
 
-// --- Encabezados ---
+// --- Encabezados de Página ---
 export const HeaderContainer = styled.div`
   display: flex;
   justify-content: space-between;
@@ -51,36 +51,7 @@ export const Sub = styled.p`
   font-weight: 500;
 `;
 
-// --- Status Badges ---
-export const StatusBadge = styled.span<{ status: string }>`
-  padding: 6px 12px;
-  border-radius: 9999px;
-  font-weight: 700;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-
-  ${(p) => {
-    switch (p.status) {
-      case "ok":
-        return css`background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;`;
-      case "warning":
-        return css`background: #fffbeb; color: #d97706; border: 1px solid #fcd34d;`;
-      case "critical":
-        return css`background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;`;
-      default:
-        return css`background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0;`;
-    }
-  }}
-`;
-
-// --- Contenedores de Gráficos ---
-
-// Contenedor de una Categoría (ej: Vibración)
+// --- Secciones de Categoría ---
 export const CategorySection = styled.section`
   margin-bottom: 40px;
 `;
@@ -102,10 +73,10 @@ export const CategoryTitle = styled.h2`
   }
 `;
 
-// Grid para poner los gráficos uno al lado del otro
+// --- Grid de Gráficos ---
 export const ChartGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
   gap: 24px;
 
   @media (max-width: 600px) {
@@ -113,31 +84,66 @@ export const ChartGrid = styled.div`
   }
 `;
 
-// Tarjeta individual de gráfico
-export const ChartCard = styled.div`
+// --- Tarjeta de Gráfico (Card Inteligente) ---
+// Recibe $status para cambiar el borde de color si hay alerta
+export const ChartCard = styled.div<{ $status?: string }>`
   background: white;
   border-radius: 16px;
   padding: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
-  border: 1px solid #f1f5f9;
   transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+
+  /* Lógica de Borde y Sombra Dinámica */
+  border: 1px solid ${({ $status }) => {
+    if ($status === 'critical') return '#fecaca'; // Rojo suave
+    if ($status === 'warning') return '#fcd34d'; // Amarillo suave
+    return '#f1f5f9'; // Gris normal
+  }};
+  
+  box-shadow: ${({ $status }) => {
+    if ($status === 'critical') return '0 4px 12px rgba(220, 38, 38, 0.1)';
+    if ($status === 'warning') return '0 4px 12px rgba(217, 119, 6, 0.1)';
+    return '0 4px 6px -1px rgba(0, 0, 0, 0.02)';
+  }};
+
+  /* Indicador lateral de color sólido */
+  &::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: ${({ $status }) => {
+      if ($status === 'critical') return '#dc2626';
+      if ($status === 'warning') return '#d97706';
+      return 'transparent'; 
+    }};
+  }
 
   &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
-    border-color: #e2e8f0;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
   }
 `;
 
+// --- Header Interno de la Métrica ---
 export const MetricHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 20px;
 
+  .title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
   h3 {
     margin: 0;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     color: #64748b;
     text-transform: uppercase;
@@ -145,15 +151,35 @@ export const MetricHeader = styled.div`
   }
 
   .current-value {
-    font-size: 24px;
+    font-size: 28px;
     font-weight: 800;
     color: #0f172a;
-    font-feature-settings: "tnum";
     line-height: 1;
+    font-feature-settings: "tnum";
+    display: flex;
+    align-items: baseline;
   }
 `;
 
-// --- Secciones de Información (Listas) ---
+// --- Badge de Estado ---
+export const StatusBadge = styled.span<{ $status?: string }>`
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 6px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  width: fit-content;
+
+  ${({ $status }) => {
+    if ($status === 'critical') return css`background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;`;
+    if ($status === 'warning') return css`background: #fffbeb; color: #d97706; border: 1px solid #fcd34d;`;
+    // OK (Default)
+    return css`background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;`;
+  }}
+`;
+
+// --- Elementos adicionales (Legacy/Utilidad) ---
 export const InfoSection = styled.div`
   background-color: white;
   border-radius: 16px;

@@ -270,11 +270,19 @@ export const MetricLabel = styled.span`
   text-transform: uppercase;
 `;
 
+// --- AQUÍ ESTA EL ARREGLO PARA LOS NÚMEROS LARGOS ---
 export const MetricValue = styled.span`
   font-size: 20px;
   font-weight: 800;
   color: #0f172a;
   letter-spacing: -0.5px;
+
+  /* Fix overflow */
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 `;
 
 // --- Listas de Historial (Feed Style) ---

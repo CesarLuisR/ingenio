@@ -401,3 +401,120 @@ export const LoadingText = styled.div`
   color: #94a3b8;
   font-size: 16px;
 `;
+
+// --- ESTILOS PARA EL REPORTE DE IMPORTACIÓN ---
+
+export const ReportContainer = styled.div`
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  margin-bottom: 24px;
+  overflow: hidden;
+  animation: fadeIn 0.3s ease-out;
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+`;
+
+export const ReportHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+
+  h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+`;
+
+export const ReportStats = styled.div`
+  display: flex;
+  gap: 12px;
+`;
+
+export const StatBadge = styled.span<{ type: 'success' | 'error' | 'info' }>`
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+
+  ${({ type }) => type === 'success' && css`
+    background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;
+  `}
+  ${({ type }) => type === 'error' && css`
+    background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca;
+  `}
+  ${({ type }) => type === 'info' && css`
+    background: #eff6ff; color: #1d4ed8; border: 1px solid #dbeafe;
+  `}
+`;
+
+export const ReportContent = styled.div`
+  max-height: 250px;
+  overflow-y: auto;
+  padding: 0;
+  
+  /* Scrollbar bonita */
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-track { background: #f1f5f9; }
+  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+`;
+
+export const LogRow = styled.div<{ type: 'success' | 'error' }>`
+  padding: 10px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: ${({ type }) => type === 'error' ? '#fff5f5' : '#ffffff'};
+
+  &:last-child { border-bottom: none; }
+`;
+
+export const ReportActions = styled.div`
+  padding: 12px 20px;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+`;
+
+export const ActionButton = styled.button<{ variant?: 'primary' | 'secondary' }>`
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid;
+  transition: all 0.2s;
+
+  ${({ variant }) => variant === 'primary' ? css`
+    background: #ffffff;
+    border-color: #cbd5e1;
+    color: #475569;
+    &:hover { background: #f8fafc; border-color: #94a3b8; }
+  ` : css`
+    background: transparent;
+    border-color: transparent;
+    color: #64748b;
+    &:hover { color: #dc2626; background: #fef2f2; }
+  `}
+`;
+
+// ... resto de tus estilos

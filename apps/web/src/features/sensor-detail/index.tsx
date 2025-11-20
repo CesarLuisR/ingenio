@@ -2,7 +2,6 @@ import { useParams } from "react-router-dom";
 import { Page, HeaderContainer, TitleBlock, Title, Sub, StatusBadge } from "./styled";
 import { useSensorDetail } from "./hooks/useSensorDetail";
 import { SensorCharts } from "./components/SensorChart";
-import { SensorMaintenances } from "./components/SensorMaintenances";
 import { SensorFailures } from "./components/SensorFailures";
 import { SensorMetrics } from "./components/SensorMetrics";
 
@@ -36,7 +35,7 @@ export default function SensorDetail() {
                     <Sub>ID del Dispositivo: {id}</Sub>
                 </TitleBlock>
                 
-                <StatusBadge status={status}>
+                <StatusBadge $status={status}>
                     {status === 'ok' && '✅'} 
                     {status === 'warning' && '⚠️'}
                     {status === 'critical' && '🚨'}
@@ -55,7 +54,6 @@ export default function SensorDetail() {
             {/* Tablas de Historial (Grid layout para aprovechar espacio) */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: '24px', marginTop: '40px' }}>
                 <SensorFailures items={failures} />
-                <SensorMaintenances items={maintenances} />
             </div>
         </Page>
     );

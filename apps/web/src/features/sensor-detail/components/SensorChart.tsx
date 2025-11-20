@@ -7,6 +7,7 @@ import {
     CartesianGrid,
     Tooltip,
     ResponsiveContainer,
+    ReferenceLine,
 } from "recharts";
 import {
     CategorySection,
@@ -14,6 +15,7 @@ import {
     ChartGrid,
     ChartCard,
     MetricHeader,
+    StatusBadge
 } from "../styled";
 
 interface SensorChartsProps {
@@ -21,113 +23,195 @@ interface SensorChartsProps {
     latest: any;
 }
 
-// Paleta de colores moderna para rotar entre gráficas
-const COLORS = [
+// Colores por defecto si el estado es OK
+const DEFAULT_COLORS = [
     { stroke: "#3b82f6", fill: "#3b82f6" }, // Blue
     { stroke: "#10b981", fill: "#10b981" }, // Emerald
-    { stroke: "#f59e0b", fill: "#f59e0b" }, // Amber
     { stroke: "#8b5cf6", fill: "#8b5cf6" }, // Violet
-    { stroke: "#ec4899", fill: "#ec4899" }, // Pink
     { stroke: "#06b6d4", fill: "#06b6d4" }, // Cyan
 ];
 
-// Función para mejorar el rango del eje Y
-function computeDomain(data: any[], dataKey: string) {
+// Colores de estado (Alerta)
+const STATUS_COLORS = {
+    critical: { stroke: "#dc2626", fill: "#dc2626" }, // Red
+    warning:  { stroke: "#d97706", fill: "#d97706" }, // Amber
+    ok:       { stroke: "#10b981", fill: "#10b981" }, // Green (opcional, o usar default)
+};
+
+/**
+ * Calcula el rango del eje Y asegurando que los límites sean visibles
+ */
+function computeSmartDomain(data: any[], dataKey: string, minLimit?: number, maxLimit?: number) {
     if (!data.length) return [0, 100];
-    let min = Infinity;
-    let max = -Infinity;
-    
+
+    let minData = Infinity;
+    let maxData = -Infinity;
+
     data.forEach(d => {
         const val = Number(d[dataKey]);
         if (!isNaN(val)) {
-            if (val < min) min = val;
-            if (val > max) max = val;
+            if (val < minData) minData = val;
+            if (val > maxData) maxData = val;
         }
     });
 
-    if (!isFinite(min) || !isFinite(max)) return [0, 100];
-    
-    const padding = (max - min) * 0.2; // 20% de padding
-    if (padding === 0) return [min - 10, max + 10];
+    if (!isFinite(minData)) minData = 0;
+    if (!isFinite(maxData)) maxData = 100;
 
-    return [Math.floor(min - padding), Math.ceil(max + padding)];
+    // Expandimos el dominio para incluir los límites si existen
+    let lowerBound = minLimit !== undefined ? Math.min(minData, minLimit) : minData;
+    let upperBound = maxLimit !== undefined ? Math.max(maxData, maxLimit) : maxData;
+
+    // Agregamos padding visual (15%)
+    const range = upperBound - lowerBound || 10;
+    return [
+        Math.floor(lowerBound - range * 0.15), 
+        Math.ceil(upperBound + range * 0.15)
+    ];
 }
 
-/**
- * Componente para una sola métrica (Ej: Temperatura)
- */
-const SingleMetricChart = ({ title, dataKey, data, colorIndex, latestValue }: any) => {
-    const color = COLORS[colorIndex % COLORS.length];
-    const domain = useMemo(() => computeDomain(data, dataKey), [data, dataKey]);
+interface SingleChartProps {
+    title: string;
+    dataKey: string;
+    data: any[];
+    colorIndex: number;
+    latestValue: any;
+    status: "ok" | "warning" | "critical";
+    limits?: { min?: number; max?: number };
+}
+
+const SingleMetricChart = ({ title, dataKey, data, colorIndex, latestValue, status, limits }: SingleChartProps) => {
+    // Seleccionamos color: Si es warning/critical usamos color de estado, sino el rotativo
+    let color = DEFAULT_COLORS[colorIndex % DEFAULT_COLORS.length];
+    
+    if (status === "critical") color = STATUS_COLORS.critical;
+    else if (status === "warning") color = STATUS_COLORS.warning;
+
+    const domain = useMemo(
+        () => computeSmartDomain(data, dataKey, limits?.min, limits?.max), 
+        [data, dataKey, limits]
+    );
+
+    const formattedValue = typeof latestValue === 'number' 
+        ? latestValue.toFixed(2) 
+        : latestValue ?? "--";
 
     return (
-        <ChartCard>
+        <ChartCard $status={status}>
             <MetricHeader>
-                <h3>{title}</h3>
+                <div className="title-group">
+                    <h3>{title}</h3>
+                    <StatusBadge $status={status}>
+                        {status === 'ok' ? 'Normal' : status === 'warning' ? 'Precaución' : 'Crítico'}
+                    </StatusBadge>
+                </div>
                 <div className="current-value">
-                    {latestValue !== undefined && !isNaN(Number(latestValue))
-                        ? Number(latestValue).toFixed(2)
-                        : "--"}
+                    {formattedValue}
+                    <span style={{fontSize: 12, color: '#94a3b8', marginLeft: 4, fontWeight: 500}}>actual</span>
                 </div>
             </MetricHeader>
 
-            <div style={{ height: 200, width: "100%" }}>
+            <div style={{ height: 220, width: "100%" }}>
                 <ResponsiveContainer>
                     <AreaChart data={data}>
                         <defs>
-                            <linearGradient id={`color-${dataKey}`} x1="0" y1="0" x2="0" y2="1">
+                            <linearGradient id={`color-${dataKey}-${status}`} x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="5%" stopColor={color.fill} stopOpacity={0.3} />
                                 <stop offset="95%" stopColor={color.fill} stopOpacity={0} />
                             </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                        <XAxis 
-                            dataKey="time" 
-                            hide 
-                        />
+                        
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        
+                        <XAxis dataKey="time" hide />
+                        
                         <YAxis 
                             domain={domain} 
                             tick={{ fontSize: 11, fill: "#94a3b8" }}
                             axisLine={false}
                             tickLine={false}
-                            width={30}
+                            width={35}
                         />
+                        
                         <Tooltip
                             contentStyle={{
-                                backgroundColor: "rgba(255, 255, 255, 0.9)",
+                                backgroundColor: "rgba(255, 255, 255, 0.95)",
                                 borderRadius: "8px",
                                 border: "1px solid #e2e8f0",
-                                boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                                boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
                                 fontSize: "12px",
                                 fontWeight: 600,
                             }}
                             itemStyle={{ color: "#1e293b" }}
-                            cursor={{ stroke: "#94a3b8", strokeWidth: 1, strokeDasharray: "4 4" }}
+                            formatter={(val: number) => [val.toFixed(2), title]}
+                            labelStyle={{ color: "#64748b", marginBottom: 4 }}
                         />
+
+                        {/* --- LÍNEAS DE LÍMITE --- */}
+                        {limits?.max !== undefined && (
+                            <ReferenceLine 
+                                y={limits.max} 
+                                stroke="#ef4444" 
+                                strokeDasharray="3 3" 
+                                label={{ 
+                                    position: 'right', 
+                                    value: `Max: ${limits.max}`, 
+                                    fill: '#ef4444', 
+                                    fontSize: 10 
+                                }} 
+                            />
+                        )}
+                        {limits?.min !== undefined && (
+                            <ReferenceLine 
+                                y={limits.min} 
+                                stroke="#3b82f6" 
+                                strokeDasharray="3 3" 
+                                label={{ 
+                                    position: 'right', 
+                                    value: `Min: ${limits.min}`, 
+                                    fill: '#3b82f6', 
+                                    fontSize: 10 
+                                }} 
+                            />
+                        )}
+
                         <Area
                             type="monotone"
                             dataKey={dataKey}
                             stroke={color.stroke}
-                            strokeWidth={3}
+                            strokeWidth={2.5}
                             fillOpacity={1}
-                            fill={`url(#color-${dataKey})`}
-                            isAnimationActive={false} // Mejor rendimiento en tiempo real
+                            fill={`url(#color-${dataKey}-${status})`}
+                            isAnimationActive={false}
                         />
                     </AreaChart>
                 </ResponsiveContainer>
             </div>
+            
+            {/* Pie de tarjeta con información de límites si existen */}
+            {(limits?.max !== undefined || limits?.min !== undefined) && (
+                 <div style={{ 
+                     marginTop: 12, 
+                     paddingTop: 12, 
+                     borderTop: '1px dashed #f1f5f9', 
+                     display: 'flex', 
+                     gap: 16, 
+                     fontSize: 11, 
+                     color: '#64748b' 
+                 }}>
+                    {limits.max !== undefined && <span>Limite Alto: <strong>{limits.max}</strong></span>}
+                    {limits.min !== undefined && <span>Limite Bajo: <strong>{limits.min}</strong></span>}
+                 </div>
+            )}
         </ChartCard>
     );
 };
 
-/**
- * Componente Principal de Gráficos
- */
 export function SensorCharts({ chartData, latest }: SensorChartsProps) {
     const categories = Object.keys(chartData);
 
     if (categories.length === 0) {
-        return <div style={{ padding: 20, color: "#94a3b8" }}>Esperando datos del sensor...</div>;
+        return <div style={{ padding: 20, color: "#94a3b8", textAlign: 'center' }}>Esperando datos del sensor...</div>;
     }
 
     let globalColorIndex = 0;
@@ -138,9 +222,8 @@ export function SensorCharts({ chartData, latest }: SensorChartsProps) {
                 const data = chartData[category];
                 if (!data.length) return null;
 
-                // Obtener las métricas disponibles en esta categoría (keys que no sean 'time')
-                const samplePoint = data[0];
-                const metrics = Object.keys(samplePoint).filter((k) => k !== "time");
+                // Filtramos 'time' para obtener solo las métricas
+                const metrics = Object.keys(data[0]).filter((k) => k !== "time");
 
                 return (
                     <CategorySection key={category}>
@@ -150,12 +233,30 @@ export function SensorCharts({ chartData, latest }: SensorChartsProps) {
                             {metrics.map((metric) => {
                                 const currentIndex = globalColorIndex++;
                                 
-                                // Extraer el valor más reciente para mostrarlo en el header
+                                // Lógica para extraer valor, estado y límites del objeto 'latest'
                                 let latestVal = 0;
+                                let status: "ok" | "warning" | "critical" = "ok";
+                                let limits = {}; 
+
                                 try {
                                     const metricObj = latest?.metrics?.[category]?.[metric];
-                                    latestVal = typeof metricObj === 'object' ? metricObj.value : metricObj;
-                                } catch (e) {}
+                                    
+                                    // Verificamos si metricObj es un objeto complejo { value, status, limits }
+                                    // o si es un valor simple.
+                                    if (typeof metricObj === 'object' && metricObj !== null) {
+                                        latestVal = metricObj.value;
+                                        status = metricObj.status || "ok";
+                                        // Asumimos que los límites vienen en el objeto, si no, intentamos inferirlos o dejarlos vacíos
+                                        // Ajusta esto según cómo venga tu backend realmente
+                                        limits = metricObj.limits || {}; 
+                                    } else {
+                                        latestVal = metricObj;
+                                        // Si viene plano, intentamos sacar el estado del padre
+                                        status = latest?.status || "ok";
+                                    }
+                                } catch (e) {
+                                    console.warn("Error parsing metric", e);
+                                }
 
                                 return (
                                     <SingleMetricChart
@@ -165,6 +266,8 @@ export function SensorCharts({ chartData, latest }: SensorChartsProps) {
                                         data={data}
                                         colorIndex={currentIndex}
                                         latestValue={latestVal}
+                                        status={status}
+                                        limits={limits}
                                     />
                                 );
                             })}
