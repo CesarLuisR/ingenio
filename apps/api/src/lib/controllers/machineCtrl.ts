@@ -43,7 +43,7 @@ export const getMachineById: RequestHandler = async (req, res) => {
 };
 
 export const createMachine: RequestHandler = async (req, res) => {
-    const { name, code, type, location } = req.body;
+    const { name, code, type, location, description } = req.body;
     const ingenioId = req.session.user?.ingenioId;
 
     if (!ingenioId) {
@@ -64,6 +64,7 @@ export const createMachine: RequestHandler = async (req, res) => {
             name,
             code,
             type,
+            description,
             location,
             ingenioId,
         },
@@ -74,7 +75,7 @@ export const createMachine: RequestHandler = async (req, res) => {
 
 export const updateMachine: RequestHandler = async (req, res) => {
     const id = Number(req.params.id);
-    const { name, code, type, location, active } = req.body;
+    const { name, code, type, location, active, description } = req.body;
     const ingenioId = req.session.user?.ingenioId;
 
     const machine = await prisma.machine.findUnique({ where: { id } });
@@ -96,7 +97,7 @@ export const updateMachine: RequestHandler = async (req, res) => {
 
     const updated = await prisma.machine.update({
         where: { id },
-        data: { name, code, type, location, active },
+        data: { name, code, type, location, active, description },
     });
 
     res.json(updated);
