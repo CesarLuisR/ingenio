@@ -30,12 +30,11 @@ import {
 	TypeTag,
 } from "./styled";
 import { formatMoney } from "./utils";
-import { Label } from "recharts";
 
 export default function Mantenimientos() {
 	const {
 		loading,
-		sensors,
+		machines,
 		technicians,
 		failures,
 		editing,
@@ -54,8 +53,8 @@ export default function Mantenimientos() {
 		handleImportExcel,
 
 		// filtros
-		filterSensorId,
-		setFilterSensorId,
+		filterMachineId,
+		setFilterMachineId,
 		filterTechnicianId,
 		setFilterTechnicianId,
 		filterType,
@@ -101,13 +100,15 @@ export default function Mantenimientos() {
 
 			{/* Filtros */}
 			<FiltersBar>
+				{/* Filtro por máquina */}
 				<SelectInput
-					value={filterSensorId}
-					onChange={(e) => setFilterSensorId(e.target.value)}>
-					<option value="">Todos los sensores</option>
-					{sensors.map((s) => (
-						<option key={s.id} value={s.id}>
-							{s.name}
+					value={filterMachineId}
+					onChange={(e) => setFilterMachineId(e.target.value)}>
+					<option value="">Todas las máquinas</option>
+					{machines.map((m) => (
+						<option key={m.id} value={m.id}>
+							{m.name}
+							{m.code ? ` (${m.code})` : ""}
 						</option>
 					))}
 				</SelectInput>
@@ -149,22 +150,23 @@ export default function Mantenimientos() {
 
 			<MaintenanceList>
 				{filteredMaintenances.map((m) => {
-					const sensor = sensors.find((s) => s.id === m.sensorId);
+					const machine = machines.find((mc) => mc.id === m.machineId) ?? m.machine;
 					const tech =
 						m.technician ??
 						technicians.find((t) => t.id === m.technicianId);
 
 					const relatedFailures = failures.filter(
 						(f) =>
-							(f as any).maintenanceId === m.id ||
-							(f as any).sensorId === m.sensorId
+							f.machineId === m.machineId ||
+							f.maintenanceId === m.id
 					);
 
 					return (
 						<MaintenanceCard key={m.id}>
 							<CardHeader>
 								<SensorName>
-									{sensor?.name || `Sensor ${m.sensorId}`}
+									{machine?.name || `Máquina ${m.machineId}`}
+									{machine?.code ? ` (${machine.code})` : ""}
 								</SensorName>
 								<EditButton onClick={() => handleEdit(m)}>
 									Editar
@@ -268,7 +270,7 @@ export default function Mantenimientos() {
 
 			{showForm && (
 				<MaintenanceForm
-					sensors={sensors}
+					machines={machines}
 					technicians={technicians}
 					initialData={editing}
 					onClose={() => {
@@ -293,7 +295,7 @@ export default function Mantenimientos() {
 						<ModalTitle>Importar Mantenimientos</ModalTitle>
 
 						<Field>
-							<Label>Archivo Excel</Label>
+							<label>Archivo Excel</label>
 							<TextInput
 								as="input"
 								type="file"
@@ -309,7 +311,7 @@ export default function Mantenimientos() {
 							<small style={{ fontSize: 11, color: "#6b7280" }}>
 								Columnas esperadas:{" "}
 								<strong>
-									sensor, type, technician, performedAt,
+									machine, type, technician, performedAt,
 									durationMinutes, cost, notes
 								</strong>
 							</small>

@@ -11,6 +11,8 @@ import LoginModule from "./features/auth";
 import ProtectedRoute from "./features/auth/components/ProtectedRoute";
 import { GlobalWebSocketProvider } from "./features/shared/components/WebSocketProvider";
 import Usuarios from "./features/users";
+import MachinesPage from "./features/machines";
+import MachineDetailPage from "./features/machines/MachineDetailPage";
 
 export default function App() {
 	return (
@@ -28,6 +30,8 @@ export default function App() {
 								path="sensor/:id"
 								element={<SensorDetail />}
 							/>
+							<Route path="maquinas" element={<MachinesPage />} />
+							<Route path="maquinas/:id" element={<MachineDetailPage />} />
 							<Route path="usuarios" element={<Usuarios />} />
 							<Route path="sensores" element={<Sensores />} />
 							<Route

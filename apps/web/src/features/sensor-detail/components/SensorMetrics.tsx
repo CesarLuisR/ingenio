@@ -6,46 +6,40 @@ interface SensorMetricsProps {
 	sensorId?: number | null;
 }
 
-interface MetricsResponse {
-	availability: number | null;
-	reliability: number | null;
-	mtbf: number | null;
-	mttr: number | null;
-	mtta: number | null;
+interface SensorHealth {
+	active: boolean;
+	lastSeen: string | null;
+	lastAnalysis: any | null;
 }
 
 export function SensorMetrics({ sensorId }: SensorMetricsProps) {
-	const [metrics, setMetrics] = useState<MetricsResponse | null>(null);
+	const [health, setHealth] = useState<SensorHealth | null>(null);
 
 	useEffect(() => {
-        console.log("EL ID: ", sensorId);
 		if (!sensorId) return;
 
 		(async () => {
 			try {
-				const res = await api.getSensorMetrics(sensorId);
-				setMetrics(res);
+				const res = await api.getSensorHealth(sensorId);
+				setHealth(res);
 			} catch (err) {
-				console.error("Error cargando métricas:", err);
+				console.error("Error cargando salud del sensor:", err);
 			}
 		})();
 	}, [sensorId]);
 
-	if (!metrics) {
+	if (!health) {
 		return (
 			<InfoSection>
-				<h2>Métricas del Sensor</h2>
-				<p>Cargando métricas...</p>
+				<h2>Salud del Sensor</h2>
+				<p>Cargando datos...</p>
 			</InfoSection>
 		);
 	}
 
-	const pretty = (v: number | null, suffix = "") =>
-		v === null ? "—" : v.toFixed(2) + suffix;
-
 	return (
 		<InfoSection>
-			<h2>Métricas del Sensor</h2>
+			<h2>Salud del Sensor</h2>
 
 			<div
 				style={{
@@ -56,33 +50,29 @@ export function SensorMetrics({ sensorId }: SensorMetricsProps) {
 				}}
 			>
 				<MetricCard
-					label="Disponibilidad"
-					value={pretty(metrics.availability, "%")}
-					color="#d1fae5"
+					label="Estado"
+					value={health.active ? "Activo" : "Inactivo"}
+					color={health.active ? "#d1fae5" : "#fee2e2"}
 				/>
 
 				<MetricCard
-					label="Confiabilidad"
-					value={pretty(metrics.reliability, "%")}
-					color="#fef3c7"
-				/>
-
-				<MetricCard
-					label="MTBF"
-					value={pretty(metrics.mtbf, " h")}
+					label="Última señal"
+					value={
+						health.lastSeen
+							? new Date(health.lastSeen).toLocaleString()
+							: "—"
+					}
 					color="#e0f2fe"
 				/>
 
 				<MetricCard
-					label="MTTR"
-					value={pretty(metrics.mttr, " h")}
-					color="#fee2e2"
-				/>
-
-				<MetricCard
-					label="MTTA"
-					value={pretty(metrics.mtta, " h")}
-					color="#ede9fe"
+					label="Último análisis"
+					value={
+						health.lastAnalysis
+							? "Disponible"
+							: "No disponible"
+					}
+					color="#fef3c7"
 				/>
 			</div>
 		</InfoSection>

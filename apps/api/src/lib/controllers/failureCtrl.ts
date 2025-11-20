@@ -5,10 +5,17 @@ import { UserRole } from "@prisma/client";
 
 export const getAllFailures = async (req: Request, res: Response) => {
     try {
+        const ingenioId = req.session.user?.ingenioId;
+
         const failures = await prisma.failure.findMany({
-            include: { sensor: true, maintenance: true },
-            where: { ingenioId: req.session.user?.ingenioId },
+            where: { ingenioId },
+            include: {
+                machine: true,
+                sensor: true,
+                maintenance: true,
+            },
         });
+
         res.json(failures);
     } catch (error) {
         res.status(500).json({ error: "Error al obtener fallas" });
@@ -17,12 +24,32 @@ export const getAllFailures = async (req: Request, res: Response) => {
 
 export const getFailureById = async (req: Request, res: Response) => {
     try {
-        const { id } = req.params;
+        const id = Number(req.params.id);
+
         const failure = await prisma.failure.findUnique({
-            where: { id: Number(id) },
-            include: { sensor: true, maintenance: true },
+            where: { id },
+            include: {
+                machine: true,
+                sensor: true,
+                maintenance: true,
+            },
         });
-        if (!failure) return res.status(404).json({ error: "Falla no encontrada" });
+
+        if (!failure) {
+            return res.status(404).json({ error: "Falla no encontrada" });
+        }
+
+        // Validar acceso según ingenio
+        if (
+            !hasPermission(
+                req.session.user?.role as UserRole,
+                UserRole.LECTOR,
+                { user: req.session.user?.ingenioId!, element: failure.ingenioId }
+            )
+        ) {
+            return res.status(403).json({ message: "Forbidden access" });
+        }
+
         res.json(failure);
     } catch (error) {
         res.status(500).json({ error: "Error al obtener la falla" });
@@ -30,45 +57,73 @@ export const getFailureById = async (req: Request, res: Response) => {
 };
 
 export const createFailure = async (req: Request, res: Response) => {
-    if (!hasPermission(req.session.user?.role as UserRole, UserRole.TECNICO))
-        return res.status(403).json({ message: "Forbidden access " });
+    // Solo técnicos o roles mayores
+    if (!hasPermission(req.session.user?.role as UserRole, UserRole.TECNICO)) {
+        return res.status(403).json({ message: "Forbidden access" });
+    }
 
     try {
-        const { sensorId, description, severity, status, maintenanceId, ingenioId } = req.body;
+        const { machineId, sensorId, description, severity, status, maintenanceId } = req.body;
+        const ingenioId = req.session.user?.ingenioId!;
 
-        if (!sensorId || !description)
+        if (!machineId || !description) {
             return res
                 .status(400)
-                .json({ error: "sensorId y description son obligatorios" });
+                .json({ error: "machineId y description son obligatorios" });
+        }
+
+        // Validación: la máquina debe pertenecer al mismo ingenio
+        const machine = await prisma.machine.findUnique({ where: { id: Number(machineId) } });
+
+        if (!machine || machine.ingenioId !== ingenioId) {
+            return res.status(403).json({ error: "No tienes acceso a esta máquina" });
+        }
 
         const failure = await prisma.failure.create({
             data: {
-                sensorId,
+                machineId: Number(machineId),
+                sensorId: sensorId ? Number(sensorId) : null,
                 description,
                 severity,
                 status,
-                maintenanceId,
+                maintenanceId: maintenanceId ? Number(maintenanceId) : null,
                 ingenioId,
             },
         });
 
         res.status(201).json(failure);
     } catch (error) {
+        console.log(error);
         res.status(500).json({ error: "Error al crear la falla" });
     }
 };
 
 export const updateFailure = async (req: Request, res: Response) => {
-    if (!hasPermission(req.session.user?.role as UserRole, UserRole.TECNICO))
-        return res.status(403).json({ message: "Forbidden access " });
+    // Permiso mínimo: TECNICO
+    if (!hasPermission(req.session.user?.role as UserRole, UserRole.TECNICO)) {
+        return res.status(403).json({ message: "Forbidden access" });
+    }
 
     try {
-        const { id } = req.params;
-        const data = req.body;
+        const id = Number(req.params.id);
+        const ingenioId = req.session.user?.ingenioId!;
+
+        const failure = await prisma.failure.findUnique({ where: { id } });
+
+        if (!failure) {
+            return res.status(404).json({ error: "Falla no encontrada" });
+        }
+
+        // Validar acceso por ingenio
+        if (failure.ingenioId !== ingenioId) {
+            return res.status(403).json({ message: "Forbidden access" });
+        }
+
         const updated = await prisma.failure.update({
-            where: { id: Number(id) },
-            data,
+            where: { id },
+            data: req.body,
         });
+
         res.json(updated);
     } catch (error) {
         res.status(500).json({ error: "Error al actualizar la falla" });
@@ -76,12 +131,26 @@ export const updateFailure = async (req: Request, res: Response) => {
 };
 
 export const deleteFailure = async (req: Request, res: Response) => {
-    if (!hasPermission(req.session.user?.role as UserRole, UserRole.TECNICO))
-        return res.status(403).json({ message: "Forbidden access " });
+    if (!hasPermission(req.session.user?.role as UserRole, UserRole.TECNICO)) {
+        return res.status(403).json({ message: "Forbidden access" });
+    }
 
     try {
-        const { id } = req.params;
-        await prisma.failure.delete({ where: { id: Number(id) } });
+        const id = Number(req.params.id);
+        const ingenioId = req.session.user?.ingenioId!;
+
+        const failure = await prisma.failure.findUnique({ where: { id } });
+
+        if (!failure) {
+            return res.status(404).json({ error: "Falla no encontrada" });
+        }
+
+        if (failure.ingenioId !== ingenioId) {
+            return res.status(403).json({ message: "Forbidden access" });
+        }
+
+        await prisma.failure.delete({ where: { id } });
+
         res.json({ message: "Falla eliminada correctamente" });
     } catch (error) {
         res.status(500).json({ error: "Error al eliminar la falla" });

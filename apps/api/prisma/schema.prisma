@@ -22,6 +22,28 @@ model Ingenio {
   maintenances Maintenance[]
   failures     Failure[]
   auditLogs    AuditLog[]
+  machines     Machine[]
+}
+
+model Machine {
+  id           Int           @id @default(autoincrement())
+  name         String
+  code         String        @unique
+  type         String?
+  location     String?
+  // description  String?
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  // Multi-ingenio
+  ingenioId    Int
+  ingenio      Ingenio       @relation(fields: [ingenioId], references: [id])
+
+  // Relaciones
+  sensors      Sensor[]
+  maintenances Maintenance[]
+  failures     Failure[]
 }
 
 model Sensor {
@@ -33,15 +55,23 @@ model Sensor {
   active       Boolean       @default(true)
   config       Json?
   lastSeen     DateTime?
+
+  /// Último análisis (cache rápida)
+  lastAnalysis Json?
+
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
-  // Multi-ingenio
+  // Pertenencia
+  machineId    Int
+  machine      Machine       @relation(fields: [machineId], references: [id])
+
+  // Redundante pero útil para filtros directos por ingenio
   ingenioId    Int
   ingenio      Ingenio       @relation(fields: [ingenioId], references: [id])
 
-  maintenances Maintenance[]
   failures     Failure[]
+  analyses     Analysis[]
 }
 
 model Technician {
@@ -60,25 +90,30 @@ model Technician {
 
 model Failure {
   id             Int          @id @default(autoincrement())
-  sensorId       Int 
   occurredAt     DateTime     @default(now())
   description    String
   severity       String
   status         String        @default("pendiente")
   resolvedAt     DateTime?
-  maintenanceId  Int?
 
-  sensor         Sensor        @relation(fields: [sensorId], references: [id])
+  // Máquina afectada (principal)
+  machineId      Int
+  machine        Machine       @relation(fields: [machineId], references: [id])
+
+  // Sensor que detectó la falla (opcional)
+  sensorId       Int?
+  sensor         Sensor?       @relation(fields: [sensorId], references: [id])
+
+  maintenanceId  Int?
   maintenance    Maintenance?  @relation("MaintenanceFailures", fields: [maintenanceId], references: [id])
 
-  // Multi-ingenio (redundante pero práctico para filtrar directo)
+  // Multi-ingenio (para filtrar directo)
   ingenioId      Int
   ingenio        Ingenio       @relation(fields: [ingenioId], references: [id])
 }
 
 model Maintenance {
   id              Int           @id @default(autoincrement())
-  sensorId        Int
   performedAt     DateTime      @default(now())
   type            String
   technicianId    Int?
@@ -86,13 +121,26 @@ model Maintenance {
   notes           String?
   cost            Float?
 
-  sensor          Sensor        @relation(fields: [sensorId], references: [id])
+  // Máquina a la que se le hace el mantenimiento
+  machineId       Int
+  machine         Machine       @relation(fields: [machineId], references: [id])
+
   technician      Technician?   @relation("TechnicianMaintenances", fields: [technicianId], references: [id])
   failures        Failure[]     @relation("MaintenanceFailures")
 
   // Multi-ingenio (igual que Failure)
   ingenioId       Int
   ingenio         Ingenio       @relation(fields: [ingenioId], references: [id])
+}
+
+model Analysis {
+  id        Int      @id @default(autoincrement())
+  sensorId  Int
+  createdAt DateTime @default(now())
+  data      Json     // análisis completo (features, scores, etc.)
+  summary   String?  // resumen legible opcional
+
+  sensor    Sensor   @relation(fields: [sensorId], references: [id])
 }
 
 enum UserRole {
@@ -103,17 +151,17 @@ enum UserRole {
 }
 
 model User {
-  id        Int        @id @default(autoincrement())
-  email     String     @unique
-  name      String
-  role      UserRole
-  passwordHash String 
-  createdAt DateTime   @default(now())
+  id           Int        @id @default(autoincrement())
+  email        String     @unique
+  name         String
+  role         UserRole
+  passwordHash String
+  createdAt    DateTime   @default(now())
 
   // Multi-ingenio
-  ingenioId Int
-  ingenio   Ingenio    @relation(fields: [ingenioId], references: [id])
-  auditLogs AuditLog[]
+  ingenioId    Int
+  ingenio      Ingenio    @relation(fields: [ingenioId], references: [id])
+  auditLogs    AuditLog[]
 }
 
 model AuditLog {

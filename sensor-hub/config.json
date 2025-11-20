@@ -1,7 +1,9 @@
 {
   "sensorId": "motor-01-hwt905",
+  "machineId": 1,
+  "ingenioId": 1,
   "type": "inclinometer",
-  "location": "Planta A - L\u00c3\u00adnea 1",
+  "location": "Planta A - Línea 1",
   "intervalMs": 1000,
   "metricsConfig": {
     "mechanical": {
@@ -22,6 +24,5 @@
   "active": true,
   "configVersion": "v1",
   "createdAt": "2025-11-09T00:00:00.000Z",
-  "lastSeen": "2025-11-09T00:00:00.000Z",
-  "ingenioId": 1
+  "lastSeen": "2025-11-09T00:00:00.000Z"
 }

@@ -5,13 +5,20 @@ import hasPermission from "../utils/permissionUtils";
 import { UserRole } from "@prisma/client";
 
 const cacheRepository = new RedisRepository();
-// GET /sensors
+
+/* ----------------------------------------------------------
+   GET /sensors
+----------------------------------------------------------- */
 export const getAllSensors = async (req: Request, res: Response) => {
 	try {
 		const sensors = await prisma.sensor.findMany({
-			include: { maintenances: true, failures: true },
-            where: { ingenioId: req.session.user?.ingenioId },
+			where: { ingenioId: req.session.user?.ingenioId },
+			include: {
+				failures: true,
+				machine: true,      // Ahora que sensor pertenece a machine
+			},
 		});
+
 		res.json(sensors);
 	} catch (error) {
 		console.error("Error fetching sensors:", error);
@@ -19,18 +26,28 @@ export const getAllSensors = async (req: Request, res: Response) => {
 	}
 };
 
-// GET /sensors/:sensorId
+/* ----------------------------------------------------------
+   GET /sensors/:sensorId
+----------------------------------------------------------- */
 export const getSensorById = async (req: Request, res: Response) => {
 	try {
 		const { sensorId } = req.params;
 
 		const sensor = await prisma.sensor.findUnique({
 			where: { sensorId },
-			include: { maintenances: true, failures: true },
+			include: {
+				failures: true,
+				machine: true,
+			},
 		});
 
 		if (!sensor) {
 			return res.status(404).json({ message: "Sensor not found" });
+		}
+
+		// 🔒 Multi-ingenio: solo accede si pertenece al mismo ingenio
+		if (sensor.ingenioId !== req.session.user?.ingenioId) {
+			return res.status(403).json({ message: "Forbidden access" });
 		}
 
 		res.json(sensor);
@@ -40,20 +57,38 @@ export const getSensorById = async (req: Request, res: Response) => {
 	}
 };
 
-// PUT /sensors/:sensorId
+/* ----------------------------------------------------------
+   PUT /sensors/:sensorId
+----------------------------------------------------------- */
 export const updateSensor = async (req: Request, res: Response) => {
-	// todo: Aqui habria que ver como hacemos para salvaguardar el ingenio
-
-    if (!hasPermission(
-        req.session.user?.role as UserRole,
-        UserRole.ADMIN, 
-    )) return res.status(403).json({ message: "Forbidden access " });
-
 	try {
 		const { sensorId } = req.params;
 		const data = req.body;
 
-		const sensor = await prisma.sensor.update({
+		// Primero buscamos el sensor para validar ingenio
+		const existing = await prisma.sensor.findUnique({
+			where: { sensorId },
+		});
+
+		if (!existing) {
+			return res.status(404).json({ message: "Sensor not found" });
+		}
+
+		if (
+			!hasPermission(
+				req.session.user?.role as UserRole,
+				UserRole.ADMIN,
+				{ user: req.session.user?.ingenioId!, element: existing.ingenioId }
+			)
+		)
+			return res.status(403).json({ message: "Forbidden access" });
+
+		// 🔒 Validación multi-ingenio
+		if (existing.ingenioId !== req.session.user?.ingenioId) {
+			return res.status(403).json({ message: "Forbidden access" });
+		}
+
+		const updated = await prisma.sensor.update({
 			where: { sensorId },
 			data: {
 				name: data.name,
@@ -65,10 +100,15 @@ export const updateSensor = async (req: Request, res: Response) => {
 			},
 		});
 
-		// todo: typear la data de config
-		cacheRepository.set(`sensor:${sensorId}-updated`, JSON.stringify(data.config));
+		// Cache configuraciones (si aplica)
+		if (data.config) {
+			cacheRepository.set(
+				`sensor:${sensorId}-updated`,
+				JSON.stringify(data.config)
+			);
+		}
 
-		res.json(sensor);
+		res.json(updated);
 	} catch (error: any) {
 		console.error("Error updating sensor:", error);
 
@@ -80,15 +120,36 @@ export const updateSensor = async (req: Request, res: Response) => {
 	}
 };
 
-// PATCH /sensors/:sensorId/deactivate
+/* ----------------------------------------------------------
+   PATCH /sensors/:sensorId/deactivate
+----------------------------------------------------------- */
 export const deactivateSensor = async (req: Request, res: Response) => {
-    if (!hasPermission(
-        req.session.user?.role as UserRole,
-        UserRole.ADMIN, 
-    )) return res.status(403).json({ message: "Forbidden access " });
+
 
 	try {
 		const { sensorId } = req.params;
+
+		// Primero validamos que exista y pertenezca al ingenio
+		const existing = await prisma.sensor.findUnique({
+			where: { sensorId },
+		});
+
+		if (!existing) {
+			return res.status(404).json({ error: "Sensor not found" });
+		}
+
+		if (
+			!hasPermission(
+				req.session.user?.role as UserRole,
+				UserRole.ADMIN,
+				{ user: req.session.user?.ingenioId!, element: existing.ingenioId }
+			)
+		)
+			return res.status(403).json({ message: "Forbidden access" });
+
+		if (existing.ingenioId !== req.session.user?.ingenioId) {
+			return res.status(403).json({ message: "Forbidden access" });
+		}
 
 		const sensor = await prisma.sensor.update({
 			where: { sensorId },

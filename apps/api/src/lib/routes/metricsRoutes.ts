@@ -1,15 +1,14 @@
 import { Router } from "express";
 import {
-  getSensorMetrics,
-  getIngenioMetrics,
+    getMachineMetrics,
+    getIngenioMetrics,
+    getSensorHealth
 } from "../controllers/metricsCtrl";
 
 const router = Router();
 
-// Métricas de un sensor específico
-router.get("/sensor/:id", getSensorMetrics);
-
-// Métricas agregadas por ingenio (opcional, útil para dashboards globales)
+router.get("/machine/:id", getMachineMetrics);
 router.get("/ingenio/:id", getIngenioMetrics);
+router.get("/sensor/:id/health", getSensorHealth);
 
 export default router;

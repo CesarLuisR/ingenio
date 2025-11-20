@@ -1,57 +1,135 @@
+// --- Sensor ---
 export interface Sensor {
 	id: number;
 	sensorId: string;
 	name: string;
 	type: string;
-	location?: string;
+	location?: string | null;
 	active: boolean;
 	config: Record<string, any>;
-	lastSeen?: string;
+	lastSeen?: string | null;
 	createdAt: string;
 	updatedAt: string;
+
+	// nuevo modelo
+	machineId: number;
+	ingenioId: number;
+
+	machine?: Machine | null;
+	maintenances?: Maintenance[];
+	failures?: Failure[];
 }
 
-export interface Maintenance {
-  id: number;
-  sensorId: number;
-  performedAt: string; // DateTime → string ISO
-  type: string; // "Preventivo" | "Correctivo" | "Predictivo"
-  technicianId?: number | null;
-  durationMinutes?: number | null;
-  notes?: string | null;
-  cost?: number | null;
+// --- Machine ---
+export interface Machine {
+	id: number;
+	name: string;
+	code: string;
+	type?: string | null;
+	description?: string | null;
+	location?: string | null;
+	active: boolean;
+	createdAt: string;
+	updatedAt: string;
 
-  // Relaciones opcionales
-  sensor?: Sensor;
-  technician?: Technician;
-  failures?: Failure[];
+	ingenioId: number;
+	ingenio?: Ingenio;
+
+	sensors?: Sensor[];
+	maintenances?: Maintenance[];
+	failures?: Failure[];
+}
+
+// --- Maintenance ---
+export interface Maintenance {
+	id: number;
+	performedAt: string; // ISO
+	type: string;        // "Preventivo" | "Correctivo" | etc.
+	technicianId?: number | null;
+	durationMinutes?: number | null;
+	notes?: string | null;
+	cost?: number | null;
+
+	// modelo nuevo
+	machineId: number;
+	ingenioId: number;
+
+	machine?: Machine;
+	technician?: Technician;
+	failures?: Failure[];
 }
 
 // --- Failure ---
 export interface Failure {
-  id: number;
-  sensorId: number;
-  occurredAt: string; // DateTime → string ISO
-  description: string;
-  severity?: string | null; // "Alta" | "Media" | "Baja"
-  status?: string | null; // "pendiente" | "en reparación" | "resuelta"
-  resolvedAt?: string | null;
-  maintenanceId?: number | null;
+	id: number;
+	occurredAt: string; // ISO
+	description: string;
+	severity?: string | null; // "Alta" | "Media" | "Baja"
+	status?: string | null;   // "pendiente" | "en reparación" | "resuelta"
+	resolvedAt?: string | null;
+	maintenanceId?: number | null;
 
-  // Relaciones opcionales
-  sensor?: Sensor;
-  maintenance?: Maintenance;
+	// relaciones
+	machineId: number;
+	ingenioId: number;
+	sensorId?: number | null;
+
+	machine?: Machine;
+	sensor?: Sensor;
+	maintenance?: Maintenance;
 }
 
+// --- User ---
 export interface User {
 	id: number;
 	email: string;
 	name: string;
-	role: "admin" | "technician" | "viewer";
+	role: "SUPERADMIN" | "ADMIN" | "TECNICO" | "LECTOR";
 	createdAt: string;
+
+	ingenioId: number;
+	ingenio?: Ingenio;
 }
 
-// Metrics + analysis (frontend-only logic)
+// --- Technician ---
+export interface Technician {
+	id: number;
+	name: string;
+	email?: string | null;
+	phone?: string | null;
+	active: boolean;
+
+	ingenioId: number;
+	ingenio?: Ingenio;
+
+	maintenances?: Maintenance[];
+}
+
+// --- Ingenio ---
+export interface Ingenio {
+	id: number;
+	name: string;
+	code: string;
+	location?: string | null;
+	createdAt: string;
+	updatedAt: string;
+
+	machines?: Machine[];
+	sensors?: Sensor[];
+	maintenances?: Maintenance[];
+	failures?: Failure[];
+}
+
+// ---------------- Metrics & Analysis (frontend) ----------------
+
+export interface BaseMetrics {
+	availability: number | null;
+	reliability: number | null;
+	mtbf: number | null;
+	mttr: number | null;
+	mtta: number | null;
+}
+
 export interface MetricAnalysis {
 	tendencia: "subiendo" | "bajando" | "estable";
 	pendiente: number;
@@ -89,7 +167,8 @@ export interface AnalysisResponse {
 	report: SensorReport[];
 }
 
-// Live reading models
+// ------------- Live reading models -------------
+
 export interface MetricInfo {
 	value: number;
 	status: "ok" | "low" | "high" | "critical" | "unknown";
@@ -113,35 +192,16 @@ export interface Reading {
 	severityLevel: number;
 }
 
-export interface Technician {
-  id: number;
-  name: string;
-  email?: string;
-  phone?: string;
-  active: boolean;
-  maintenances?: Maintenance[]; // relación opcional
-}
-
-export interface Ingenio {
-	id: number;
-	name: string;
-	code: string;
-	location?: string;
-	createdAt: string;
-	updatedAt: string;
-}
-
-export interface BaseMetrics {
-	availability: number | null;
-	reliability: number | null;
-	mtbf: number | null;
-	mttr: number | null;
-	mtta: number | null;
-}
-
+// ROLES (alineado al enum de Prisma)
 export const ROLES = {
 	SUPERADMIN: "SUPERADMIN",
 	ADMIN: "ADMIN",
 	TECNICO: "TECNICO",
-	LECTOR: "LECTOR"
-};
+	LECTOR: "LECTOR",
+} as const;
+
+export interface SensorHealth {
+	active: boolean;
+	lastSeen: string | null;
+	lastAnalysis: any | null;
+}

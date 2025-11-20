@@ -14,7 +14,7 @@ import {
 	Label,
 } from "../styled";
 import MetricsConfigEditor from "./MetricsConfigEditor";
-import type { Sensor } from "../../../types";
+import type { Sensor, Machine } from "../../../types";
 import { useSessionStore } from "../../../store/sessionStore";
 
 interface SensorFormData {
@@ -25,6 +25,7 @@ interface SensorFormData {
 	intervalMs: number;
 	metricsConfig: any;
 	ingenioId: number | null;
+	machineId: number | null;
 }
 
 export default function SensorForm({
@@ -36,11 +37,13 @@ export default function SensorForm({
 	onClose: () => void;
 	onSave: () => void;
 }) {
-	// Config base
 	const initialConfig = sensor?.config || {};
 	const initialMetrics = initialConfig.metricsConfig || {};
 	const sensorId = sensor?.sensorId || initialConfig.sensorId || "";
 	const user = useSessionStore((s) => s.user);
+
+	// Lista de máquinas disponibles
+	const [machines, setMachines] = useState<Machine[]>([]);
 
 	const [formData, setFormData] = useState<SensorFormData>({
 		name: sensor?.name || "",
@@ -49,10 +52,16 @@ export default function SensorForm({
 		active: sensor?.active ?? initialConfig.active ?? true,
 		intervalMs: initialConfig.intervalMs || 1000,
 		metricsConfig: initialMetrics,
-		ingenioId: null,
+		ingenioId: user?.ingenioId ?? null,
+		machineId: sensor?.machineId ?? null,
 	});
 
-	// Cuando cambia el sensor que se edita
+	// Cargar máquinas para el select
+	useEffect(() => {
+		api.getMachines().then(setMachines).catch(console.error);
+	}, []);
+
+	// Cuando cambia el sensor editado
 	useEffect(() => {
 		if (!user) return;
 		const baseConfig = sensor?.config || {};
@@ -65,11 +74,12 @@ export default function SensorForm({
 			active: sensor?.active ?? baseConfig.active ?? true,
 			intervalMs: baseConfig.intervalMs || 1000,
 			metricsConfig: baseMetrics,
-			ingenioId: user.ingenioId ?? null,
+			ingenioId: user?.ingenioId ?? null,
+			machineId: sensor?.machineId ?? null,
 		});
 	}, [sensor, user]);
 
-	// Callback para actualizar métricas
+	// Actualizar metricsConfig
 	const handleMetricsChange = useCallback((cfg: any) => {
 		setFormData((prev) => ({ ...prev, metricsConfig: cfg }));
 	}, []);
@@ -77,12 +87,16 @@ export default function SensorForm({
 	const handleSubmit = async (e: React.FormEvent) => {
 		e.preventDefault();
 
+		if (!formData.machineId) {
+			alert("Debes asignar este sensor a una máquina.");
+			return;
+		}
+
 		try {
 			const baseConfig = sensor?.config || {};
 
-			// Config consistente con la estructura del sensor físico
 			const config = {
-				sensorId: sensorId || crypto.randomUUID(), // no editable, pero se respeta el existente
+				sensorId: sensorId || crypto.randomUUID(),
 				type: formData.type,
 				location: formData.location,
 				intervalMs: formData.intervalMs,
@@ -92,23 +106,20 @@ export default function SensorForm({
 				createdAt: baseConfig.createdAt || new Date().toISOString(),
 				lastSeen: sensor?.lastSeen || null,
 				ingenioId: user?.ingenioId || 1,
+				machineId: formData.machineId!
 			};
 
-			// Payload unificado
 			const payload = {
 				name: formData.name,
 				type: formData.type,
 				location: formData.location,
 				active: formData.active,
 				config,
+				machineId: formData.machineId,    // 👈 NUEVO
+				ingenioId: formData.ingenioId!,   // 👈 coherencia
 			};
 
-			if (sensor) {
-				await api.updateSensor(sensor.sensorId, payload);
-			} else {
-				console.error("No se proporcionó sensor para actualizar");
-				return;
-			}
+			await api.updateSensor(sensor!.sensorId, payload);
 
 			onSave();
 			onClose();
@@ -120,9 +131,7 @@ export default function SensorForm({
 	return (
 		<Modal>
 			<ModalContent>
-				<ModalTitle>
-					{sensor ? "Editar Sensor" : "Nuevo Sensor"}
-				</ModalTitle>
+				<ModalTitle>Editar Sensor</ModalTitle>
 
 				<Form onSubmit={handleSubmit}>
 					<FormGroup>
@@ -146,6 +155,26 @@ export default function SensorForm({
 							<Input type="text" value={sensorId} readOnly />
 						</FormGroup>
 					)}
+
+					{/* NUEVO — selección de máquina */}
+					<FormGroup>
+						<Label>Máquina</Label>
+						<Select
+							value={formData.machineId ?? ""}
+							onChange={(e) =>
+								setFormData((prev) => ({
+									...prev,
+									machineId: Number(e.target.value),
+								}))
+							}>
+							<option value="">Seleccionar máquina</option>
+							{machines.map((m) => (
+								<option key={m.id} value={m.id}>
+									{m.name} {m.code ? `(${m.code})` : ""}
+								</option>
+							))}
+						</Select>
+					</FormGroup>
 
 					<FormGroup>
 						<Label>Tipo</Label>

@@ -1,3 +1,4 @@
+// Normaliza strings para comparaciones y búsquedas
 export const normalize = (s: string) =>
 	s
 		.normalize("NFD")
@@ -5,6 +6,7 @@ export const normalize = (s: string) =>
 		.toLowerCase()
 		.trim();
 
+// Busca por nombre exacto (normalizado)
 export const findByName = <T extends { name: string }>(
 	items: T[],
 	target: string | undefined | null,
@@ -14,6 +16,7 @@ export const findByName = <T extends { name: string }>(
 	return items.find((i) => normalize(i.name) === t) ?? null;
 };
 
+// Intenta parsear fechas tipo "dd/mm/yyyy hh:mm"
 export const parseHumanDate = (raw: string | undefined | null): Date | null => {
 	if (!raw) return null;
 	const [datePart, hourPart] = String(raw).split(" ");
@@ -26,7 +29,6 @@ export const parseHumanDate = (raw: string | undefined | null): Date | null => {
 	return new Date(y, m - 1, d, hh ?? 0, mm ?? 0);
 };
 
-// === utilidades ===
 export const formatMoney = (value?: number | null) => {
 	if (value == null) return "";
 	return value.toLocaleString("es-DO", {

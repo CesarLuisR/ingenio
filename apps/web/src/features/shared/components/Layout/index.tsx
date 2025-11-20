@@ -44,6 +44,11 @@ export default function Layout() {
 						🏠 Dashboard
 					</NavLinkStyled>
 					<NavLinkStyled
+						to="/maquinas"
+						$active={isActive("/maquinas")}>
+						⚙️ Maquinas 
+					</NavLinkStyled>
+					<NavLinkStyled
 						to="/sensores"
 						$active={isActive("/sensores")}>
 						📊 Sensores

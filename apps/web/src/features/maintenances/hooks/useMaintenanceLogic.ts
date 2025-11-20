@@ -2,298 +2,299 @@ import { useEffect, useState } from "react";
 import { api } from "../../../lib/api";
 import * as XLSX from "xlsx";
 import {
-    type Maintenance,
-    type Sensor,
-    type Technician,
-    type Failure,
+	type Maintenance,
+	type Machine,
+	type Technician,
+	type Failure,
 } from "../../../types";
 import { findByName, parseHumanDate, normalize } from "../utils";
 import { useSessionStore } from "../../../store/sessionStore";
 
 export function useMaintenancesLogic() {
-    const [maintenances, setMaintenances] = useState<Maintenance[]>([]);
-    const [sensors, setSensors] = useState<Sensor[]>([]);
-    const [technicians, setTechnicians] = useState<Technician[]>([]);
-    const [failures, setFailures] = useState<Failure[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [editing, setEditing] = useState<Maintenance | null>(null);
-    const [showForm, setShowForm] = useState(false);
+	const [maintenances, setMaintenances] = useState<Maintenance[]>([]);
+	const [machines, setMachines] = useState<Machine[]>([]);
+	const [technicians, setTechnicians] = useState<Technician[]>([]);
+	const [failures, setFailures] = useState<Failure[]>([]);
+	const [loading, setLoading] = useState(true);
+	const [editing, setEditing] = useState<Maintenance | null>(null);
+	const [showForm, setShowForm] = useState(false);
 
-    // Importación
-    const [showImport, setShowImport] = useState(false);
-    const [importing, setImporting] = useState(false);
-    const [importError, setImportError] = useState("");
-    const [importSummary, setImportSummary] = useState<string | null>(null);
+	// Importación
+	const [showImport, setShowImport] = useState(false);
+	const [importing, setImporting] = useState(false);
+	const [importError, setImportError] = useState("");
+	const [importSummary, setImportSummary] = useState<string | null>(null);
 
-    // Filtros
-    const [filterSensorId, setFilterSensorId] = useState("");
-    const [filterTechnicianId, setFilterTechnicianId] = useState("");
-    const [filterType, setFilterType] = useState("");
-    const [filterHasFailures, setFilterHasFailures] = useState("");
-    const [filterText, setFilterText] = useState("");
+	// Filtros
+	const [filterMachineId, setFilterMachineId] = useState("");
+	const [filterTechnicianId, setFilterTechnicianId] = useState("");
+	const [filterType, setFilterType] = useState("");
+	const [filterHasFailures, setFilterHasFailures] = useState("");
+	const [filterText, setFilterText] = useState("");
 
-    const user = useSessionStore((s) => s.user);
+	const user = useSessionStore((s) => s.user);
 
-    useEffect(() => {
-        loadData();
-    }, []);
+	useEffect(() => {
+		loadData();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
-    const loadData = async () => {
-        try {
-            const [maintenancesData, sensorsData, techData, failuresData] =
-                await Promise.all([
-                    api.getMaintenances(),
-                    api.getSensors(),
-                    api.getTechnicians(),
-                    api.getFailures?.() ?? Promise.resolve([]),
-                ]);
+	const loadData = async () => {
+		try {
+			const [maintenancesData, machinesData, techData, failuresData] =
+				await Promise.all([
+					api.getMaintenances(),
+					api.getMachines(),
+					api.getTechnicians(),
+					api.getFailures?.() ?? Promise.resolve([]),
+				]);
 
-            setMaintenances(maintenancesData);
-            setSensors(sensorsData);
-            setTechnicians(techData);
-            setFailures(failuresData);
-        } catch (error) {
-            console.error("Error cargando datos:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
+			setMaintenances(maintenancesData);
+			setMachines(machinesData);
+			setTechnicians(techData);
+			setFailures(failuresData);
+		} catch (error) {
+			console.error("Error cargando datos:", error);
+		} finally {
+			setLoading(false);
+		}
+	};
 
-    const handleEdit = (maintenance: Maintenance) => {
-        setEditing(maintenance);
-        setShowForm(true);
-    };
+	const handleEdit = (maintenance: Maintenance | null) => {
+		setEditing(maintenance);
+		setShowForm(true);
+	};
 
-    // =======================================
-    //   IMPORTACIÓN DESDE EXCEL (LOGICA)
-    // =======================================
-    const handleImportExcel = async (file: File) => {
-        setImportError("");
-        setImportSummary(null);
-        setImporting(true);
+	// =======================================
+	//   IMPORTACIÓN DESDE EXCEL (LÓGICA)
+	// =======================================
+	const handleImportExcel = async (file: File) => {
+		setImportError("");
+		setImportSummary(null);
+		setImporting(true);
 
-        try {
-            if (!user) {
-                throw new Error("Usuario no autenticado");
-            }
+		try {
+			if (!user) {
+				throw new Error("Usuario no autenticado");
+			}
 
-            const buffer = await file.arrayBuffer();
-            const workbook = XLSX.read(buffer, { type: "array" });
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const rows = XLSX.utils.sheet_to_json(sheet) as any[];
+			const buffer = await file.arrayBuffer();
+			const workbook = XLSX.read(buffer, { type: "array" });
+			const sheet = workbook.Sheets[workbook.SheetNames[0]];
+			const rows = XLSX.utils.sheet_to_json(sheet) as any[];
 
-            const report: {
-                rowIndex: number;
-                row: any;
-                status: "ok" | "skipped";
-                reason?: string;
-            }[] = [];
+			const report: {
+				rowIndex: number;
+				row: any;
+				status: "ok" | "skipped";
+				reason?: string;
+			}[] = [];
 
-            for (let index = 0; index < rows.length; index++) {
-                const row = rows[index];
+			for (let index = 0; index < rows.length; index++) {
+				const row = rows[index];
 
-                try {
-                    const sensorName = row.sensor || row.sensorName;
-                    const type = row.type as Maintenance["type"];
-                    const technicianName = row.technician;
-                    const notes = row.notes || undefined;
-                    const durationMinutes =
-                        row.durationMinutes != null
-                            ? Number(row.durationMinutes)
-                            : undefined;
-                    const cost = row.cost != null ? Number(row.cost) : undefined;
-                    const performedAtRaw = row.performedAt;
+				try {
+					const machineName = row.machine || row.machineName;
+					const type = row.type as Maintenance["type"];
+					const technicianName = row.technician;
+					const notes = row.notes || undefined;
+					const durationMinutes =
+						row.durationMinutes != null
+							? Number(row.durationMinutes)
+							: undefined;
+					const cost =
+						row.cost != null ? Number(row.cost) : undefined;
+					const performedAtRaw = row.performedAt;
 
-                    const sensor = findByName(sensors, sensorName);
-                    if (!sensor) {
-                        report.push({
-                            rowIndex: index + 1,
-                            row,
-                            status: "skipped",
-                            reason: "Sensor no encontrado",
-                        });
-                        continue;
-                    }
+					const machine = findByName(machines, machineName);
+					if (!machine) {
+						report.push({
+							rowIndex: index + 1,
+							row,
+							status: "skipped",
+							reason: "Máquina no encontrada",
+						});
+						continue;
+					}
 
-                    const technician = technicianName
-                        ? findByName(technicians, technicianName)
-                        : null;
+					const technician = technicianName
+						? findByName(technicians, technicianName)
+						: null;
 
-                    if (!type) {
-                        report.push({
-                            rowIndex: index + 1,
-                            row,
-                            status: "skipped",
-                            reason: "Tipo inválido",
-                        });
-                        continue;
-                    }
+					if (!type) {
+						report.push({
+							rowIndex: index + 1,
+							row,
+							status: "skipped",
+							reason: "Tipo inválido",
+						});
+						continue;
+					}
 
-                    if (durationMinutes != null && durationMinutes < 0) {
-                        report.push({
-                            rowIndex: index + 1,
-                            row,
-                            status: "skipped",
-                            reason: "Duración negativa",
-                        });
-                        continue;
-                    }
+					if (durationMinutes != null && durationMinutes < 0) {
+						report.push({
+							rowIndex: index + 1,
+							row,
+							status: "skipped",
+							reason: "Duración negativa",
+						});
+						continue;
+					}
 
-                    if (cost != null && cost < 0) {
-                        report.push({
-                            rowIndex: index + 1,
-                            row,
-                            status: "skipped",
-                            reason: "Costo negativo",
-                        });
-                        continue;
-                    }
+					if (cost != null && cost < 0) {
+						report.push({
+							rowIndex: index + 1,
+							row,
+							status: "skipped",
+							reason: "Costo negativo",
+						});
+						continue;
+					}
 
-                    const parsedDate =
-                        parseHumanDate(performedAtRaw) || new Date();
+					const parsedDate =
+						parseHumanDate(performedAtRaw) || new Date();
 
-                    const payload = {
-                        sensorId: sensor.id,
-                        type,
-                        technicianId: technician?.id,
-                        notes,
-                        performedAt: parsedDate.toISOString(),
-                        durationMinutes,
-                        cost,
-                        ingenioId: user?.ingenioId,
-                    };
+					const payload = {
+						machineId: machine.id,
+						type,
+						technicianId: technician?.id,
+						notes,
+						performedAt: parsedDate.toISOString(),
+						durationMinutes,
+						cost,
+						ingenioId: user?.ingenioId!,
+					};
 
-                    await api.createMaintenance(payload);
+					await api.createMaintenance(payload);
 
-                    report.push({
-                        rowIndex: index + 1,
-                        row,
-                        status: "ok",
-                    });
-                } catch (err) {
-                    report.push({
-                        rowIndex: index + 1,
-                        row,
-                        status: "skipped",
-                        reason: "Error creando mantenimiento",
-                    });
-                }
-            }
+					report.push({
+						rowIndex: index + 1,
+						row,
+						status: "ok",
+					});
+				} catch (err) {
+					report.push({
+						rowIndex: index + 1,
+						row,
+						status: "skipped",
+						reason: "Error creando mantenimiento",
+					});
+				}
+			}
 
-            await loadData();
+			await loadData();
 
-            const ok = report.filter((r) => r.status === "ok").length;
-            const skipped = report.filter((r) => r.status === "skipped").length;
+			const ok = report.filter((r) => r.status === "ok").length;
+			const skipped = report.filter((r) => r.status === "skipped").length;
 
-            const details = report
-                .map((r) =>
-                    r.status === "ok"
-                        ? `✔️ Fila ${r.rowIndex}: importada (${JSON.stringify(
-                            r.row,
-                        )})`
-                        : `❌ Fila ${r.rowIndex}: ignorada (${r.reason}) → ${JSON.stringify(
-                            r.row,
-                        )}`,
-                )
-                .join("\n");
+			const details = report
+				.map((r) =>
+					r.status === "ok"
+						? `✔️ Fila ${r.rowIndex}: importada (${JSON.stringify(
+								r.row,
+						  )})`
+						: `❌ Fila ${r.rowIndex}: ignorada (${r.reason}) → ${JSON.stringify(
+								r.row,
+						  )}`,
+				)
+				.join("\n");
 
-            setImportSummary(
-                `Importación completada:
-                ${ok} filas procesadas correctamente,
-                ${skipped} filas ignoradas.
+			setImportSummary(
+				`Importación completada:
+${ok} filas procesadas correctamente,
+${skipped} filas ignoradas.
 
-                Detalles:
-                ${details}`,
-            );
+Detalles:
+${details}`,
+			);
 
-            setShowImport(false);
-        } catch (err) {
-            console.error("Error importando:", err);
-            setImportError("El archivo no tiene el formato esperado.");
-        } finally {
-            setImporting(false);
-        }
-    };
+			setShowImport(false);
+		} catch (err) {
+			console.error("Error importando:", err);
+			setImportError("El archivo no tiene el formato esperado.");
+		} finally {
+			setImporting(false);
+		}
+	};
 
-    // =======================================
-    //            FILTRADO
-    // =======================================
-    const filteredMaintenances = maintenances.filter((m) => {
-        const relatedFailures = failures.filter(
-            (f) =>
-                (f as any).maintenanceId === m.id ||
-                (f as any).sensorId === m.sensorId,
-        );
+	// =======================================
+	//            FILTRADO
+	// =======================================
+	const filteredMaintenances = maintenances.filter((m) => {
+		const relatedFailures = failures.filter(
+			(f) => f.machineId === m.machineId || f.maintenanceId === m.id,
+		);
 
-        const sensor = sensors.find((s) => s.id === m.sensorId);
-        const tech =
-            m.technician ??
-            technicians.find((t) => t.id === m.technicianId);
+		const machine = machines.find((mc) => mc.id === m.machineId);
+		const tech =
+			m.technician ?? technicians.find((t) => t.id === m.technicianId);
 
-        if (filterSensorId && m.sensorId.toString() !== filterSensorId)
-            return false;
+		if (filterMachineId && m.machineId.toString() !== filterMachineId)
+			return false;
 
-        if (
-            filterTechnicianId &&
-            m.technicianId?.toString() !== filterTechnicianId
-        )
-            return false;
+		if (
+			filterTechnicianId &&
+			m.technicianId?.toString() !== filterTechnicianId
+		)
+			return false;
 
-        if (filterType && m.type !== filterType) return false;
+		if (filterType && m.type !== filterType) return false;
 
-        if (filterHasFailures === "yes" && relatedFailures.length === 0)
-            return false;
+		if (filterHasFailures === "yes" && relatedFailures.length === 0)
+			return false;
 
-        if (filterHasFailures === "no" && relatedFailures.length > 0)
-            return false;
+		if (filterHasFailures === "no" && relatedFailures.length > 0)
+			return false;
 
-        if (filterText) {
-            const text = normalize(filterText);
-            const haystack =
-                normalize(sensor?.name || "") +
-                " " +
-                normalize(tech?.name || "") +
-                " " +
-                normalize(m.notes || "") +
-                " " +
-                normalize(m.type || "");
+		if (filterText) {
+			const text = normalize(filterText);
+			const haystack =
+				normalize(machine?.name || "") +
+				" " +
+				normalize(machine?.code || "") +
+				" " +
+				normalize(tech?.name || "") +
+				" " +
+				normalize(m.notes || "") +
+				" " +
+				normalize(m.type || "");
 
-            if (!haystack.includes(text)) return false;
-        }
+			if (!haystack.includes(text)) return false;
+		}
 
-        return true;
-    });
+		return true;
+	});
 
-    return {
-        loading,
-        sensors,
-        technicians,
-        failures,
-        editing,
-        showForm,
-        handleEdit,
-        setShowForm,
-        filteredMaintenances,
-        loadData,
+	return {
+		loading,
+		machines,
+		technicians,
+		failures,
+		editing,
+		showForm,
+		handleEdit,
+		setShowForm,
+		filteredMaintenances,
+		loadData,
 
-        // importación
-        showImport,
-        setShowImport,
-        importing,
-        importError,
-        importSummary,
-        handleImportExcel,
+		// importación
+		showImport,
+		setShowImport,
+		importing,
+		importError,
+		importSummary,
+		handleImportExcel,
 
-        // filtros
-        filterSensorId,
-        setFilterSensorId,
-        filterTechnicianId,
-        setFilterTechnicianId,
-        filterType,
-        setFilterType,
-        filterHasFailures,
-        setFilterHasFailures,
-        filterText,
-        setFilterText,
-    };
+		// filtros
+		filterMachineId,
+		setFilterMachineId,
+		filterTechnicianId,
+		setFilterTechnicianId,
+		filterType,
+		setFilterType,
+		filterHasFailures,
+		setFilterHasFailures,
+		filterText,
+		setFilterText,
+	};
 }

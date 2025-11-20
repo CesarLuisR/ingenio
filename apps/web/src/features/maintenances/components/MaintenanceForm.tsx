@@ -1,4 +1,4 @@
-import type { Maintenance, Sensor, Technician } from "../../../types";
+import type { Maintenance, Machine, Technician } from "../../../types";
 import { useMaintenanceForm } from "../hooks/useMaintenanceForm";
 
 import {
@@ -20,13 +20,13 @@ import {
 } from "../styled";
 
 export default function MaintenanceForm({
-	sensors,
+	machines,
 	technicians,
 	initialData,
 	onClose,
 	onSave,
 }: {
-	sensors: Sensor[];
+	machines: Machine[];
 	technicians: Technician[];
 	initialData?: Maintenance | null;
 	onClose: () => void;
@@ -48,20 +48,22 @@ export default function MaintenanceForm({
 
 				<Form onSubmit={handleSubmit}>
 					<Field>
-						<Label>Sensor</Label>
+						<Label>Máquina</Label>
 						<SelectInput
 							required
-							value={formData.sensorId}
-							onChange={handleFieldChange("sensorId")}
+							value={formData.machineId}
+							onChange={handleFieldChange("machineId")}
 						>
-							<option value="">Seleccionar sensor</option>
-							{sensors.map((s) => (
-								<option key={s.id} value={s.id}>
-									{s.name}
+							<option value="">Seleccionar máquina</option>
+							{machines.map((m) => (
+								<option key={m.id} value={m.id}>
+									{m.name} {m.code ? `(${m.code})` : ""}
 								</option>
 							))}
 						</SelectInput>
-						{errors.sensorId && <ErrorText>{errors.sensorId}</ErrorText>}
+						{errors.machineId && (
+							<ErrorText>{errors.machineId}</ErrorText>
+						)}
 					</Field>
 
 					<Field>

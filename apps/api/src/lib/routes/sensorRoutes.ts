@@ -11,6 +11,6 @@ const router = Router();
 router.get("/", getAllSensors);
 router.get("/:sensorId", getSensorById);
 router.put("/:sensorId", updateSensor);
-router.patch("/:sensorId/remove", deactivateSensor);
+router.patch("/:sensorId/deactivate", deactivateSensor);
 
 export default router;

@@ -1,230 +1,63 @@
-import { RequestHandler } from "express-serve-static-core";
+import { RequestHandler } from "express";
 import prisma from "../../database/postgres.db";
+import { calculateMachineMetrics, calculateIngenioMetrics } from "../services/metricsService";
 
-const msPerHour = 36e5;
-const diffHours = (a: Date, b: Date) => (b.getTime() - a.getTime()) / msPerHour;
+export const getMachineMetrics: RequestHandler = async (req, res) => {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ error: "Bad request" });
 
-export const getSensorMetrics: RequestHandler = async (req, res) => {
-	try {
-		const id = Number(req.params.id);
+    try {
+        const machine = await prisma.machine.findUnique({ where: { id } });
+        if (!machine) return res.status(404).json({ error: "Machine no encontrada" });
 
-		if (!id) throw new Error("Bad request");
+        if (machine.ingenioId !== req.session.user?.ingenioId)
+            return res.status(403).json({ message: "Forbidden access" });
 
-		const sensor = await prisma.sensor.findUnique({
-			where: { id: id },
-		});
-
-		if (!sensor) {
-			return res.status(404).json({ error: "Sensor no encontrado" });
-		}
-
-		const failures = await prisma.failure.findMany({
-			where: { sensorId: id },
-			orderBy: { occurredAt: "asc" },
-			include: { maintenance: true },
-		});
-
-		// Si nunca falló → 100% disponibilidad
-		if (failures.length === 0) {
-			return res.json({
-				availability: 100,
-				reliability: 100,
-				mtbf: null,
-				mttr: null,
-				mtta: null,
-			});
-		}
-
-		console.log("LLEGA AL 2");
-		// --- MTTR (Mean Time To Repair) ---
-	
-		const resolved = failures.filter((f) => f.resolvedAt);
-		const mttr =
-			resolved.length > 0
-				? resolved.reduce((acc, f) => acc + diffHours(f.occurredAt, f.resolvedAt!), 0) /
-				  resolved.length
-				: null;
-
-		// --- MTTA (Mean Time To Attend) ---
-		const attended = failures.filter(
-			(f) => f.maintenance && f.maintenance.performedAt
-		);
-
-		const mtta =
-			attended.length > 0
-				? attended.reduce(
-						(acc, f) =>
-							acc +
-							diffHours(
-								f.occurredAt,
-								f.maintenance!.performedAt!
-							),
-						0
-				  ) / attended.length
-				: null;
-
-		// --- MTBF (Mean Time Between Failures) ---
-		let mtbf = null;
-		if (failures.length > 1) {
-			const gaps: number[] = [];
-			for (let i = 1; i < failures.length; i++) {
-				gaps.push(diffHours(failures[i - 1].occurredAt, failures[i].occurredAt));
-			}
-			mtbf = gaps.reduce((a, b) => a + b, 0) / gaps.length;
-		}
-
-		// ------------------------------------------------------------------
-		// 🔥 DISPONIBILIDAD (refactor real-line industrial)
-		// ------------------------------------------------------------------
-
-		const now = new Date();
-		const start = sensor.createdAt;
-		const totalHours = diffHours(start, now);
-
-		// Downtime = suma de intervalos de falla abiertos o cerrados
-		let downtime = 0;
-
-		for (const f of failures) {
-			const end = f.resolvedAt ?? now; // si no está reparada → sigue fallada
-			downtime += diffHours(f.occurredAt, end);
-		}
-
-		const uptime = totalHours - downtime;
-
-		const availability =
-			totalHours > 0 ? (uptime / totalHours) * 100 : null;
-
-
-		// ------------------------------------------------------------------
-		// 🔥 Confiabilidad (R = MTBF / (MTBF + MTTR))
-		// ------------------------------------------------------------------
-
-		const reliability =
-			mtbf && mttr ? (mtbf / (mtbf + mttr)) * 100 : null;
-
-		return res.json({
-			availability,
-			reliability,
-			mtbf,
-			mttr,
-			mtta,
-		});
-	} catch (err) {
-		console.error(err);
-		res.status(500).json({ error: "Error calculando métricas del sensor" });
-	}
+        const result = await calculateMachineMetrics(machine.id);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: "Error calculando métricas" });
+    }
 };
 
-
 export const getIngenioMetrics: RequestHandler = async (req, res) => {
-	try {
-		const id = Number(req.params.id);
-		if (!id) throw new Error("Bad request");
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ error: "Bad request" });
 
-		// INFO DEL INGENIO
-		const ingenio = await prisma.ingenio.findUnique({
-			where: { id },
-		});
+    try {
+        const ingenio = await prisma.ingenio.findUnique({ where: { id } });
+        if (!ingenio) return res.status(404).json({ error: "Ingenio no encontrado" });
 
-		if (!ingenio) {
-			return res.status(404).json({ error: "Ingenio no encontrado" });
-		}
+        if (ingenio.id !== req.session.user?.ingenioId)
+            return res.status(403).json({ message: "Forbidden access" });
 
-		// FALLAS DE TODOS LOS SENSORES DEL INGENIO
-		const failures = await prisma.failure.findMany({
-			where: { ingenioId: id },
-			orderBy: { occurredAt: "asc" },
-			include: { maintenance: true },
-		});
+        const result = await calculateIngenioMetrics(ingenio.id);
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: "Error calculando métricas del ingenio" });
+    }
+};
 
-		// Sin fallas → 100% en todo
-		if (failures.length === 0) {
-			return res.json({
-				availability: 100,
-				reliability: 100,
-				mtbf: null,
-				mttr: null,
-				mtta: null,
-			});
-		}
+export const getSensorHealth: RequestHandler = async (req, res) => {
+    const id = Number(req.params.id);
+    if (!id) return res.status(400).json({ error: "Bad request" });
 
-		// -----------------------------------------------------
-		// MTTR (Mean Time To Repair)
-		// -----------------------------------------------------
-		const resolved = failures.filter((f) => f.resolvedAt);
-		const mttr =
-			resolved.length > 0
-				? resolved.reduce((acc, f) => acc + diffHours(f.occurredAt, f.resolvedAt!), 0) /
-				  resolved.length
-				: null;
+    try {
+        const sensor = await prisma.sensor.findUnique({
+            where: { id },
+        });
 
-		// -----------------------------------------------------
-		// MTTA (Mean Time To Attend)
-		// -----------------------------------------------------
-		const attended = failures.filter(
-			(f) => f.maintenance && f.maintenance.performedAt
-		);
+        if (!sensor) return res.status(404).json({ error: "Sensor no encontrado" });
 
-		const mtta =
-			attended.length > 0
-				? attended.reduce(
-						(acc, f) =>
-							acc +
-							diffHours(
-								f.occurredAt,
-								f.maintenance!.performedAt!
-							),
-						0
-				  ) /
-				  attended.length
-				: null;
+        if (sensor.ingenioId !== req.session.user?.ingenioId)
+            return res.status(403).json({ message: "Forbidden access" });
 
-		// -----------------------------------------------------
-		// MTBF (Mean Time Between Failures)
-		// -----------------------------------------------------
-		let mtbf = null;
-		if (failures.length > 1) {
-			const gaps: number[] = [];
-			for (let i = 1; i < failures.length; i++) {
-				gaps.push(diffHours(failures[i - 1].occurredAt, failures[i].occurredAt));
-			}
-			mtbf = gaps.reduce((a, b) => a + b, 0) / gaps.length;
-		}
-
-		// -----------------------------------------------------
-		// DISPONIBILIDAD REAL (Industrial)
-		// -----------------------------------------------------
-		const now = new Date();
-		const start = ingenio.createdAt;
-		const totalHours = diffHours(start, now);
-
-		let downtime = 0;
-
-		for (const f of failures) {
-			const end = f.resolvedAt ?? now;
-			downtime += diffHours(f.occurredAt, end);
-		}
-
-		const uptime = totalHours - downtime;
-
-		const availability =
-			totalHours > 0 ? (uptime / totalHours) * 100 : null;
-
-		// -----------------------------------------------------
-		// Confiabilidad del ingenio
-		// -----------------------------------------------------
-		const reliability =
-			mtbf && mttr ? (mtbf / (mtbf + mttr)) * 100 : null;
-
-		return res.json({
-			availability,
-			reliability,
-			mtbf,
-			mttr,
-			mtta,
-		});
-	} catch (err) {
-		console.error(err);
-		res.status(500).json({ error: "Error calculando métricas del ingenio" });
-	}
+        res.json({
+            active: sensor.active,
+            lastSeen: sensor.lastSeen,
+            lastAnalysis: sensor.lastAnalysis,
+        });
+    } catch (error) {
+        res.status(500).json({ error: "Error obteniendo salud del sensor" });
+    }
 };

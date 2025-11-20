@@ -24,6 +24,7 @@ import useFailures from "./hooks/useFailures";
 
 export default function Fallos() {
 	const {
+		machines,
 		sensors,
 		loading,
 		filteredFailures,
@@ -32,6 +33,8 @@ export default function Fallos() {
 		showForm,
 		setShowForm,
 
+		filterMachineId,
+		setFilterMachineId,
 		filterSensorId,
 		setFilterSensorId,
 		filterSeverity,
@@ -62,6 +65,20 @@ export default function Fallos() {
 
 			{/* FILTROS */}
 			<FiltersBar>
+				{/* 🔷 Filtrar por máquina */}
+				<SelectInput
+					value={filterMachineId}
+					onChange={(e) => setFilterMachineId(e.target.value)}>
+					<option value="">Todas las máquinas</option>
+					{machines.map((m) => (
+						<option key={m.id} value={m.id}>
+							{m.name}
+							{m.code ? ` (${m.code})` : ""}
+						</option>
+					))}
+				</SelectInput>
+
+				{/* 🔶 Filtro por sensor (solo sensores dentro del ingenio) */}
 				<SelectInput
 					value={filterSensorId}
 					onChange={(e) => setFilterSensorId(e.target.value)}>
@@ -102,13 +119,17 @@ export default function Fallos() {
 			{/* LISTA */}
 			<FailureList>
 				{filteredFailures.map((f) => {
+					const machine =
+						machines.find((m) => m.id === f.machineId) ?? f.machine;
+
 					const sensor = sensors.find((s) => s.id === f.sensorId);
 
 					return (
 						<FailureCard key={f.id}>
 							<CardHeader>
 								<SensorName>
-									{sensor?.name || `Sensor ${f.sensorId}`}
+									{machine?.name || `Máquina ${f.machineId}`}
+									{machine?.code ? ` (${machine.code})` : ""}
 								</SensorName>
 
 								<EditButton
@@ -128,6 +149,18 @@ export default function Fallos() {
 								<StatusTag $sts={f.status || "pendiente"}>
 									{f.status || "pendiente"}
 								</StatusTag>
+
+								{sensor && (
+									<span
+										style={{
+											fontSize: 12,
+											background: "#f3f4f6",
+											padding: "2px 6px",
+											borderRadius: 6,
+										}}>
+										Sensor: {sensor.name}
+									</span>
+								)}
 							</TagRow>
 
 							<Description>{f.description}</Description>
@@ -153,6 +186,7 @@ export default function Fallos() {
 
 			{showForm && (
 				<FailureForm
+					machines={machines}
 					sensors={sensors}
 					initialData={editing}
 					onClose={() => {

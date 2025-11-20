@@ -8,6 +8,7 @@ import type {
 	Sensor,
 	Technician,
 	User,
+	Machine,
 } from "../types";
 
 const API_BASE_URL =
@@ -24,13 +25,11 @@ class ApiClient {
 			},
 		});
 
-		// Manejo de error HTTP
 		if (!response.ok) {
 			const errText = await response.text();
 			throw new Error(`API Error ${response.status}: ${errText}`);
 		}
 
-		// Si no hay contenido (DELETE, 204, etc.), evita .json() vacío
 		if (response.status === 204) return undefined as T;
 
 		return response.json();
@@ -54,227 +53,280 @@ class ApiClient {
 		});
 	}
 
-	// Obtiene la sesión actual desde el backend (si existe)
 	async getSession(): Promise<User | null> {
 		try {
-			const data = await this.request<{ user: User | null }>("/api/auth/session", {
-				method: "GET",
-			});
+			const data = await this.request<{ user: User | null }>("/api/auth/session");
 			return data.user ?? null;
 		} catch {
 			return null;
 		}
 	}
 
-	// --- Ingenios ---
-	async getIngenios(): Promise<Ingenio[]> {
+	// ======================
+	// 🌾 INGENIOS
+	// ======================
+
+	getIngenios(): Promise<Ingenio[]> {
 		return this.request<Ingenio[]>("/api/ingenios");
 	}
 
-	async getIngenio(id: number): Promise<Ingenio> {
+	getIngenio(id: number): Promise<Ingenio> {
 		return this.request<Ingenio>(`/api/ingenios/${id}`);
 	}
 
-	async createIngenio(data: Partial<Ingenio>): Promise<Ingenio> {
+	createIngenio(data: Partial<Ingenio>): Promise<Ingenio> {
 		return this.request<Ingenio>("/api/ingenios", {
 			method: "POST",
 			body: JSON.stringify(data),
 		});
 	}
 
-	async updateIngenio(id: number, data: Partial<Ingenio>): Promise<Ingenio> {
+	updateIngenio(id: number, data: Partial<Ingenio>): Promise<Ingenio> {
 		return this.request<Ingenio>(`/api/ingenios/${id}`, {
 			method: "PUT",
 			body: JSON.stringify(data),
 		});
 	}
 
-	async deleteIngenio(id: number): Promise<void> {
+	deleteIngenio(id: number): Promise<void> {
 		return this.request<void>(`/api/ingenios/${id}`, {
 			method: "DELETE",
 		});
 	}
 
-	// --- Metrics ---
-	async getSensorMetrics(sensorId: number): Promise<BaseMetrics> {
-		return this.request(`/api/metrics/sensor/${sensorId}`, {
-			method: "GET",
+	// ======================
+	// 🏭 MACHINES
+	// ======================
+
+	getMachines(): Promise<Machine[]> {
+		return this.request<Machine[]>("/api/machines");
+	}
+
+	getMachine(id: number): Promise<Machine> {
+		return this.request<Machine>(`/api/machines/${id}`);
+	}
+
+	createMachine(data: Partial<Machine>): Promise<Machine> {
+		return this.request<Machine>("/api/machines", {
+			method: "POST",
+			body: JSON.stringify(data),
 		});
 	}
 
-	async getIngenioMetrics(ingenioId: number): Promise<BaseMetrics> {
-		return this.request(`/api/metrics/ingenio/${ingenioId}`, {
-			method: "GET",
+	updateMachine(id: number, data: Partial<Machine>): Promise<Machine> {
+		return this.request<Machine>(`/api/machines/${id}`, {
+			method: "PUT",
+			body: JSON.stringify(data),
 		});
 	}
 
+	deleteMachine(id: number): Promise<void> {
+		return this.request<void>(`/api/machines/${id}`, {
+			method: "DELETE",
+		});
+	}
 
-	// --- Sensors ---
-	async getSensors(): Promise<Sensor[]> {
+	// ======================
+	// 📊 METRICS
+	// ======================
+
+	getMachineMetrics(machineId: number): Promise<BaseMetrics> {
+		return this.request<BaseMetrics>(`/api/metrics/machine/${machineId}`);
+	}
+
+	getIngenioMetrics(ingenioId: number): Promise<BaseMetrics> {
+		return this.request<BaseMetrics>(`/api/metrics/ingenio/${ingenioId}`);
+	}
+
+	getSensorHealth(id: number): Promise<{
+		active: boolean;
+		lastSeen: string | null;
+		lastAnalysis: any | null;
+	}> {
+		return this.request(`/api/metrics/sensor/${id}/health`);
+	}
+
+	// ======================
+	// 📡 SENSORS
+	// ======================
+
+	getSensors(): Promise<Sensor[]> {
 		return this.request<Sensor[]>("/api/sensors");
 	}
 
-	async getSensor(sensorId: string): Promise<Sensor> {
+	getSensor(sensorId: string): Promise<Sensor> {
 		return this.request<Sensor>(`/api/sensors/${sensorId}`);
 	}
 
-	async updateSensor(sensorId: string, data: Partial<Sensor>): Promise<Sensor> {
+	updateSensor(sensorId: string, data: Partial<Sensor>): Promise<Sensor> {
 		return this.request<Sensor>(`/api/sensors/${sensorId}`, {
 			method: "PUT",
 			body: JSON.stringify(data),
 		});
 	}
 
-	async deactivateSensor(sensorId: string): Promise<Sensor> {
+	deactivateSensor(sensorId: string): Promise<Sensor> {
+		// backend: PATCH /api/sensors/:sensorId/deactivate
 		return this.request<Sensor>(`/api/sensors/${sensorId}/deactivate`, {
 			method: "PATCH",
 		});
 	}
 
-	// --- Maintenances ---
-	async getMaintenances(): Promise<Maintenance[]> {
+	getSensorReadings(sensorId: string): Promise<Reading[]> {
+		return this.request<Reading[]>(`/api/sensors/${sensorId}/readings`);
+	}
+
+	// ======================
+	// 🛠 MAINTENANCES
+	// ======================
+
+	getMaintenances(): Promise<Maintenance[]> {
 		return this.request<Maintenance[]>("/api/maintenances");
 	}
 
-	async getMaintenance(id: string): Promise<Maintenance> {
+	getMaintenance(id: string): Promise<Maintenance> {
 		return this.request<Maintenance>(`/api/maintenances/${id}`);
 	}
 
-	async createMaintenance(data: Partial<Maintenance>): Promise<Maintenance> {
+	createMaintenance(data: Partial<Maintenance>): Promise<Maintenance> {
 		return this.request<Maintenance>("/api/maintenances", {
 			method: "POST",
 			body: JSON.stringify(data),
 		});
 	}
 
-	async updateMaintenance(
-		id: string,
-		data: Partial<Maintenance>
-	): Promise<Maintenance> {
+	updateMaintenance(id: string, data: Partial<Maintenance>): Promise<Maintenance> {
 		return this.request<Maintenance>(`/api/maintenances/${id}`, {
 			method: "PUT",
 			body: JSON.stringify(data),
 		});
 	}
 
-	async deleteMaintenance(id: string): Promise<void> {
+	deleteMaintenance(id: string): Promise<void> {
 		return this.request<void>(`/api/maintenances/${id}`, {
 			method: "DELETE",
 		});
 	}
 
-	// --- Failures ---
-	async getFailures(): Promise<Failure[]> {
+	// ======================
+	// ⚠️ FAILURES
+	// ======================
+
+	getFailures(): Promise<Failure[]> {
 		return this.request<Failure[]>("/api/failures");
 	}
 
-	async getFailure(id: string): Promise<Failure> {
+	getFailure(id: string): Promise<Failure> {
 		return this.request<Failure>(`/api/failures/${id}`);
 	}
 
-	async createFailure(data: Partial<Failure>): Promise<Failure> {
+	createFailure(data: Partial<Failure>): Promise<Failure> {
 		return this.request<Failure>("/api/failures", {
 			method: "POST",
 			body: JSON.stringify(data),
 		});
 	}
 
-	async updateFailure(id: string, data: Partial<Failure>): Promise<Failure> {
+	updateFailure(id: string, data: Partial<Failure>): Promise<Failure> {
 		return this.request<Failure>(`/api/failures/${id}`, {
 			method: "PUT",
 			body: JSON.stringify(data),
 		});
 	}
 
-	async deleteFailure(id: string): Promise<void> {
+	deleteFailure(id: string): Promise<void> {
 		return this.request<void>(`/api/failures/${id}`, {
 			method: "DELETE",
 		});
 	}
 
-	// --- Technicians ---
-	async getTechnicians(): Promise<Technician[]> {
+	// ======================
+	// 👷 TECHNICIANS
+	// ======================
+
+	getTechnicians(): Promise<Technician[]> {
 		return this.request<Technician[]>("/api/technicians");
 	}
 
-	async getTechnician(id: string): Promise<Technician> {
+	getTechnician(id: string): Promise<Technician> {
 		return this.request<Technician>(`/api/technicians/${id}`);
 	}
 
-	async createTechnician(data: Partial<Technician>): Promise<Technician> {
+	createTechnician(data: Partial<Technician>): Promise<Technician> {
 		return this.request<Technician>("/api/technicians", {
 			method: "POST",
 			body: JSON.stringify(data),
 		});
 	}
 
-	async updateTechnician(
-		id: string,
-		data: Partial<Technician>
-	): Promise<Technician> {
+	updateTechnician(id: string, data: Partial<Technician>): Promise<Technician> {
 		return this.request<Technician>(`/api/technicians/${id}`, {
 			method: "PUT",
 			body: JSON.stringify(data),
 		});
 	}
 
-	async deleteTechnician(id: string): Promise<void> {
+	deleteTechnician(id: string): Promise<void> {
 		return this.request<void>(`/api/technicians/${id}`, {
 			method: "DELETE",
 		});
 	}
 
-	// --- Users ---
-	async getUsers(): Promise<User[]> {
+	// ======================
+	// 👤 USERS
+	// ======================
+
+	getUsers(): Promise<User[]> {
 		return this.request<User[]>("/api/users");
 	}
 
-	async createUser(data: Partial<User>): Promise<User> {
+	createUser(data: Partial<User>): Promise<User> {
 		return this.request<User>("/api/users", {
 			method: "POST",
 			body: JSON.stringify(data),
 		});
 	}
 
-	async updateUser(id: string, data: Partial<User>): Promise<User> {
+	updateUser(id: string, data: Partial<User>): Promise<User> {
 		return this.request<User>(`/api/users/${id}`, {
 			method: "PUT",
 			body: JSON.stringify(data),
 		});
 	}
 
-	async deleteUser(id: string): Promise<void> {
+	deleteUser(id: string): Promise<void> {
 		return this.request<void>(`/api/users/${id}`, {
 			method: "DELETE",
 		});
 	}
 
-	// --- Analysis ---
-	async analyzeData(sensorIds: string[]): Promise<AnalysisResponse> {
+	// ======================
+	// 🧠 ANALYSIS
+	// ======================
+
+	analyzeData(sensorIds: string[]): Promise<AnalysisResponse> {
 		return this.request<AnalysisResponse>("/api/analyze", {
 			method: "POST",
 			body: JSON.stringify(sensorIds),
 		});
 	}
 
-	// --- Ingest ---
-	async ingestData(data: any): Promise<void> {
+	// ======================
+	// 🔄 INGEST
+	// ======================
+
+	ingestData(data: any): Promise<void> {
 		return this.request<void>("/api/ingest", {
 			method: "POST",
 			body: JSON.stringify(data),
 		});
 	}
 
-	async ingestSensorData(data: any): Promise<void> {
+	ingestSensorData(data: any): Promise<void> {
 		return this.request<void>("/api/ingest/sensor", {
 			method: "POST",
 			body: JSON.stringify(data),
 		});
-	}
-
-	// --- Readings ---
-	async getSensorReadings(sensorId: string): Promise<Reading[]> {
-		return this.request<Reading[]>(`/api/sensors/${sensorId}/readings`);
 	}
 }
 

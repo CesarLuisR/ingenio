@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type React from "react";
 import type { Maintenance } from "../../../types";
 import { api } from "../../../lib/api";
 import { safeNumber } from "../utils";
@@ -8,7 +9,7 @@ export function useMaintenanceForm(initialData: Maintenance | null, onSave: () =
 	const user = useSessionStore((s) => s.user);
 
 	const [formData, setFormData] = useState({
-		sensorId: initialData?.sensorId?.toString() || "",
+		machineId: initialData?.machineId?.toString() || "",
 		type: initialData?.type || "Preventivo",
 		technicianId: initialData?.technicianId?.toString() || "",
 		performedAt: initialData
@@ -27,7 +28,7 @@ export function useMaintenanceForm(initialData: Maintenance | null, onSave: () =
 	const validate = () => {
 		const newErrors: Record<string, string> = {};
 
-		if (!formData.sensorId) newErrors.sensorId = "Selecciona un sensor.";
+		if (!formData.machineId) newErrors.machineId = "Selecciona una máquina.";
 		if (!formData.type) newErrors.type = "Selecciona un tipo de mantenimiento.";
 
 		if (formData.durationMinutes) {
@@ -74,7 +75,7 @@ export function useMaintenanceForm(initialData: Maintenance | null, onSave: () =
 
 		try {
 			const payload = {
-				sensorId: Number(formData.sensorId),
+				machineId: Number(formData.machineId),
 				type: formData.type as Maintenance["type"],
 				technicianId: formData.technicianId
 					? Number(formData.technicianId)
@@ -87,9 +88,7 @@ export function useMaintenanceForm(initialData: Maintenance | null, onSave: () =
 				performedAt: formData.performedAt
 					? new Date(formData.performedAt).toISOString()
 					: new Date().toISOString(),
-
-				// 🔥 Aquí se agrega el ingenioId del usuario autenticado
-				ingenioId: user?.ingenioId ?? null,
+				ingenioId: user?.ingenioId! ?? null,
 			};
 
 			if (initialData) {
