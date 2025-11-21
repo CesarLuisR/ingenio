@@ -57,8 +57,8 @@ export default function Mantenimientos() {
         showImport,
         setShowImport,
         importing,
-        importReport,     // <--- Usamos el nuevo estado
-        setImportReport,  // <--- Para poder cerrar el reporte
+        importReport,
+        setImportReport,
         handleImportExcel,
 
         // filtros
@@ -99,12 +99,11 @@ export default function Mantenimientos() {
         return <LoadingText>Cargando registros...</LoadingText>;
     }
 
-    // Agrupar mantenimientos por máquina (Igual que antes)
+    // Agrupar mantenimientos por máquina
     const maintenancesByMachine = machines.map((machine) => {
         const machineMaintenances = filteredMaintenances
             .filter((m) => m.machineId === machine.id)
-            .sort((a, b) => new Date(b.performedAt).getTime() - new Date(a.performedAt).getTime())
-            .slice(0, 3);
+            .sort((a, b) => new Date(b.performedAt).getTime() - new Date(a.performedAt).getTime());
 
         return {
             machine,
@@ -129,7 +128,7 @@ export default function Mantenimientos() {
                 </div>
             </Header>
 
-            {/* --- NUEVA SECCIÓN DE REPORTE DE IMPORTACIÓN --- */}
+            {/* --- SECCIÓN DE REPORTE DE IMPORTACIÓN --- */}
             {importReport && (
                 <ReportContainer>
                     <ReportHeader>
@@ -176,9 +175,8 @@ export default function Mantenimientos() {
                 </ReportContainer>
             )}
 
-            {/* Barra de Filtros (Igual que antes) */}
+            {/* Barra de Filtros */}
             <FiltersBar>
-               {/* ... código existente de filtros ... */}
                 <SelectInput
                     value={filterMachineId}
                     onChange={(e) => setFilterMachineId(e.target.value)}>
@@ -189,22 +187,25 @@ export default function Mantenimientos() {
                         </option>
                     ))}
                 </SelectInput>
-                {/* ... Resto de filtros ... */}
+
                 <SelectInput value={filterTechnicianId} onChange={(e) => setFilterTechnicianId(e.target.value)}>
                     <option value="">Todos los técnicos</option>
                     {technicians.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </SelectInput>
+
                 <SelectInput value={filterType} onChange={(e) => setFilterType(e.target.value)}>
                     <option value="">Todos los tipos</option>
                     <option value="Preventivo">Preventivo</option>
                     <option value="Correctivo">Correctivo</option>
                     <option value="Predictivo">Predictivo</option>
                 </SelectInput>
+
                 <SelectInput value={filterHasFailures} onChange={(e) => setFilterHasFailures(e.target.value)}>
                     <option value="">Estado de fallas</option>
                     <option value="yes">Con fallas asociadas</option>
                     <option value="no">Sin fallas</option>
                 </SelectInput>
+
                 <TextInput
                     placeholder="🔍 Buscar notas o detalles..."
                     value={filterText}
@@ -216,7 +217,7 @@ export default function Mantenimientos() {
                 {maintenancesByMachine.map(({ machine, maintenances }) => (
                     <div key={machine.id}>
                         <MachineGroupHeader>
-                            🏭 {machine.name} <span style={{color: '#94a3b8', fontWeight: 400}}>— {maintenances.length} registros recientes</span>
+                            🏭 {machine.name} <span style={{color: '#94a3b8', fontWeight: 400}}>— {maintenances.length} registros</span>
                         </MachineGroupHeader>
 
                         <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: 16}}>

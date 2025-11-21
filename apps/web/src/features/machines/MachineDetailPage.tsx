@@ -28,7 +28,6 @@ import {
 } from "./detailStyled";
 
 // --- FUNCIÓN DE AYUDA PARA FORMATEAR KPIS ---
-// Si es undefined devuelve "-", si es número lo redondea a 2 decimales
 const formatMetric = (value: number | undefined | null, suffix: string = "") => {
     if (value === undefined || value === null) return "-";
     return `${Number(value).toFixed(2)}${suffix}`;
@@ -38,7 +37,6 @@ export default function MachineDetailPage() {
     const { id } = useParams();
     const machineId = Number(id);
 
-    // Extraemos "reload" del hook
     const {
         machine,
         sensors,
@@ -51,6 +49,31 @@ export default function MachineDetailPage() {
     } = useMachineDetail(machineId);
 
     const [tab, setTab] = useState<"mantenimientos" | "fallas" | "sensores">("mantenimientos");
+
+    /* LÓGICA DE ESTADO (Advertencia vs Operativa) */
+    // Filtramos las fallas que NO tienen fecha de resolución (están abiertas)
+    const activeFailures = failures.filter(f => !f.resolvedAt);
+    const hasWarnings = activeFailures.length > 0;
+
+    // Determinamos el texto y el color del estado
+    let statusConfig = {
+        text: "Fuera de Servicio",
+        style: { background: "#fef2f2", color: "#b91c1c", borderColor: "#fecaca" } // Rojo
+    };
+
+    if (machine?.active) {
+        if (hasWarnings) {
+            statusConfig = {
+                text: "Advertencia",
+                style: { background: "#fffbeb", color: "#d97706", borderColor: "#fcd34d" } // Ámbar/Amarillo
+            };
+        } else {
+            statusConfig = {
+                text: "Operativa",
+                style: { background: "#ecfdf5", color: "#059669", borderColor: "#a7f3d0" } // Verde
+            };
+        }
+    }
 
     /* LOADING */
     if (loading) return <Container>Cargando información...</Container>;
@@ -84,8 +107,17 @@ export default function MachineDetailPage() {
                             <span>Reg: {new Date(machine.createdAt).toLocaleDateString()}</span>
                         </SubInfo>
                     </div>
-                    <StatusTag $active={machine.active}>
-                        {machine.active ? "Operativa" : "Fuera de Servicio"}
+                    
+                    {/* TAG DE ESTADO DINÁMICO */}
+                    <StatusTag 
+                        $active={machine.active} 
+                        style={{
+                            backgroundColor: statusConfig.style.background,
+                            color: statusConfig.style.color,
+                            border: `1px solid ${statusConfig.style.borderColor}`
+                        }}
+                    >
+                        {statusConfig.text}
                     </StatusTag>
                 </HeaderTop>
 
@@ -93,8 +125,9 @@ export default function MachineDetailPage() {
                     {machine.type && <Tag>{machine.type}</Tag>}
                     <Tag>{sensors.length} sensores</Tag>
                     <Tag>{maintenances.length} mantenimientos</Tag>
-                    <Tag style={{ color: failures.length > 0 ? '#ef4444' : 'inherit' }}>
-                        {failures.length} fallas
+                    {/* Tag de fallas: Muestra rojo si hay fallas activas, no solo historial */}
+                    <Tag style={{ color: hasWarnings ? '#ef4444' : 'inherit', fontWeight: hasWarnings ? 700 : 400 }}>
+                        {activeFailures.length} fallas activas ({failures.length} total)
                     </Tag>
                 </TagRow>
             </Header>
@@ -119,7 +152,6 @@ export default function MachineDetailPage() {
                         <Section>
                             <SectionTitle>
                                 Registro de intervenciones
-                                {/* Botón para actualizar manualmente si editas un técnico */}
                                 <button 
                                     onClick={() => reload()} 
                                     style={{ marginLeft: 'auto', fontSize: 12, cursor: 'pointer', padding: '4px 8px' }}
@@ -138,7 +170,6 @@ export default function MachineDetailPage() {
                                                 <span className="date">{new Date(mt.performedAt).toLocaleDateString()}</span>
                                             </div>
                                             <div className="meta">
-                                                {/* Mostrar técnico correctamente */}
                                                 <span>Técnico: <strong>{mt.technician?.name ? mt.technician.name : "Sin asignar"}</strong></span>
                                                 <span>Duración: <strong>{mt.durationMinutes ?? 0} min</strong></span>
                                             </div>
@@ -168,9 +199,13 @@ export default function MachineDetailPage() {
                                                 <span>Severidad: <strong>{f.severity ?? "Media"}</strong></span>
                                                 <span>Estado: <strong>{f.status ?? "Abierto"}</strong></span>
                                             </div>
-                                            {f.resolvedAt && (
+                                            {f.resolvedAt ? (
                                                 <div className="notes" style={{ background: '#f0fdf4', color: '#166534' }}>
                                                     ✅ Resuelto el {new Date(f.resolvedAt).toLocaleString()}
+                                                </div>
+                                            ) : (
+                                                <div className="notes" style={{ background: '#fffbeb', color: '#b45309' }}>
+                                                    ⚠️ Pendiente de resolución
                                                 </div>
                                             )}
                                         </InfoCard>
@@ -223,7 +258,12 @@ export default function MachineDetailPage() {
                             <div><span>Ubicación</span> <span>{machine.location ?? "-"}</span></div>
                             <div><span>Fecha de Registro</span> <span>{new Date(machine.createdAt).toLocaleString()}</span></div>
                             <div><span>Fecha de Actualización</span> <span>{new Date(machine.updatedAt).toLocaleString()}</span></div>
-                            <div><span>Estado</span> <span style={{ color: machine.active ? '#16a34a' : '#dc2626' }}>{machine.active ? "Activa" : "Inactiva"}</span></div>
+                            <div>
+                                <span>Estado</span> 
+                                <span style={{ color: statusConfig.style.color, fontWeight: 600 }}>
+                                    {statusConfig.text}
+                                </span>
+                            </div>
                         </InfoList>
                         {machine.description && (
                             <div style={{ marginTop: 16, fontSize: 13, color: '#64748b', lineHeight: 1.5, background: '#f8fafc', padding: 10, borderRadius: 8 }}>
@@ -241,7 +281,6 @@ export default function MachineDetailPage() {
                             <MetricsGrid>
                                 <MetricCard>
                                     <MetricLabel>Disponibilidad</MetricLabel>
-                                    {/* Usamos title para mostrar valor completo al pasar mouse */}
                                     <MetricValue title={String(metrics.availability)}>
                                         {formatMetric(metrics.availability, "%")}
                                     </MetricValue>
@@ -268,7 +307,7 @@ export default function MachineDetailPage() {
                         )}
                     </SidebarCard>
 
-                    {/* CARD: ÚLTIMO REPORTE (Mockup) */}
+                    {/* CARD: ÚLTIMO REPORTE */}
                     <SidebarCard>
                         <SectionTitle style={{ marginBottom: 12 }}>Último Reporte</SectionTitle>
                         <div style={{
@@ -283,7 +322,9 @@ export default function MachineDetailPage() {
                                 <span style={{ fontWeight: 700, color: '#0369a1', fontSize: 14 }}>Análisis Diario</span>
                             </div>
                             <p style={{ fontSize: 12, color: '#0c4a6e', margin: 0, lineHeight: 1.4 }}>
-                                El rendimiento es estable. No se detectan anomalías críticas recientes.
+                                {hasWarnings 
+                                    ? "Se detectan fallas pendientes que requieren atención inmediata." 
+                                    : "El rendimiento es estable. No se detectan anomalías críticas recientes."}
                             </p>
                         </div>
                         <button style={{

@@ -8,18 +8,17 @@ import {
     SmallText,
     SecondaryLine,
     InfoList,
-    StatBox, // <--- Nuevo
+    StatBox, 
     TagRow,
     StatusTag,
     Tag,
     ActionsRow,
     IconButton,
-    PrimaryActionButton, // <--- Nuevo
+    PrimaryActionButton,
     DangerousButton,
 } from "../styled";
 import { ROLES } from "../../../types";
 import { useSessionStore } from "../../../store/sessionStore";
-// import { useMemo } from "react";
 
 interface MachineCardProps {
     machine: MachineWithRelations;
@@ -44,14 +43,33 @@ export function MachineCard({
     const maintCount = machine.maintenances?.length ?? 0;
     const failCount = machine.failures?.length ?? 0;
 
-    // const statusText = useMemo(() => {
-    //     if (!machine.active) return "Fuera de servicio";
-    //     if (failCount > 0) return "Incidencias";
-    //     return "Normal";
-    // }, [machine.active, failCount]);
+    // --- LÓGICA DE ESTADO ---
+    // Filtramos fallas activas (sin fecha de resolución)
+    const activeFailures = machine.failures?.filter(f => !f.resolvedAt) || [];
+    const hasWarnings = activeFailures.length > 0;
+
+    let statusConfig = {
+        text: "Fuera de Servicio",
+        style: { background: "#fef2f2", color: "#b91c1c", borderColor: "#fecaca" } // Rojo
+    };
+
+    if (machine.active) {
+        if (hasWarnings) {
+            statusConfig = {
+                text: "Advertencia",
+                style: { background: "#fffbeb", color: "#d97706", borderColor: "#fcd34d" } // Ámbar
+            };
+        } else {
+            statusConfig = {
+                text: "Operativa",
+                style: { background: "#ecfdf5", color: "#059669", borderColor: "#a7f3d0" } // Verde
+            };
+        }
+    }
 
     return (
-        // Pasamos el prop data-active para la barra de color lateral
+        // Pasamos el prop data-active para la barra de color lateral (rojo si inactiva, verde si activa)
+        // Nota: Podrías cambiar esto para que la barra lateral también refleje la advertencia si quisieras
         <Card data-active={machine.active}> 
             <CardHeader>
                 <MachineMain>
@@ -72,19 +90,28 @@ export function MachineCard({
                 </MachineMain>
 
                 <TagRow>
-                    <StatusTag $active={machine.active}>
-                        {machine.active ? "Activa" : "Inactiva"}
+                    {/* StatusTag con estilos dinámicos in-line para sobrescribir el default */}
+                    <StatusTag 
+                        $active={machine.active}
+                        style={{
+                            backgroundColor: statusConfig.style.background,
+                            color: statusConfig.style.color,
+                            border: `1px solid ${statusConfig.style.borderColor}`
+                        }}
+                    >
+                        {statusConfig.text}
                     </StatusTag>
-                    {/* Mostramos un tag extra si hay fallas */}
-                    {failCount > 0 && (
-                         <Tag style={{ color: '#b91c1c', background: '#fef2f2', borderColor: '#fecaca' }}>
-                            ⚠️ Atención
+
+                    {/* Tag adicional si hay advertencias específicas */}
+                    {hasWarnings && (
+                         <Tag style={{ color: '#b91c1c', background: '#fef2f2', borderColor: '#fecaca', fontWeight: 600 }}>
+                            ⚠️ {activeFailures.length} falla(s)
                          </Tag>
                     )}
                 </TagRow>
             </CardHeader>
 
-            {/* Nueva visualización de estadísticas en cuadrícula */}
+            {/* Visualización de estadísticas */}
             <InfoList>
                 <StatBox>
                     <span>Sensores</span>
@@ -96,6 +123,7 @@ export function MachineCard({
                 </StatBox>
                 <StatBox>
                     <span>Fallas</span>
+                    {/* Rojo si hay alguna falla histórica, o podrías usar hasWarnings para solo las activas */}
                     <span style={{ color: failCount > 0 ? '#ef4444' : 'inherit' }}>{failCount}</span>
                 </StatBox>
             </InfoList>

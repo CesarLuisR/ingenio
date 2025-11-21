@@ -116,6 +116,7 @@ export function useMaintenancesLogic() {
                     // Validaciones
                     if (!machine) throw new Error(`Máquina "${machineName}" no encontrada`);
                     if (!type) throw new Error("Tipo de mantenimiento inválido o faltante");
+                    if (type != 'Preventivo' && type != 'Correctivo' && type != 'Predictivo') throw new Error("Tipo de mantenimiento inválido");
                     if (durationMinutes != null && durationMinutes < 0) throw new Error("Duración negativa");
                     if (cost != null && cost < 0) throw new Error("Costo negativo");
 

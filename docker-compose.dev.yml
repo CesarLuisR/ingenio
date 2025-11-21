@@ -20,6 +20,11 @@ services:
     # volumes:
     #   - ./apps/api:/app
       # - /app/node_modules:/app/node_modules 
+    
+    # 👇 AQUÍ ESTÁ LA SOLUCIÓN:
+    # Esto fuerza a que se cree la estructura de la base de datos antes de iniciar la app
+    command: sh -c "npx prisma db push && npm run dev"
+    
     ports:
       - "5000:5000"
     environment:
@@ -36,14 +41,14 @@ services:
         condition: service_started
       redis:
         condition: service_started
-  
+   
   mongo:
     image: mongo:7
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
-  
+   
   redis:
     image: redis:7
     ports:
@@ -82,7 +87,7 @@ services:
       # - PORT=5001
       - API=http://api:5000
       - CONFIG_FILE_NAME=motor-01.json
-  
+   
   ia_mock:
     build:
       context: ./apps/ia-mock

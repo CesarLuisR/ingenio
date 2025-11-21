@@ -44,7 +44,7 @@ export interface Machine {
 export interface Maintenance {
 	id: number;
 	performedAt: string; // ISO
-	type: string;        // "Preventivo" | "Correctivo" | etc.
+	type: 'Preventivo' | 'Correctivo' | 'Predictivo';        // "Preventivo" | "Correctivo" | etc.
 	technicianId?: number | null;
 	durationMinutes?: number | null;
 	notes?: string | null;
