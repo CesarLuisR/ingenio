@@ -13,6 +13,7 @@ import { GlobalWebSocketProvider } from "./features/shared/components/WebSocketP
 import Usuarios from "./features/users";
 import MachinesPage from "./features/machines";
 import MachineDetailPage from "./features/machines/MachineDetailPage";
+import Ingenios from "./features/ingenios";
 
 export default function App() {
 	return (
@@ -41,6 +42,7 @@ export default function App() {
 							<Route path="fallos" element={<Fallos />} />
 							<Route path="analisis" element={<Analisis />} />
 							<Route path="tecnicos" element={<Technicians />} />
+							<Route path="ingenios" element={<Ingenios />} />
 							<Route
 								path="*"
 								element={<div>Página no encontrada</div>}

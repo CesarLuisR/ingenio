@@ -77,6 +77,31 @@ export async function createUsers() {
 
 
     // --------------------------------------------
+    // 4. Crear usuario superadmin si no existe
+    // --------------------------------------------
+    const superadmin = await prisma.user.findUnique({
+        where: { email: "superadmin@admin.com" }
+    });
+
+    if (!superadmin) {
+        await prisma.user.create({
+            data: {
+                name: "superadmin",
+                email: "superadmin@admin.com",
+                role: UserRole.SUPERADMIN,
+                passwordHash:
+                    "$2b$10$y9EfTvn5iCRn.QvFZO2mO.hwO3wPXXtYBNnu1ONsw5Tv8Og4Eo8ba",
+                ingenioId: ingenio.id
+            },
+        });
+
+        console.log("✅ Usuario superadmin creado");
+    } else {
+        console.log("ℹ️ Usuario superadmin ya existe");
+    }
+
+
+    // --------------------------------------------
     // LOG FINAL
     // --------------------------------------------
     console.log("🎉 Setup inicial completado.");

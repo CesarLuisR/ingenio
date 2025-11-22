@@ -1,4 +1,3 @@
-// src/pages/Dashboard/Dashboard.tsx
 import { useEffect, useState, useMemo } from "react";
 import {
     AreaChart,
@@ -36,6 +35,9 @@ import {
 import { useDashboardData } from "./hooks/useDashboardData";
 import { useDashboardStatus } from "./hooks/useDashboardStatus";
 import type { BaseMetrics } from "../../types";
+import { useSessionStore } from "../../store/sessionStore";
+import { ROLES } from "../../types";
+import SuperAdminDashboard from "./SuperAdminDashboard";
 
 const INGENIO_ID = 1;
 
@@ -66,6 +68,12 @@ const MOCK_HISTORY_DATA = [
 const PIE_COLORS = ['#16a34a', '#dc2626', '#94a3b8']; // OK, Critical, Offline
 
 export default function Dashboard() {
+    const { user } = useSessionStore();
+
+    if (user?.role === ROLES.SUPERADMIN) {
+        return <SuperAdminDashboard />;
+    }
+
     // 1. Data Hooks
     const { sensors, loading: sensorsLoading } = useDashboardData();
     const wsStatus = useDashboardStatus();
@@ -108,11 +116,10 @@ export default function Dashboard() {
 
     return (
         <Container>
-            {/* --- HEADER --- */}
             <Header>
                 <div>
-                    <Title>Dashboard Operativo</Title>
-                    <Subtitle>Centro de control Ingenio #1</Subtitle>
+                    <Title>Dashboard General</Title>
+                    <Subtitle>Vista general del estado del ingenio</Subtitle>
                 </div>
                 <HeaderActions>
                     <ConnectionBadge status={wsStatus}>

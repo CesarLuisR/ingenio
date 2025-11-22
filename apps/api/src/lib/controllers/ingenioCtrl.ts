@@ -44,7 +44,7 @@ export const updateIngenio: RequestHandler = async (req, res) => {
     const id = Number(req.params.id);
     if (!hasPermission(
         req.session.user?.role as UserRole,
-        UserRole.ADMIN, 
+        UserRole.ADMIN,
         { user: req.session.user?.ingenioId!, element: id }
     )) return res.status(403).json({ message: "Forbidden access " });
 

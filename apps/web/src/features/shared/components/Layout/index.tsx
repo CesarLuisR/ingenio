@@ -17,6 +17,7 @@ import { useSessionStore } from "../../../../store/sessionStore";
 import { useEffect, useState } from "react";
 import { api } from "../../../../lib/api";
 import type { Ingenio } from "../../../../types";
+import { ROLES } from "../../../../types";
 
 export default function Layout() {
     const location = useLocation();
@@ -54,7 +55,7 @@ export default function Layout() {
                 <SidebarHeader>
                     <Title>
                         <span>📡</span>
-                        {ingenio?.name || "Cargando..."}
+                        {user?.role === ROLES.SUPERADMIN ? "Panel Superadmin" : (ingenio?.name || "Cargando...")}
                     </Title>
                     <Subtitle>Sistema de Monitoreo</Subtitle>
                 </SidebarHeader>
@@ -91,6 +92,12 @@ export default function Layout() {
                     <NavLinkStyled to="/analisis" $active={isActive("/analisis")}>
                         <span>📈</span> Análisis
                     </NavLinkStyled>
+
+                    {user?.role === ROLES.SUPERADMIN && (
+                        <NavLinkStyled to="/ingenios" $active={isActive("/ingenios")}>
+                            <span>🏭</span> Ingenios
+                        </NavLinkStyled>
+                    )}
                 </Nav>
 
                 {/* Footer con información del usuario logueado */}

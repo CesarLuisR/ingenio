@@ -66,7 +66,7 @@ class ApiClient {
 	// 🌾 INGENIOS
 	// ======================
 
-	getIngenios(): Promise<Ingenio[]> {
+	getAllIngenios(): Promise<Ingenio[]> {
 		return this.request<Ingenio[]>("/api/ingenios");
 	}
 

@@ -5,21 +5,41 @@ import hasPermission from "../utils/permissionUtils";
 import { UserRole } from "@prisma/client";
 
 export const getAllUsers = async (req: Request, res: Response) => {
+    const currentUser = req.session.user;
+    const whereClause: any = {};
+
+    // Si NO es superadmin, filtrar por su ingenio
+    if (currentUser?.role !== UserRole.SUPERADMIN) {
+        whereClause.ingenioId = currentUser?.ingenioId;
+    }
+    // Si es SUPERADMIN, no aplicamos filtro (ve todos), o podría filtrar por query param si se implementara
+
     const users = await prisma.user.findMany({
-        where: { ingenioId: req.session.user?.ingenioId },
-        orderBy: { createdAt: 'desc' }
+        where: whereClause,
+        orderBy: { createdAt: 'desc' },
+        include: { ingenio: true } // Incluir info del ingenio para que el superadmin sepa de dónde son
     });
     res.json(users);
 };
 
 export const createUser = async (req: Request, res: Response) => {
     try {
+        // Solo ADMIN o SUPERADMIN pueden crear
         if (!hasPermission(
             req.session.user?.role as UserRole,
             UserRole.ADMIN,
         )) return res.status(403).json({ message: "Forbidden access" });
 
         const { email, name, role, password, ingenioId } = req.body;
+        const currentUser = req.session.user;
+
+        // Validar que si es ADMIN (no super), solo cree usuarios para su propio ingenio
+        if (currentUser?.role !== UserRole.SUPERADMIN) {
+            if (ingenioId && Number(ingenioId) !== currentUser?.ingenioId) {
+                return res.status(403).json({ message: "No puedes crear usuarios para otro ingenio" });
+            }
+            // Si no envía ingenioId, se asigna el suyo por defecto (aunque el front debería enviarlo)
+        }
 
         // Validar email duplicado
         const existingUser = await prisma.user.findUnique({ where: { email } });
@@ -28,8 +48,14 @@ export const createUser = async (req: Request, res: Response) => {
         }
 
         const hash = await hashPassword(password);
+
+        // Preparar data. Si es superadmin creando otro superadmin, ingenioId puede ser null.
+        // Si es admin, ingenioId es obligatorio (o se fuerza al suyo).
+        const finalIngenioId = currentUser?.role === UserRole.SUPERADMIN ? (ingenioId ? Number(ingenioId) : null) : currentUser?.ingenioId;
+
+        // todo: ERROR QUE PUEDE SER PENDEJO
         const user = await prisma.user.create({
-            data: { email, name, role, passwordHash: hash, ingenioId },
+            data: { email, name, role, passwordHash: hash, ingenioId: finalIngenioId! },
         });
         res.status(201).json(user);
     } catch (error) {
@@ -61,8 +87,15 @@ export const updateUser = async (req: Request, res: Response) => {
         const target = await prisma.user.findUnique({ where: { id: userId } });
         if (!target) return res.status(404).json({ error: "Usuario no encontrado" });
 
-        if (target.ingenioId !== currentUser.ingenioId && currentUser.role !== UserRole.SUPERADMIN) {
-            return res.status(403).json({ error: "No puedes editar usuarios de otro ingenio" });
+        // Si NO es superadmin, verificar que el target sea de su mismo ingenio
+        if (currentUser.role !== UserRole.SUPERADMIN) {
+            if (target.ingenioId !== currentUser.ingenioId) {
+                return res.status(403).json({ error: "No puedes editar usuarios de otro ingenio" });
+            }
+            // Y no permitir cambiar el ingenioId a otro
+            if (ingenioId && Number(ingenioId) !== currentUser.ingenioId) {
+                return res.status(403).json({ error: "No puedes mover usuarios a otro ingenio" });
+            }
         }
 
         // Validar email duplicado si se está cambiando
@@ -77,7 +110,9 @@ export const updateUser = async (req: Request, res: Response) => {
             email,
             name,
             role,
-            ingenioId,
+            // Si es superadmin, puede cambiar el ingenioId (o dejarlo null)
+            // Si es admin, mantenemos el ingenioId original (o el suyo, que es lo mismo)
+            ingenioId: currentUser.role === UserRole.SUPERADMIN ? (ingenioId ? Number(ingenioId) : null) : target.ingenioId,
         };
 
         // Si se envía password → hash nuevo
@@ -121,7 +156,7 @@ export const deleteUser = async (req: Request, res: Response) => {
         const target = await prisma.user.findUnique({ where: { id: userId } });
         if (!target) return res.status(404).json({ error: "Usuario no encontrado" });
 
-        if (target.ingenioId !== currentUser.ingenioId && currentUser.role !== UserRole.SUPERADMIN) {
+        if (currentUser.role !== UserRole.SUPERADMIN && target.ingenioId !== currentUser.ingenioId) {
             return res.status(403).json({ error: "No puedes eliminar usuarios de otro ingenio" });
         }
 
