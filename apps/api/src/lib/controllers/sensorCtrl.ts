@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 import RedisRepository from "../repositories/cache/redisRepository";
 import hasPermission from "../utils/permissionUtils";
 import { UserRole } from "@prisma/client";
+import { ConfigData } from "../../types/sensorTypes";
 
 const cacheRepository = new RedisRepository();
 
@@ -101,6 +102,7 @@ export const updateSensor = async (req: Request, res: Response) => {
 		});
 
 		// Cache configuraciones (si aplica)
+		// todo: que tan malo es este codigo?
 		if (data.config) {
 			cacheRepository.set(
 				`sensor:${sensorId}-updated`,
@@ -124,8 +126,6 @@ export const updateSensor = async (req: Request, res: Response) => {
    PATCH /sensors/:sensorId/deactivate
 ----------------------------------------------------------- */
 export const deactivateSensor = async (req: Request, res: Response) => {
-
-
 	try {
 		const { sensorId } = req.params;
 
@@ -151,12 +151,20 @@ export const deactivateSensor = async (req: Request, res: Response) => {
 			return res.status(403).json({ message: "Forbidden access" });
 		}
 
+		const currentConfig = (existing.config as Record<string, any>) || {};
+		currentConfig.active = false;
+
+		await cacheRepository.set(
+			`sensor:${sensorId}-updated`,
+			JSON.stringify(currentConfig)
+		);
+
 		const sensor = await prisma.sensor.update({
 			where: { sensorId },
-			data: { active: false },
+			data: { active: false, config: currentConfig },
 		});
 
-		res.json({
+		return res.json({
 			message: `Sensor ${sensorId} deactivated successfully.`,
 			sensor,
 		});
@@ -167,6 +175,51 @@ export const deactivateSensor = async (req: Request, res: Response) => {
 			return res.status(404).json({ error: "Sensor not found" });
 		}
 
-		res.status(500).json({ error: "Internal server error" });
+		return res.status(500).json({ error: "Internal server error" });
 	}
+};
+
+/* ----------------------------------------------------------
+   PATCH /sensors/:sensorId/activate
+----------------------------------------------------------- */
+export const activateSensor = async (req: Request, res: Response) => {
+    try {
+        const { sensorId } = req.params;
+
+        const existing = await prisma.sensor.findUnique({
+            where: { sensorId },
+        });
+
+        if (!existing) {
+            return res.status(404).json({ error: "Sensor not found" });
+        }
+
+        // Validar permisos (misma lógica que deactivate)
+        if (existing.ingenioId !== req.session.user?.ingenioId) {
+            return res.status(403).json({ message: "Forbidden access" });
+        }
+
+		const currentConfig = (existing.config as Record<string, any>) || {};
+		currentConfig.active = true;
+
+		// todo
+		// codigo de mierda igual que el de arriba, hay que ver como lo arreglamos
+		await cacheRepository.set(
+			`sensor:${sensorId}-updated`,
+			JSON.stringify(currentConfig)
+		);	
+
+        const sensor = await prisma.sensor.update({
+            where: { sensorId },
+            data: { active: true, config: currentConfig },
+        });
+
+        return res.json({
+            message: `Sensor ${sensorId} activated successfully.`,
+            sensor,
+        });
+    } catch (error: any) {
+        console.error("Error activating sensor:", error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
 };

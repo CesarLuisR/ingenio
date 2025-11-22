@@ -39,6 +39,9 @@ import {
     ActionButton
 } from "./styled";
 import { formatMoney } from "./utils";
+import { useSessionStore } from "../../store/sessionStore";
+import { hasPermission } from "../../lib/hasPermission";
+import { ROLES } from "../../types";
 
 export default function Mantenimientos() {
     const {
@@ -68,6 +71,11 @@ export default function Mantenimientos() {
         filterHasFailures, setFilterHasFailures,
         filterText, setFilterText,
     } = useMaintenancesLogic();
+
+    const { user } = useSessionStore();
+    const canImport = hasPermission(user?.role || "", ROLES.ADMIN);
+    const canCreate = hasPermission(user?.role || "", ROLES.TECNICO);
+    const canEdit = hasPermission(user?.role || "", ROLES.ADMIN);
 
     // --- FUNCIÓN PARA DESCARGAR EL REPORTE ---
     const downloadReportLog = () => {
@@ -119,12 +127,16 @@ export default function Mantenimientos() {
                     <p style={{color: '#64748b', margin: '4px 0 0 0'}}>Registro histórico y programación de actividades</p>
                 </div>
                 <div style={{ display: "flex", gap: "12px" }}>
-                    <ImportButton onClick={() => setShowImport(true)}>
-                        📊 Importar Excel
-                    </ImportButton>
-                    <Button onClick={() => handleEdit(null as any)}>
-                        + Nuevo Registro
-                    </Button>
+                    {canImport && (
+                        <ImportButton onClick={() => setShowImport(true)}>
+                            📊 Importar Excel
+                        </ImportButton>
+                    )}
+                    {canCreate && (
+                        <Button onClick={() => handleEdit(null as any)}>
+                            + Nuevo Registro
+                        </Button>
+                    )}
                 </div>
             </Header>
 
@@ -234,7 +246,9 @@ export default function Mantenimientos() {
                                                     {new Date(m.performedAt).toLocaleDateString(undefined, { weekday: 'short', year: 'numeric', month: 'long', day: 'numeric' })}
                                                 </DateText>
                                             </CardTitleBlock>
-                                            <EditButton onClick={() => handleEdit(m)}>Editar</EditButton>
+                                            {canEdit && (
+                                                <EditButton onClick={() => handleEdit(m)}>Editar</EditButton>
+                                            )}
                                         </CardHeader>
 
                                         <InfoGrid>

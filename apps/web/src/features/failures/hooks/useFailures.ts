@@ -1,105 +1,111 @@
-import { useEffect, useState } from "react";
+// src/modules/failures/hooks/useFailures.ts
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { api } from "../../../lib/api";
 import type { Failure, Machine, Sensor } from "../../../types";
 
+// Helper para normalizar texto (fuera del hook para no recrearlo)
 const normalize = (s: string) =>
-	s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
 export default function useFailures() {
-	const [failures, setFailures] = useState<Failure[]>([]);
-	const [machines, setMachines] = useState<Machine[]>([]);
-	const [sensors, setSensors] = useState<Sensor[]>([]);
-	const [loading, setLoading] = useState(true);
+    // --- ESTADOS DE DATOS ---
+    const [failures, setFailures] = useState<Failure[]>([]);
+    const [machines, setMachines] = useState<Machine[]>([]);
+    const [sensors, setSensors] = useState<Sensor[]>([]);
+    const [loading, setLoading] = useState(true);
 
-	const [editing, setEditing] = useState<Failure | null>(null);
-	const [showForm, setShowForm] = useState(false);
+    // --- ESTADOS DE UI ---
+    const [editing, setEditing] = useState<Failure | null>(null);
+    const [showForm, setShowForm] = useState(false);
 
-	// filtros
-	const [filterMachineId, setFilterMachineId] = useState("");
-	const [filterSensorId, setFilterSensorId] = useState("");
-	const [filterSeverity, setFilterSeverity] = useState("");
-	const [filterStatus, setFilterStatus] = useState("");
-	const [filterText, setFilterText] = useState("");
+    // --- ESTADOS DE FILTROS ---
+    const [filterMachineId, setFilterMachineId] = useState("");
+    const [filterSensorId, setFilterSensorId] = useState("");
+    const [filterSeverity, setFilterSeverity] = useState("");
+    const [filterStatus, setFilterStatus] = useState("");
+    const [filterText, setFilterText] = useState("");
 
-	useEffect(() => {
-		loadData();
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, []);
+    // --- CARGA DE DATOS ---
+    const loadData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [failuresData, machinesData, sensorsData] = await Promise.all([
+                api.getFailures(),
+                api.getMachines(),
+                api.getSensors(),
+            ]);
 
-	const loadData = async () => {
-		try {
-			const [failuresData, machinesData, sensorsData] = await Promise.all([
-				api.getFailures(),
-				api.getMachines(),
-				api.getSensors(),
-			]);
+            setFailures(failuresData);
+            setMachines(machinesData);
+            setSensors(sensorsData);
+        } catch (err) {
+            console.error("Error cargando datos:", err);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
-			setFailures(failuresData);
-			setMachines(machinesData);
-			setSensors(sensorsData);
-		} catch (err) {
-			console.error("Error cargando datos:", err);
-		} finally {
-			setLoading(false);
-		}
-	};
+    // Cargar al montar
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
 
-	const filteredFailures = failures.filter((f) => {
-		if (filterMachineId && f.machineId.toString() !== filterMachineId)
-			return false;
+    // --- LÓGICA DE FILTRADO (MEMOIZADA) ---
+    const filteredFailures = useMemo(() => {
+        return failures.filter((f) => {
+            // 1. Filtros exactos
+            if (filterMachineId && f.machineId.toString() !== filterMachineId) return false;
+            if (filterSensorId && f.sensorId?.toString() !== filterSensorId) return false;
+            if (filterSeverity && (f.severity || "") !== filterSeverity) return false;
+            if (filterStatus && (f.status || "") !== filterStatus) return false;
 
-		if (filterSensorId && f.sensorId?.toString() !== filterSensorId)
-			return false;
+            // 2. Filtro de texto (Búsqueda profunda)
+            if (filterText) {
+                const term = normalize(filterText);
+                
+                // Buscamos nombres relacionados en memoria para no hacer querys complejos
+                const machineName = machines.find((m) => m.id === f.machineId)?.name || "";
+                const sensorName = sensors.find((s) => s.id === f.sensorId)?.name || "";
+                const description = f.description || "";
 
-		if (filterSeverity && (f.severity || "") !== filterSeverity)
-			return false;
+                // Creamos un string gigante con todo lo buscable
+                const haystack = normalize(`${description} ${machineName} ${sensorName}`);
 
-		if (filterStatus && (f.status || "") !== filterStatus)
-			return false;
+                if (!haystack.includes(term)) return false;
+            }
 
-		if (filterText) {
-			const t = normalize(filterText);
+            return true;
+        });
+    }, [
+        failures, 
+        machines, 
+        sensors, 
+        filterMachineId, 
+        filterSensorId, 
+        filterSeverity, 
+        filterStatus, 
+        filterText
+    ]);
 
-			const machine = machines.find((m) => m.id === f.machineId);
-			const sensor = sensors.find((s) => s.id === f.sensorId);
+    return {
+        // Datos crudos y procesados
+        machines,
+        sensors,
+        loading,
+        filteredFailures,
 
-			const haystack =
-				normalize(f.description || "") +
-				" " +
-				normalize(machine?.name || "") +
-				" " +
-				normalize(sensor?.name || "");
+        // Acciones UI
+        editing,
+        setEditing,
+        showForm,
+        setShowForm,
+        loadData,
 
-			if (!haystack.includes(t)) return false;
-		}
-
-		return true;
-	});
-
-	return {
-		failures,
-		machines,
-		sensors,
-		loading,
-
-		filteredFailures,
-
-		editing,
-		setEditing,
-		showForm,
-		setShowForm,
-
-		filterMachineId,
-		setFilterMachineId,
-		filterSensorId,
-		setFilterSensorId,
-		filterSeverity,
-		setFilterSeverity,
-		filterStatus,
-		setFilterStatus,
-		filterText,
-		setFilterText,
-
-		loadData,
-	};
+        // Controladores de Filtros
+        filterMachineId, setFilterMachineId,
+        filterSensorId, setFilterSensorId,
+        filterSeverity, setFilterSeverity,
+        filterStatus, setFilterStatus,
+        filterText, setFilterText,
+    };
 }

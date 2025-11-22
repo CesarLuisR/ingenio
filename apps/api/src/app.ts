@@ -13,7 +13,7 @@ app.use(cors({
 }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(session({
+export const sessionMiddleware = session({
     secret: process.env.SESSION_SECRET || 'default_secret',
     resave: false,
     saveUninitialized: true,
@@ -22,7 +22,9 @@ app.use(session({
         maxAge: 24 * 60 * 60 * 1000, // 1 day
         httpOnly: true
     }
-}))
+});
+
+app.use(sessionMiddleware);
 
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: "/ws" });

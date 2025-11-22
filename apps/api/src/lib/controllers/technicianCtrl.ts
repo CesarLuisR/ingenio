@@ -31,12 +31,12 @@ export const getTechnicianById = async (req: Request, res: Response) => {
 };
 
 export const createTechnician = async (req: Request, res: Response) => {
-    if (!hasPermission(
-        req.session.user?.role as UserRole,
-        UserRole.ADMIN, 
-    )) return res.status(403).json({ message: "Forbidden access " });
-
     try {
+        if (!hasPermission(
+            req.session.user?.role as UserRole,
+            UserRole.ADMIN,
+        )) return res.status(403).json({ message: "Forbidden access" });
+
         const { name, email, phone, active, ingenioId } = req.body;
 
         if (!name)
@@ -48,17 +48,18 @@ export const createTechnician = async (req: Request, res: Response) => {
 
         res.status(201).json(technician);
     } catch (error) {
+        console.error("Error creating technician:", error);
         res.status(500).json({ error: "Error al crear técnico" });
     }
 };
 
 export const updateTechnician = async (req: Request, res: Response) => {
-    if (!hasPermission(
-        req.session.user?.role as UserRole,
-        UserRole.ADMIN, 
-    )) return res.status(403).json({ message: "Forbidden access " });
-
     try {
+        if (!hasPermission(
+            req.session.user?.role as UserRole,
+            UserRole.ADMIN,
+        )) return res.status(403).json({ message: "Forbidden access" });
+
         const { id } = req.params;
         const data = req.body;
         const updated = await prisma.technician.update({
@@ -67,21 +68,23 @@ export const updateTechnician = async (req: Request, res: Response) => {
         });
         res.json(updated);
     } catch (error) {
+        console.error("Error updating technician:", error);
         res.status(500).json({ error: "Error al actualizar técnico" });
     }
 };
 
 export const deleteTechnician = async (req: Request, res: Response) => {
-    if (!hasPermission(
-        req.session.user?.role as UserRole,
-        UserRole.ADMIN, 
-    )) return res.status(403).json({ message: "Forbidden access " });
-
     try {
+        if (!hasPermission(
+            req.session.user?.role as UserRole,
+            UserRole.ADMIN,
+        )) return res.status(403).json({ message: "Forbidden access" });
+
         const { id } = req.params;
         await prisma.technician.delete({ where: { id: Number(id) } });
         res.json({ message: "Técnico eliminado correctamente" });
     } catch (error) {
+        console.error("Error deleting technician:", error);
         res.status(500).json({ error: "Error al eliminar técnico" });
     }
 };

@@ -8,7 +8,6 @@ CONFIG = {}
 CONFIG_LAST_MODIFIED = None
 SENSORS = []
 
-
 def load_config():
     """Carga o recarga la configuración desde disco si cambió."""
     global CONFIG, CONFIG_LAST_MODIFIED

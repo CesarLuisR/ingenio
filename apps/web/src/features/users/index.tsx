@@ -20,6 +20,8 @@ import {
 import useUsers from "./hooks/useUsers";
 import UserForm from "./components/UserForm";
 import { ROLES } from "../../types";
+import { useSessionStore } from "../../store/sessionStore";
+import { hasPermission } from "../../lib/hasPermission";
 
 export default function Usuarios() {
     const {
@@ -33,20 +35,25 @@ export default function Usuarios() {
         deleteUser,
     } = useUsers();
 
+    const { user } = useSessionStore();
+    const canManage = hasPermission(user?.role || "", ROLES.ADMIN);
+
     if (loading) return <LoadingText>Cargando usuarios...</LoadingText>;
 
     return (
         <Container>
             <Header>
                 <Title>Gestión de Usuarios</Title>
-                <Button
-                    onClick={() => {
-                        setEditing(null);
-                        setShowForm(true);
-                    }}
-                >
-                    + Nuevo Usuario
-                </Button>
+                {canManage && (
+                    <Button
+                        onClick={() => {
+                            setEditing(null);
+                            setShowForm(true);
+                        }}
+                    >
+                        + Nuevo Usuario
+                    </Button>
+                )}
             </Header>
 
             <TableContainer>
@@ -58,7 +65,7 @@ export default function Usuarios() {
                             <TableHeader>Rol</TableHeader>
                             <TableHeader>Ingenio ID</TableHeader>
                             <TableHeader>Fecha Creación</TableHeader>
-                            <TableHeader>Acciones</TableHeader>
+                            {canManage && <TableHeader>Acciones</TableHeader>}
                         </tr>
                     </TableHead>
 
@@ -89,29 +96,31 @@ export default function Usuarios() {
                                     {new Date(u.createdAt).toLocaleDateString()}
                                 </TableCell>
 
-                                <TableCell>
-                                    <Actions>
-                                        <ActionButton
-                                            onClick={() => {
-                                                setEditing(u);
-                                                setShowForm(true);
-                                            }}
-                                        >
-                                            Editar
-                                        </ActionButton>
+                                {canManage && (
+                                    <TableCell>
+                                        <Actions>
+                                            <ActionButton
+                                                onClick={() => {
+                                                    setEditing(u);
+                                                    setShowForm(true);
+                                                }}
+                                            >
+                                                Editar
+                                            </ActionButton>
 
-                                        <ActionButton
-                                            $danger
-                                            onClick={() => {
-                                                if(confirm('¿Estás seguro de eliminar este usuario?')) {
-                                                    deleteUser(u.id);
-                                                }
-                                            }}
-                                        >
-                                            Eliminar
-                                        </ActionButton>
-                                    </Actions>
-                                </TableCell>
+                                            <ActionButton
+                                                $danger
+                                                onClick={() => {
+                                                    if(confirm('¿Estás seguro de eliminar este usuario?')) {
+                                                        deleteUser(u.id);
+                                                    }
+                                                }}
+                                            >
+                                                Eliminar
+                                            </ActionButton>
+                                        </Actions>
+                                    </TableCell>
+                                )}
                             </TableRow>
                         ))}
                     </TableBody>

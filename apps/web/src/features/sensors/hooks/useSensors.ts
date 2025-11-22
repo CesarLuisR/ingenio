@@ -3,85 +3,87 @@ import { api } from "../../../lib/api";
 import type { Sensor, Machine } from "../../../types";
 
 export function useSensors() {
-	const [sensors, setSensors] = useState<Sensor[]>([]);
-	const [machines, setMachines] = useState<Machine[]>([]);
-	const [loading, setLoading] = useState(true);
-	const [searchTerm, setSearchTerm] = useState("");
+    const [sensors, setSensors] = useState<Sensor[]>([]);
+    const [machines, setMachines] = useState<Machine[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState("");
 
-	// Load sensors & machines from backend
-	const loadSensors = useCallback(async () => {
-		setLoading(true);
-		try {
-			const [sensorData, machineData] = await Promise.all([
-				api.getSensors(),
-				api.getMachines(), // 🔥 ahora cargas máquinas SIEMPRE
-			]);
+    const loadSensors = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [sensorData, machineData] = await Promise.all([
+                api.getSensors(),
+                api.getMachines(),
+            ]);
+            setSensors(sensorData);
+            setMachines(machineData);
+        } catch (error) {
+            console.error("Error cargando sensores:", error);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
-			setSensors(sensorData);
-			setMachines(machineData);
-		} catch (error) {
-			console.error("Error cargando sensores:", error);
-		} finally {
-			setLoading(false);
-		}
-	}, []);
+    const deactivateSensor = useCallback(async (sensorId: string) => {
+        try {
+            await api.deactivateSensor(sensorId);
+            // Actualización optimista local
+            setSensors((prev) =>
+                prev.map((s) =>
+                    (s.sensorId ?? String(s.id)) === sensorId ? { ...s, active: false } : s
+                )
+            );
+        } catch (error) {
+            console.error("Error desactivando sensor:", error);
+        }
+    }, []);
 
-	// Deactivate (soft delete)
-	const deactivateSensor = useCallback(async (sensorId: string) => {
-		try {
-			await api.deactivateSensor(sensorId);
+    // --- NUEVA FUNCIÓN ---
+    const activateSensor = useCallback(async (sensorId: string) => {
+        try {
+            await api.activateSensor(sensorId);
+            // Actualización optimista local
+            setSensors((prev) =>
+                prev.map((s) =>
+                    (s.sensorId ?? String(s.id)) === sensorId ? { ...s, active: true } : s
+                )
+            );
+        } catch (error) {
+            console.error("Error activando sensor:", error);
+        }
+    }, []);
 
-			setSensors((prev) =>
-				prev.map((s) =>
-					(s.sensorId ?? String(s.id)) === sensorId
-						? { ...s, active: false }
-						: s
-				)
-			);
-		} catch (error) {
-			console.error("Error desactivando sensor:", error);
-		}
-	}, []);
+    const sensorsWithMachine = useMemo(() => {
+        return sensors.map((s) => {
+            const machine = machines.find((m) => m.id === s.machineId) || null;
+            return { ...s, machine };
+        });
+    }, [sensors, machines]);
 
-	// JOIN: enrich sensors with machine info
-	const sensorsWithMachine = useMemo(() => {
-		return sensors.map((s) => {
-			const machine = machines.find((m) => m.id === s.machineId) || null;
-			return { ...s, machine };
-		});
-	}, [sensors, machines]);
+    const filteredSensors = useMemo(() => {
+        const term = searchTerm.toLowerCase().trim();
+        if (!term) return sensorsWithMachine;
+        return sensorsWithMachine.filter((s) => {
+            const nameMatch = s.name.toLowerCase().includes(term);
+            const machineMatch = s.machine?.name.toLowerCase().includes(term) || s.machine?.code?.toLowerCase().includes(term);
+            const locationMatch = s.location?.toLowerCase().includes(term);
+            return nameMatch || machineMatch || locationMatch;
+        });
+    }, [sensorsWithMachine, searchTerm]);
 
-	// Filtering by search
-	const filteredSensors = useMemo(() => {
-		const term = searchTerm.toLowerCase().trim();
+    useEffect(() => {
+        loadSensors();
+    }, [loadSensors]);
 
-		if (!term) return sensorsWithMachine;
-
-		return sensorsWithMachine.filter((s) => {
-			const nameMatch = s.name.toLowerCase().includes(term);
-			const machineMatch =
-				s.machine?.name.toLowerCase().includes(term) ||
-				s.machine?.code?.toLowerCase().includes(term);
-
-			const locationMatch = s.location?.toLowerCase().includes(term);
-
-			return nameMatch || machineMatch || locationMatch;
-		});
-	}, [sensorsWithMachine, searchTerm]);
-
-	// Initial load
-	useEffect(() => {
-		loadSensors();
-	}, [loadSensors]);
-
-	return {
-		sensors: sensorsWithMachine,
-		machines,
-		filteredSensors,
-		loading,
-		searchTerm,
-		setSearchTerm,
-		reload: loadSensors,
-		deactivateSensor,
-	};
+    return {
+        sensors: sensorsWithMachine,
+        machines,
+        filteredSensors,
+        loading,
+        searchTerm,
+        setSearchTerm,
+        reload: loadSensors,
+        deactivateSensor,
+        activateSensor, // Exportamos la nueva función
+    };
 }

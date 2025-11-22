@@ -172,6 +172,13 @@ class ApiClient {
 		});
 	}
 
+	activateSensor(sensorId: string): Promise<Sensor> {
+		// backend: PATCH /api/sensors/:sensorId/activate
+		return this.request<Sensor>(`/api/sensors/${sensorId}/activate`, {
+			method: "PATCH",
+		});
+	}
+
 	getSensorReadings(sensorId: string): Promise<Reading[]> {
 		return this.request<Reading[]>(`/api/sensors/${sensorId}/readings`);
 	}

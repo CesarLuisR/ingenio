@@ -5,6 +5,9 @@ import { useReadingsStore } from "../../store/readingState";
 import { useSensors } from "./hooks/useSensors";
 import { useActiveSensors } from "./hooks/useActiveSensors";
 import type { Sensor } from "../../types";
+import { useSessionStore } from "../../store/sessionStore";
+import { hasPermission } from "../../lib/hasPermission";
+import { ROLES } from "../../types";
 
 import {
     Container,
@@ -30,7 +33,7 @@ import {
     GhostButton,
     DangerTextButton,
     Loading,
-} from "./styled"; // Asegúrate de importar desde el archivo nuevo
+} from "./styled";
 
 import SensorForm from "./components/SensorForm";
 
@@ -46,12 +49,18 @@ export default function Sensores() {
         setSearchTerm,
         reload,
         deactivateSensor,
+        activateSensor, // <--- Importamos la nueva función
     } = useSensors();
+
+    const { user } = useSessionStore();
+    const canManage = hasPermission(user?.role || "", ROLES.ADMIN);
 
     const [showForm, setShowForm] = useState(false);
     const [editingSensor, setEditingSensor] = useState<Sensor | null>(null);
+    
+    // Agregamos 'disabled' a los modos de filtro
     const [filterMode, setFilterMode] =
-        useState<"all" | "active" | "inactive" | "recent">("all");
+        useState<"all" | "active" | "inactive" | "recent" | "disabled">("all");
 
     const [machineFilterId, setMachineFilterId] =
         useState<"all" | number>("all");
@@ -69,7 +78,6 @@ export default function Sensores() {
             .sort((a, b) => a.name.localeCompare(b.name));
     }, [machines]);
 
-    // ... (Lógica de enrichedSensors y displayedSensors permanece igual) ...
     const enrichedSensors = useMemo(() => {
         return filteredSensors.map((sensor) => {
             const key = sensor.sensorId ?? String(sensor.id);
@@ -103,24 +111,37 @@ export default function Sensores() {
                 totalIssues,
                 metricsCount,
                 isActive: !!activeMap[key],
-                isEnabled: sensor.active,
+                isEnabled: sensor.active, // Mapeamos el estado de la BD
             };
         });
     }, [filteredSensors, sensorMap, activeMap]);
 
+    // --- LÓGICA DE FILTRADO MEJORADA ---
     const displayedSensors = useMemo(() => {
         let base = enrichedSensors;
+
+        // 1. Filtro por máquina
         if (machineFilterId !== "all") {
             base = base.filter((s) => s.machineId === machineFilterId);
         }
+
+        // 2. Si el modo es 'disabled', mostramos SOLO los desactivados
+        if (filterMode === "disabled") {
+            return base.filter((s) => !s.isEnabled);
+        }
+
+        // 3. Para el resto de modos, ocultamos los desactivados por defecto
+        base = base.filter((s) => s.isEnabled);
+
+        // 4. Filtros específicos de estado (Online/Offline)
         switch (filterMode) {
-            case "active": return base.filter((s) => s.isActive);
-            case "inactive": return base.filter((s) => !s.isActive);
+            case "active": return base.filter((s) => s.isActive); // Online
+            case "inactive": return base.filter((s) => !s.isActive); // Offline
             case "recent":
                 return [...base]
                     .filter((s) => s.lastReadingTime)
                     .sort((a, b) => (b.lastReadingTime ?? 0) - (a.lastReadingTime ?? 0));
-            default: return base;
+            default: return base; // 'all' (pero solo habilitados)
         }
     }, [enrichedSensors, machineFilterId, filterMode]);
 
@@ -133,9 +154,11 @@ export default function Sensores() {
                         Monitoreo en tiempo real del estado y configuración de dispositivos.
                     </p>
                 </div>
-                <ActionButton onClick={() => alert("Próximamente")}>
-                    + Nuevo Sensor
-                </ActionButton>
+                {canManage && (
+                    <ActionButton onClick={() => alert("Próximamente")}>
+                        + Nuevo Sensor
+                    </ActionButton>
+                )}
             </Header>
 
             <FilterContainer>
@@ -165,13 +188,21 @@ export default function Sensores() {
                         Todos
                     </FilterButton>
                     <FilterButton $active={filterMode === "active"} onClick={() => setFilterMode("active")}>
-                        Activos
+                        Online
                     </FilterButton>
                     <FilterButton $active={filterMode === "inactive"} onClick={() => setFilterMode("inactive")}>
-                        Inactivos
+                        Offline
                     </FilterButton>
                     <FilterButton $active={filterMode === "recent"} onClick={() => setFilterMode("recent")}>
                         Recientes
+                    </FilterButton>
+                    {/* Botón separado visualmente para ver la "papelera" o desactivados */}
+                    <FilterButton 
+                        $active={filterMode === "disabled"} 
+                        onClick={() => setFilterMode("disabled")}
+                        style={{ borderLeft: '1px solid #e2e8f0', color: filterMode === 'disabled' ? '#dc2626' : '#94a3b8' }}
+                    >
+                        Deshabilitados
                     </FilterButton>
                 </ButtonGroup>
             </FilterContainer>
@@ -181,13 +212,31 @@ export default function Sensores() {
             ) : (
                 <Grid>
                     {displayedSensors.map((sensor) => {
-                        const badgeStatus = sensor.isActive ? "active" : !sensor.isEnabled ? "inactive" : "unknown";
+                        // Lógica visual del Badge
+                        let badgeStatus = "unknown";
+                        let badgeText = "Desconocido";
+
+                        if (!sensor.isEnabled) {
+                            badgeStatus = "unknown"; // O crear un estilo 'disabled' gris
+                            badgeText = "Deshabilitado";
+                        } else if (sensor.isActive) {
+                            badgeStatus = "active";
+                            badgeText = "Online";
+                        } else {
+                            badgeStatus = "inactive";
+                            badgeText = "Offline";
+                        }
 
                         return (
                             <Card
                                 key={sensor.id}
                                 $isActive={sensor.isActive}
-                                onClick={() => navigate(`/sensor/${sensor.sensorId ?? sensor.id}`)}
+                                style={{ opacity: sensor.isEnabled ? 1 : 0.7 }} // Opacidad visual para los desactivados
+                                onClick={() => {
+                                    if (sensor.isEnabled) {
+                                        navigate(`/sensor/${sensor.sensorId ?? sensor.id}`);
+                                    }
+                                }}
                             >
                                 <CardHeader>
                                     <CardTitleBlock>
@@ -198,7 +247,7 @@ export default function Sensores() {
                                         </CardSubtitle>
                                     </CardTitleBlock>
                                     <Badge $status={badgeStatus}>
-                                        {badgeStatus === "active" ? "Online" : badgeStatus === "inactive" ? "Offline" : "Sin señal"}
+                                        {badgeText}
                                     </Badge>
                                 </CardHeader>
 
@@ -219,30 +268,49 @@ export default function Sensores() {
                                     </StatBox>
                                 </CardStatsGrid>
                                 
-                                {sensor.lastReadingTime && (
+                                {sensor.isEnabled && sensor.lastReadingTime && (
                                     <LastReadingText>
                                         Actualizado: {new Date(sensor.lastReadingTime).toLocaleTimeString()}
                                     </LastReadingText>
                                 )}
 
                                 <CardActions>
-                                    <GhostButton
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            setEditingSensor(sensor);
-                                            setShowForm(true);
-                                        }}>
-                                        Editar
-                                    </GhostButton>
+                                    {canManage && (
+                                        <GhostButton
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setEditingSensor(sensor);
+                                                setShowForm(true);
+                                            }}>
+                                            Editar
+                                        </GhostButton>
+                                    )}
 
-                                    <DangerTextButton
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            const sid = sensor.sensorId ?? String(sensor.id);
-                                            deactivateSensor(sid);
-                                        }}>
-                                        Desactivar
-                                    </DangerTextButton>
+                                    {/* Botón dinámico: Activar o Desactivar */}
+                                    {canManage && (
+                                        sensor.isEnabled ? (
+                                            <DangerTextButton
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    if(confirm("¿Desactivar este sensor? Dejará de recibir datos.")) {
+                                                        const sid = sensor.sensorId ?? String(sensor.id);
+                                                        deactivateSensor(sid);
+                                                    }
+                                                }}>
+                                                Desactivar
+                                            </DangerTextButton>
+                                        ) : (
+                                            <GhostButton
+                                                style={{ color: '#16a34a', fontWeight: 'bold' }}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    const sid = sensor.sensorId ?? String(sensor.id);
+                                                    activateSensor(sid);
+                                                }}>
+                                                Reactivar
+                                            </GhostButton>
+                                        )
+                                    )}
                                 </CardActions>
                             </Card>
                         );

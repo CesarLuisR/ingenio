@@ -7,6 +7,7 @@ import PostgresRepository from "../repositories/database/postgresRepository";
 import { Reading } from "../../database/mongo.db";
 import { createFormattedInfoInfo } from "../services/infoFormatterService";
 
+// todo: este codigo es una mierda o no??? tendria que analizar trade-offs
 const cacheRepository = new RedisRepository();
 const sensorRepository = new SensorRepository(
     cacheRepository,
@@ -24,11 +25,11 @@ export function createIngestCtrl(bus: IMessageBus): RequestHandler {
             if (!data.metrics || !data.sensorId || !data.timestamp)
                 return res.status(400).json({ error: "Missing required fields" });
 
-            const reading = new Reading(data);
-            await reading.save();
-
             const readingSensorConfig: ConfigData | null =
                 await sensorRepository.getSensorConfig(data.sensorId);
+
+            const reading = new Reading(data);
+            await reading.save();
 
             if (!readingSensorConfig) {
                 console.warn(`⚠️ No sensor config found for sensorId: ${data.sensorId}`);
@@ -36,7 +37,8 @@ export function createIngestCtrl(bus: IMessageBus): RequestHandler {
             }
 
             const info = await createFormattedInfoInfo(data, readingSensorConfig);
-            bus.publish("reading", info);
+            if (readingSensorConfig?.active === true)
+                bus.publishToIngenio("reading", info, readingSensorConfig.ingenioId);
 
             const newConfig = await cacheRepository.get(`sensor:${data.sensorId}-updated`);
             if (newConfig) {

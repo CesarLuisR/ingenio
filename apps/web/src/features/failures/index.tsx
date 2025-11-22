@@ -19,6 +19,9 @@ import {
     TextInput,
     Title,
 } from "./styled";
+import { useSessionStore } from "../../store/sessionStore";
+import { hasPermission } from "../../lib/hasPermission";
+import { ROLES } from "../../types";
 
 import useFailures from "./hooks/useFailures";
 
@@ -47,6 +50,10 @@ export default function Fallos() {
         loadData,
     } = useFailures();
 
+    const { user } = useSessionStore();
+    const canReport = hasPermission(user?.role || "", ROLES.TECNICO);
+    const canEdit = hasPermission(user?.role || "", ROLES.ADMIN);
+
     if (loading) return <LoadingText>Cargando fallas...</LoadingText>;
 
     return (
@@ -56,13 +63,15 @@ export default function Fallos() {
                     <Title>Registro de Fallas</Title>
                     <p style={{color: '#64748b', margin: '8px 0 0 0'}}>Seguimiento de incidencias críticas</p>
                 </div>
-                <Button
-                    onClick={() => {
-                        setEditing(null);
-                        setShowForm(true);
-                    }}>
-                    + Reportar Falla
-                </Button>
+                {canReport && (
+                    <Button
+                        onClick={() => {
+                            setEditing(null);
+                            setShowForm(true);
+                        }}>
+                        + Reportar Falla
+                    </Button>
+                )}
             </Header>
 
             {/* FILTROS */}
@@ -130,13 +139,15 @@ export default function Fallos() {
                                         {machine?.code ? `(${machine.code})` : ""}
                                     </span>
                                 </SensorName>
-                                <EditButton
-                                    onClick={() => {
-                                        setEditing(f);
-                                        setShowForm(true);
-                                    }}>
-                                    Editar
-                                </EditButton>
+                                {canEdit && (
+                                    <EditButton
+                                        onClick={() => {
+                                            setEditing(f);
+                                            setShowForm(true);
+                                        }}>
+                                        Editar
+                                    </EditButton>
+                                )}
                             </CardHeader>
 
                             <TagRow>

@@ -11,6 +11,7 @@ import {
     SidebarFooter,
     UserAvatar,
     UserInfo,
+    LogoutButton,
 } from "./styled";
 import { useSessionStore } from "../../../../store/sessionStore";
 import { useEffect, useState } from "react";
@@ -94,11 +95,19 @@ export default function Layout() {
 
                 {/* Footer con información del usuario logueado */}
                 <SidebarFooter>
-                    <UserAvatar>{initials}</UserAvatar>
-                    <UserInfo>
-                        <span className="name">{user?.name || "Usuario"}</span>
-                        <span className="role">{user?.role || "Invitado"}</span>
-                    </UserInfo>
+                    <div style={{display: 'flex', alignItems: 'center', gap: 12, width: '100%'}}>
+                        <UserAvatar>{initials}</UserAvatar>
+                        <UserInfo>
+                            <span className="name">{user?.name || "Usuario"}</span>
+                            <span className="role">{user?.role || "Invitado"}</span>
+                        </UserInfo>
+                        <LogoutButton 
+                            onClick={() => useSessionStore.getState().logout()}
+                            title="Cerrar Sesión"
+                        >
+                            🚪Cerrar Sesión
+                        </LogoutButton>
+                    </div>
                 </SidebarFooter>
             </Sidebar>
 

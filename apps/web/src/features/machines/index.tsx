@@ -6,6 +6,7 @@ import { MachineCard } from "./components/MachineCard";
 import { api } from "../../lib/api";
 import { useSessionStore } from "../../store/sessionStore";
 import { ROLES } from "../../types";
+import { hasPermission } from "../../lib/hasPermission";
 
 import {
 	Container,
@@ -44,9 +45,7 @@ export default function MachinesPage() {
 	const [selectedMachine, setSelectedMachine] =
 		useState<MachineWithRelations | null>(null);
 
-	const canManage =
-		user &&
-		(user.role === ROLES.SUPERADMIN || user.role === ROLES.ADMIN);
+	const canManage = hasPermission(user?.role || "", ROLES.ADMIN);
 
 	const filteredMachines = useMemo(() => {
 		let data = [...machines];

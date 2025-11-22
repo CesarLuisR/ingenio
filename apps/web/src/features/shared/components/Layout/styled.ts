@@ -73,7 +73,7 @@ export const Nav = styled.nav`
   &::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
 `;
 
-export const NavLinkStyled = styled(Link)<{ $active: boolean }>`
+export const NavLinkStyled = styled(Link) <{ $active: boolean }>`
   display: flex;
   align-items: center;
   gap: 12px;
@@ -122,44 +122,6 @@ export const NavLinkStyled = styled(Link)<{ $active: boolean }>`
   }
 `;
 
-// --- Footer del Sidebar (Usuario) ---
-export const SidebarFooter = styled.div`
-  padding: 20px 24px;
-  border-top: 1px solid #f1f5f9;
-  background: #ffffff;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-`;
-
-export const UserAvatar = styled.div`
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 16px;
-`;
-
-export const UserInfo = styled.div`
-  display: flex;
-  flex-direction: column;
-  
-  .name {
-    font-size: 14px;
-    font-weight: 700;
-    color: #0f172a;
-  }
-  .role {
-    font-size: 12px;
-    color: #64748b;
-  }
-`;
-
 // --- Contenido Principal ---
 export const MainContent = styled.main`
   margin-left: 280px; /* Mismo ancho que el sidebar */
@@ -170,5 +132,109 @@ export const MainContent = styled.main`
     margin-left: 0;
     width: 100%;
     padding-top: 80px; /* Espacio para un header móvil si existiera */
+  }
+`;
+
+// --- Footer del Sidebar (Usuario) ---
+export const SidebarFooter = styled.div`
+  /* Fijamos altura y padding para que se vea robusto */
+  padding: 16px 20px; 
+  border-top: 1px solid #e2e8f0;
+  background: #ffffff;
+  
+  /* Flexbox para alinear todo horizontalmente */
+  display: flex;
+  align-items: center;
+  gap: 12px; /* Espacio entre el avatar y el texto */
+`;
+
+export const UserAvatar = styled.div`
+  /* Tamaño fijo y circular */
+  width: 40px;
+  height: 40px;
+  min-width: 40px; /* Evita que se aplaste */
+  border-radius: 50%;
+  
+  /* Gradiente moderno */
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  
+  /* Centrado del texto (iniciales) */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 5px rgba(37, 99, 235, 0.2);
+`;
+
+export const UserInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Por si el nombre es muy largo */
+  
+  .name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1e293b; /* Slate-800: Más oscuro para legibilidad */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  
+  .role {
+    font-size: 11px;
+    font-weight: 500;
+    color: #64748b; /* Slate-500 */
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+`;
+
+// --- EL BOTÓN ARREGLADO ---
+export const LogoutButton = styled.button`
+  /* 1. Posicionamiento: Empujamos a la derecha */
+  margin-left: auto;
+
+  /* 2. Tamaño: Hacemos un cuadrado perfecto */
+  width: 36px;
+  height: 36px;
+  
+  /* 3. Flexbox: Centrar el icono perfectamente */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* 4. Estilos Base (Estado normal) */
+  background-color: transparent;
+  border: 1px solid transparent; /* Reserva espacio para el borde hover */
+  border-radius: 8px;
+  cursor: pointer;
+  color: #94a3b8; /* Gris suave */
+  
+  /* Transición suave */
+  transition: all 0.2s ease-in-out;
+
+  /* 5. El Icono SVG */
+  svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 2px; /* Asegura que se vea nítido */
+  }
+
+  /* 6. HOVER: Aquí es donde se ve bien */
+  &:hover {
+    background-color: #fef2f2; /* Fondo rojo muy suave */
+    color: #dc2626;            /* Icono rojo intenso */
+    border-color: #fecaca;     /* Borde rojo suave */
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.1);
+    transform: translateY(-1px);
+  }
+
+  /* 7. ACTIVE: Efecto de click */
+  &:active {
+    transform: translateY(0) scale(0.95);
+    background-color: #fee2e2;
   }
 `;

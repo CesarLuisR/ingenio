@@ -1,6 +1,9 @@
 import TechnicianForm from "./components/TechnicianForm";
 import useTechnicians from "./hooks/useTechnicians";
 import { api } from "../../lib/api";
+import { useSessionStore } from "../../store/sessionStore";
+import { hasPermission } from "../../lib/hasPermission";
+import { ROLES } from "../../types";
 import {
     Container,
     Header,
@@ -37,6 +40,9 @@ export default function Technicians() {
         loadData,
     } = useTechnicians();
 
+    const { user } = useSessionStore();
+    const canManage = hasPermission(user?.role || "", ROLES.ADMIN);
+
     if (loading) return <LoadingText>Cargando técnicos...</LoadingText>;
 
     return (
@@ -47,13 +53,15 @@ export default function Technicians() {
                     <p style={{color: '#64748b', margin: '8px 0 0 0'}}>Gestión del personal de mantenimiento</p>
                 </div>
 
-                <Button
-                    onClick={() => {
-                        setEditing(null);
-                        setShowForm(true);
-                    }}>
-                    + Nuevo Técnico
-                </Button>
+                {canManage && (
+                    <Button
+                        onClick={() => {
+                            setEditing(null);
+                            setShowForm(true);
+                        }}>
+                        + Nuevo Técnico
+                    </Button>
+                )}
             </Header>
 
             {/* FILTROS */}
@@ -92,29 +100,31 @@ export default function Technicians() {
                             </p>
                         </InfoList>
 
-                        <Actions>
-                            <ActionButton
-                                onClick={() => {
-                                    setEditing(t);
-                                    setShowForm(true);
-                                }}>
-                                Editar
-                            </ActionButton>
+                        {canManage && (
+                            <Actions>
+                                <ActionButton
+                                    onClick={() => {
+                                        setEditing(t);
+                                        setShowForm(true);
+                                    }}>
+                                    Editar
+                                </ActionButton>
 
-                            <ActionButton
-                                $danger
-                                onClick={async () => {
-                                    if (!confirm(`¿Seguro que deseas eliminar a ${t.name}?`)) return;
-                                    try {
-                                        await api.deleteTechnician(t.id.toString());
-                                        loadData();
-                                    } catch (e) {
-                                        alert("Error al eliminar técnico");
-                                    }
-                                }}>
-                                Eliminar
-                            </ActionButton>
-                        </Actions>
+                                <ActionButton
+                                    $danger
+                                    onClick={async () => {
+                                        if (!confirm(`¿Seguro que deseas eliminar a ${t.name}?`)) return;
+                                        try {
+                                            await api.deleteTechnician(t.id.toString());
+                                            loadData();
+                                        } catch (e) {
+                                            alert("Error al eliminar técnico");
+                                        }
+                                    }}>
+                                    Eliminar
+                                </ActionButton>
+                            </Actions>
+                        )}
                     </TechnicianCard>
                 ))}
             </TechnicianList>
