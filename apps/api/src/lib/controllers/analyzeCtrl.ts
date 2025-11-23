@@ -14,12 +14,11 @@ const sensorRepository = new SensorRepository(new RedisRepository(), new Postgre
 
 export const analyzeMachine = async (req: Request, res: Response) => {
     const { IA_API } = process.env;
-    // Asumimos que el ID viene en la URL: /api/analysis/machine/:id
-    const machineId = Number(req.params.id); 
+    const machineId = Number(req.params.id);
 
     // 1. Validaciones Básicas
     if (!IA_API) {
-        return res.status(500).json({ error: "IA_API no configurada" });
+        return res.status(500).json({ error: "IA_API no configurada en variables de entorno" });
     }
 
     if (isNaN(machineId)) {
@@ -27,12 +26,12 @@ export const analyzeMachine = async (req: Request, res: Response) => {
     }
 
     try {
-        // 2. Obtener la Máquina y sus Sensores (Relacional - Postgres)
+        // 2. Obtener la Máquina y sus Sensores Activos (Postgres)
         const machine = await prisma.machine.findUnique({
             where: { id: machineId },
             include: {
                 sensors: {
-                    where: { active: true } // Solo analizamos sensores activos
+                    where: { active: true }
                 }
             }
         });
@@ -42,35 +41,30 @@ export const analyzeMachine = async (req: Request, res: Response) => {
         }
 
         if (machine.sensors.length === 0) {
-            return res.status(400).json({ error: "La máquina no tiene sensores activos asignados" });
+            return res.status(400).json({ error: "La máquina no tiene sensores activos para analizar" });
         }
 
-        console.log(`🏭 Analizando Máquina: ${machine.name} (${machine.sensors.length} sensores)`);
+        console.log(`🏭 Preparando datos para: ${machine.name} (${machine.sensors.length} sensores)`);
 
-        // 3. Recolectar Configuración y Lecturas de cada Sensor (Paralelo)
+        // 3. Recolectar Configuración y Lecturas (Paralelo)
         const sensorDataPromises = machine.sensors.map(async (sensor) => {
             try {
-                // A. Obtener Configuración (Cache -> DB)
-                // Usamos sensor.sensorId (el string UUID) que es lo que usa el repositorio
+                // A. Configuración (Redis/DB)
                 const config = await sensorRepository.getSensorConfig(sensor.sensorId);
+                if (!config) return null;
 
-                if (!config) {
-                    console.warn(`⚠️ Configuración no encontrada para sensor ${sensor.sensorId}`);
-                    return null;
-                }
-
-                // B. Obtener Lecturas (Mongo)
-                // Limitamos a las últimas X lecturas para no saturar la IA (ej: últimas 24h o últimos 1000 puntos)
+                // B. Lecturas (Mongo) - Últimos 1000 puntos para tener buena historia
                 const readings = await Reading.find({ sensorId: sensor.sensorId })
-                    .sort({ timestamp: -1 }) // Los más recientes primero
-                    .limit(500)              // Límite de seguridad
+                    .sort({ timestamp: -1 })
+                    .limit(1000) 
                     .lean<ReadingData[]>();
 
-                if (!readings || readings.length === 0) {
+                if (!readings || readings.length < 10) {
+                    console.warn(`⚠️ Pocos datos para sensor ${sensor.sensorId}, omitiendo.`);
                     return null;
                 }
 
-                // Reordenamos cronológicamente para el análisis (antiguo -> nuevo)
+                // Reordenar cronológicamente para Prophet (Antiguo -> Nuevo)
                 readings.reverse();
 
                 return {
@@ -79,48 +73,29 @@ export const analyzeMachine = async (req: Request, res: Response) => {
                 } as IMachineData;
 
             } catch (err) {
-                console.error(`❌ Error recolectando datos del sensor ${sensor.sensorId}:`, err);
+                console.error(`❌ Error data sensor ${sensor.sensorId}:`, err);
                 return null;
             }
         });
 
-        // Esperamos a que todos los sensores traigan sus datos
         const results = await Promise.all(sensorDataPromises);
-        
-        // Limpiamos los nulos (sensores sin datos o errores)
         const validSensorData = results.filter((r): r is IMachineData => r !== null);
 
         if (validSensorData.length === 0) {
-            return res.status(400).json({ error: "No hay datos de lectura disponibles para esta máquina" });
+            return res.status(400).json({ error: "No hay suficientes datos históricos para realizar predicciones." });
         }
 
-        // 4. Preparar Payload para la IA
-        // Nota: Dependiendo de tu IA, podrías querer enviar metadata de la máquina también.
-        // Por ahora mantenemos la estructura de lista de sensores, pero agrupada lógicamente.
-        
-        const payload = {
-            machineId: machine.id,
-            machineName: machine.name,
-            machineType: machine.type,
-            sensors: validSensorData
-        };
-
-        // 5. Enviar al Microservicio de IA
-        // NOTA: Si tu IA espera un array directo, envía 'validSensorData'.
-        // Si actualizaste la IA para recibir contexto de máquina, envía 'payload'.
-        // Aquí asumo que tu endpoint '/analyze' actual espera un array de sensores (IMachineData[]).
-        
-        console.log(`🚀 Enviando ${validSensorData.length} streams de datos a IA...`);
+        // 4. Enviar al Cerebro Python 🧠
+        console.log(`🚀 Enviando ${validSensorData.length} sensores al servicio de IA...`);
 
         const { data: analysisResult } = await axios.post<AnalysisResponse>(
             `${IA_API}/analyze`,
-            validSensorData, // <--- Enviamos el array de sensores de ESTA máquina
+            validSensorData,
             { headers: { "Content-Type": "application/json" } }
         );
 
-        // 6. (Opcional) Guardar resultado en caché o DB para no re-calcular inmediatamente
-        // await saveAnalysisResult(machineId, analysisResult);
-
+        console.log(`🚀 Resultado de análisis:`, analysisResult);
+        // 5. Responder al Frontend
         return res.status(200).json({
             machine: {
                 id: machine.id,
@@ -133,8 +108,11 @@ export const analyzeMachine = async (req: Request, res: Response) => {
     } catch (error: any) {
         if (axios.isAxiosError(error)) {
             const status = error.response?.status || 502;
-            console.error(`❌ Error IA (${status}):`, error.response?.data);
-            return res.status(status).json({ error: "Fallo en el servicio de inteligencia artificial" });
+            console.error(`❌ Error del Servicio IA (${status}):`, error.response?.data || error.message);
+            return res.status(status).json({ 
+                error: "El servicio de IA no pudo procesar la solicitud.",
+                details: error.response?.data 
+            });
         }
 
         console.error("❌ Error interno analizando máquina:", error);

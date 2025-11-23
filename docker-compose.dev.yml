@@ -33,13 +33,16 @@ services:
       - MONGO_URI=mongodb://mongo:27017/ingenio
       - REDIS_URL=redis://redis:6379
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/ingenio
-      - IA_API=http://ia_mock:8081
+      # - IA_API=http://ia_mock:8081
+      - IA_API=http://ia-service:8000
     depends_on:
       postgres:
         condition: service_healthy
       mongo:
         condition: service_started
       redis:
+        condition: service_started
+      ia-service: 
         condition: service_started
    
   mongo:
@@ -94,6 +97,19 @@ services:
       dockerfile: Dockerfile
     # volumes:
       # - ./apps/ia-mock:/app
+
+  ia-service:
+    build:
+      context: ./apps/ia-service
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000" # Exponemos el puerto para debug
+    networks:
+      - default # Asegúrate de que todos usen la red por defecto o define una
+    deploy:
+      resources:
+        limits:
+          memory: 1G # Prophet consume RAM, dale espacio
 
 volumes:
   mongo_data:

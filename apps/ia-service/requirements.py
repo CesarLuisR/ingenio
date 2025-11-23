@@ -1,5 +1,0 @@
-fastapi==0.104.1
-uvicorn==0.24.0
-pandas==2.1.3
-prophet==1.1.5
-pydantic==2.5.2

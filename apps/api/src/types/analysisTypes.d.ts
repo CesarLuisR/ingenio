@@ -1,14 +1,20 @@
-export interface MetricAnalysis {
-    tendencia: "subiendo" | "bajando" | "estable";
-    pendiente: number;
-    valorActual: number;
-    rango: { min?: number; max?: number };
-    urgencia: "normal" | "moderada" | "⚠️ muy alta" | "🚨 fuera de rango";
+export interface CategorySummary {
+    [metricName: string]: MetricAnalysis | { message: string };
 }
+
+export interface AnalysisResponse {
+    timestamp: string;
+    report: SensorReport[];
+}
+
+////
 
 export interface ChartPoint {
     timestamp: string;
     value: number;
+    confidenceLow?: number;
+    confidenceHigh?: number;
+    isFuture?: boolean;
 }
 
 export interface ChartMetric {
@@ -16,18 +22,28 @@ export interface ChartMetric {
     data: ChartPoint[];
 }
 
-export interface ChartData {
-    [category: string]: ChartMetric[];
-}
-
-export interface CategorySummary {
-    [metricName: string]: MetricAnalysis | { message: string };
+export interface MetricAnalysis {
+    status: "ok" | "warning" | "critical";
+    valorActual: number;
+    predictedValue24h: number;
+    pendiente: number;
+    volatility: number;
+    tendencia: "subiendo" | "bajando" | "estable";
+    urgencia: "normal" | "moderada" | "⚠️ muy alta" | "🚨 fuera de rango";
+    recommendation: string;
+    message: string;
+    rulHours: number | null;
+    anomalyCount: number;
+    rango: {
+        min: number | null;
+        max: number | null;
+    };
 }
 
 export interface SensorReport {
     sensorId: string;
-    resumen: Record<string, CategorySummary>;
-    chartData: ChartData;
+    resumen: Record<string, Record<string, MetricAnalysis>>;
+    chartData: Record<string, ChartMetric[]>;
 }
 
 export interface AnalysisResponse {
