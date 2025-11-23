@@ -61,42 +61,58 @@ export default function Layout() {
                 </SidebarHeader>
 
                 <Nav>
-                    <NavLinkStyled to="/" $active={isActive("/")}>
-                        <span>🏠</span> Dashboard
-                    </NavLinkStyled>
-                    
-                    <NavLinkStyled to="/maquinas" $active={isActive("/maquinas")}>
-                        <span>⚙️</span> Máquinas
-                    </NavLinkStyled>
-                    
-                    <NavLinkStyled to="/sensores" $active={isActive("/sensores")}>
-                        <span>📊</span> Sensores
-                    </NavLinkStyled>
-                    
-                    <NavLinkStyled to="/mantenimientos" $active={isActive("/mantenimientos")}>
-                        <span>🔧</span> Mantenimientos
-                    </NavLinkStyled>
-                    
-                    <NavLinkStyled to="/fallos" $active={isActive("/fallos")}>
-                        <span>⚠️</span> Fallos
-                    </NavLinkStyled>
-                    
-                    <NavLinkStyled to="/tecnicos" $active={isActive("/tecnicos")}>
-                        <span>👷‍♂️</span> Técnicos
-                    </NavLinkStyled>
-                    
-                    <NavLinkStyled to="/usuarios" $active={isActive("/usuarios")}>
-                        <span>👥</span> Usuarios
-                    </NavLinkStyled>
-                    
-                    <NavLinkStyled to="/analisis" $active={isActive("/analisis")}>
-                        <span>📈</span> Análisis
-                    </NavLinkStyled>
-
-                    {user?.role === ROLES.SUPERADMIN && (
-                        <NavLinkStyled to="/ingenios" $active={isActive("/ingenios")}>
-                            <span>🏭</span> Ingenios
-                        </NavLinkStyled>
+                    {user?.role === ROLES.SUPERADMIN ? (
+                        <>
+                            <NavLinkStyled to="/" $active={isActive("/")}>
+                                <span>🏠</span> Dashboard
+                            </NavLinkStyled>
+                            <NavLinkStyled to="/ingenios" $active={isActive("/ingenios")}>
+                                <span>🏭</span> Ingenios
+                            </NavLinkStyled>
+                            <NavLinkStyled to="/usuarios" $active={isActive("/usuarios")}>
+                                <span>👥</span> Usuarios
+                            </NavLinkStyled>
+                            <NavLinkStyled to="/maquinas" $active={isActive("/maquinas")}>
+                                <span>⚙️</span> Máquinas
+                            </NavLinkStyled>
+                            <NavLinkStyled to="/sensores" $active={isActive("/sensores")}>
+                                <span>📊</span> Sensores
+                            </NavLinkStyled>
+                        </>
+                    ) : (
+                        <>
+                            <NavLinkStyled to="/" $active={isActive("/")}>
+                                <span>🏠</span> Dashboard
+                            </NavLinkStyled>
+                            
+                            <NavLinkStyled to="/maquinas" $active={isActive("/maquinas")}>
+                                <span>⚙️</span> Máquinas
+                            </NavLinkStyled>
+                            
+                            <NavLinkStyled to="/sensores" $active={isActive("/sensores")}>
+                                <span>📊</span> Sensores
+                            </NavLinkStyled>
+                            
+                            <NavLinkStyled to="/mantenimientos" $active={isActive("/mantenimientos")}>
+                                <span>🔧</span> Mantenimientos
+                            </NavLinkStyled>
+                            
+                            <NavLinkStyled to="/fallos" $active={isActive("/fallos")}>
+                                <span>⚠️</span> Fallos
+                            </NavLinkStyled>
+                            
+                            <NavLinkStyled to="/tecnicos" $active={isActive("/tecnicos")}>
+                                <span>👷‍♂️</span> Técnicos
+                            </NavLinkStyled>
+                            
+                            <NavLinkStyled to="/usuarios" $active={isActive("/usuarios")}>
+                                <span>👥</span> Usuarios
+                            </NavLinkStyled>
+                            
+                            <NavLinkStyled to="/analisis" $active={isActive("/analisis")}>
+                                <span>📈</span> Análisis
+                            </NavLinkStyled>
+                        </>
                     )}
                 </Nav>
 

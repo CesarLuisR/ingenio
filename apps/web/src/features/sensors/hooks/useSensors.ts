@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { api } from "../../../lib/api";
 import type { Sensor, Machine } from "../../../types";
 
-export function useSensors() {
+export function useSensors(ingenioId?: number) {
     const [sensors, setSensors] = useState<Sensor[]>([]);
     const [machines, setMachines] = useState<Machine[]>([]);
     const [loading, setLoading] = useState(true);
@@ -12,7 +12,7 @@ export function useSensors() {
         setLoading(true);
         try {
             const [sensorData, machineData] = await Promise.all([
-                api.getSensors(),
+                api.getSensors(ingenioId),
                 api.getMachines(),
             ]);
             setSensors(sensorData);
@@ -22,7 +22,7 @@ export function useSensors() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [ingenioId]);
 
     const deactivateSensor = useCallback(async (sensorId: string) => {
         try {

@@ -13,7 +13,7 @@ import {
     CancelButton,
     SubmitButton,
 } from "../styled";
-import { ROLES, type User } from "../../../types";
+import { ROLES, type User, type Ingenio } from "../../../types";
 import { useSessionStore } from "../../../store/sessionStore";
 
 type Role = typeof ROLES[keyof typeof ROLES];
@@ -28,6 +28,7 @@ export default function UserForm({
     onSave: () => void;
 }) {
     const sessionUser = useSessionStore((s) => s.user);
+    const [ingenios, setIngenios] = useState<Ingenio[]>([]);
 
     const [formData, setFormData] = useState<{
         name: string;
@@ -42,6 +43,12 @@ export default function UserForm({
         password: "",
         ingenioId: sessionUser?.ingenioId ?? 1,
     });
+
+    useEffect(() => {
+        if (sessionUser?.role === ROLES.SUPERADMIN) {
+            api.getAllIngenios().then(setIngenios).catch(console.error);
+        }
+    }, [sessionUser]);
 
     useEffect(() => {
         if (initialData) {
@@ -162,12 +169,16 @@ export default function UserForm({
 
                     {sessionUser?.role === ROLES.SUPERADMIN && (
                          <FormGroup>
-                            <Label>ID Ingenio</Label>
-                            <Input 
-                                type="number"
+                            <Label>Ingenio</Label>
+                            <Select 
                                 value={formData.ingenioId || ''}
                                 onChange={(e) => setFormData({...formData, ingenioId: Number(e.target.value)})}
-                            />
+                            >
+                                <option value="" disabled>Seleccionar Ingenio</option>
+                                {ingenios.map(ing => (
+                                    <option key={ing.id} value={ing.id}>{ing.name}</option>
+                                ))}
+                            </Select>
                          </FormGroup>
                     )}
 

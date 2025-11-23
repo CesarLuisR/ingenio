@@ -1,86 +1,143 @@
 import axios from "axios";
-import { RequestHandler } from "express";
+import { Request, Response } from "express";
+import prisma from "../../database/postgres.db"; 
 import { Reading } from "../../database/mongo.db";
-import { ConfigData, IMachineData, ReadingData } from "../../types/sensorTypes";
-import { AnalysisResponse, MetricAnalysis } from "../../types/analysisTypes";
+import { IMachineData, ReadingData } from "../../types/sensorTypes";
+import { AnalysisResponse } from "../../types/analysisTypes";
 
 import SensorRepository from "../repositories/sensorRepository";
 import RedisRepository from "../repositories/cache/redisRepository";
 import PostgresRepository from "../repositories/database/postgresRepository";
 
-const redisRepository = new RedisRepository();
-const postgresRepository = new PostgresRepository();
-const sensorRepository = new SensorRepository(redisRepository, postgresRepository);
+// Repositorios
+const sensorRepository = new SensorRepository(new RedisRepository(), new PostgresRepository());
 
-export const getAnalysis: RequestHandler = async (req, res) => {
-    const IA_API = process.env.IA_API;
-    const data: string[] = req.body; // lista de sensorIds
+export const analyzeMachine = async (req: Request, res: Response) => {
+    const { IA_API } = process.env;
+    // Asumimos que el ID viene en la URL: /api/analysis/machine/:id
+    const machineId = Number(req.params.id); 
 
-    const request: IMachineData[] = [];
+    // 1. Validaciones Básicas
+    if (!IA_API) {
+        return res.status(500).json({ error: "IA_API no configurada" });
+    }
 
-    if (!IA_API)
-        return res.status(500).json({ error: "IA_API no configurada en el entorno" });
+    if (isNaN(machineId)) {
+        return res.status(400).json({ error: "ID de máquina inválido" });
+    }
 
     try {
-        // --- Construir payload con sensores y lecturas ---
-        for (const sensorId of data) {
-            const sensorConfig: ConfigData = await sensorRepository.getSensorConfig(sensorId);
-            console.log("SENSOR CONFIG encontrada en ENDPOINT:", sensorConfig);
-            if (!sensorConfig) {
-                console.warn(`⚠️  Sensor no encontrado: ${sensorId}`);
-                continue;
-            }
-
-            const readings: ReadingData[] = await Reading.find({ sensorId });
-            if (!readings || readings.length === 0) {
-                console.warn(`⚠️  No hay lecturas para el sensor: ${sensorId}`);
-                continue;
-            }
-
-            request.push({ config: sensorConfig, readings });
-        }
-
-        if (request.length === 0) {
-            return res.status(400).json({ error: "No hay sensores válidos con datos" });
-        }
-
-        // --- Llamada al microservicio de IA ---
-        const response = await axios.post<AnalysisResponse>(`${IA_API}/analyze`, request, {
-            headers: { "Content-Type": "application/json" },
-        });
-
-        const report = response.data; // 👈 obtenemos solo los datos JSON planos
-
-        // --- Mostrar resumen en consola para debugging ---
-        console.log("\n==============================");
-        console.log("📊 REPORTE DE ANÁLISIS DE SENSORES");
-        console.log("==============================");
-
-        for (const sensor of report.report) {
-            console.log(`\n🔹 Sensor: ${sensor.sensorId}`);
-            for (const [category, metrics] of Object.entries(sensor.resumen)) {
-                console.log(`  ▸ ${category.toUpperCase()}`);
-                for (const [metric, info] of Object.entries(metrics as Record<string, MetricAnalysis>)) {
-                    console.log(
-                        `     - ${metric}: ${info.tendencia ?? "?"} | Valor: ${info.valorActual?.toFixed?.(2) ?? "?"} | Pendiente: ${info.pendiente?.toExponential?.(3) ?? "-"} | Urgencia: ${info.urgencia ?? "?"}`
-                    );
+        // 2. Obtener la Máquina y sus Sensores (Relacional - Postgres)
+        const machine = await prisma.machine.findUnique({
+            where: { id: machineId },
+            include: {
+                sensors: {
+                    where: { active: true } // Solo analizamos sensores activos
                 }
             }
+        });
+
+        if (!machine) {
+            return res.status(404).json({ error: "Máquina no encontrada" });
         }
 
-        console.log("==============================\n");
+        if (machine.sensors.length === 0) {
+            return res.status(400).json({ error: "La máquina no tiene sensores activos asignados" });
+        }
 
-        // --- Devolver datos al frontend (formato JSON correcto) ---
-        return res.status(200).json({
-            timestamp: report.timestamp,
-            report: report.report.map(sensor => ({
-                sensorId: sensor.sensorId,
-                resumen: sensor.resumen,
-                chartData: sensor.chartData, // 👈 incluye también las gráficas
-            })),
+        console.log(`🏭 Analizando Máquina: ${machine.name} (${machine.sensors.length} sensores)`);
+
+        // 3. Recolectar Configuración y Lecturas de cada Sensor (Paralelo)
+        const sensorDataPromises = machine.sensors.map(async (sensor) => {
+            try {
+                // A. Obtener Configuración (Cache -> DB)
+                // Usamos sensor.sensorId (el string UUID) que es lo que usa el repositorio
+                const config = await sensorRepository.getSensorConfig(sensor.sensorId);
+
+                if (!config) {
+                    console.warn(`⚠️ Configuración no encontrada para sensor ${sensor.sensorId}`);
+                    return null;
+                }
+
+                // B. Obtener Lecturas (Mongo)
+                // Limitamos a las últimas X lecturas para no saturar la IA (ej: últimas 24h o últimos 1000 puntos)
+                const readings = await Reading.find({ sensorId: sensor.sensorId })
+                    .sort({ timestamp: -1 }) // Los más recientes primero
+                    .limit(500)              // Límite de seguridad
+                    .lean<ReadingData[]>();
+
+                if (!readings || readings.length === 0) {
+                    return null;
+                }
+
+                // Reordenamos cronológicamente para el análisis (antiguo -> nuevo)
+                readings.reverse();
+
+                return {
+                    config,
+                    readings
+                } as IMachineData;
+
+            } catch (err) {
+                console.error(`❌ Error recolectando datos del sensor ${sensor.sensorId}:`, err);
+                return null;
+            }
         });
-    } catch (e: any) {
-        console.error("❌ Error durante el análisis:", e.message || e);
-        return res.status(500).json({ error: "Error procesando el análisis" });
+
+        // Esperamos a que todos los sensores traigan sus datos
+        const results = await Promise.all(sensorDataPromises);
+        
+        // Limpiamos los nulos (sensores sin datos o errores)
+        const validSensorData = results.filter((r): r is IMachineData => r !== null);
+
+        if (validSensorData.length === 0) {
+            return res.status(400).json({ error: "No hay datos de lectura disponibles para esta máquina" });
+        }
+
+        // 4. Preparar Payload para la IA
+        // Nota: Dependiendo de tu IA, podrías querer enviar metadata de la máquina también.
+        // Por ahora mantenemos la estructura de lista de sensores, pero agrupada lógicamente.
+        
+        const payload = {
+            machineId: machine.id,
+            machineName: machine.name,
+            machineType: machine.type,
+            sensors: validSensorData
+        };
+
+        // 5. Enviar al Microservicio de IA
+        // NOTA: Si tu IA espera un array directo, envía 'validSensorData'.
+        // Si actualizaste la IA para recibir contexto de máquina, envía 'payload'.
+        // Aquí asumo que tu endpoint '/analyze' actual espera un array de sensores (IMachineData[]).
+        
+        console.log(`🚀 Enviando ${validSensorData.length} streams de datos a IA...`);
+
+        const { data: analysisResult } = await axios.post<AnalysisResponse>(
+            `${IA_API}/analyze`,
+            validSensorData, // <--- Enviamos el array de sensores de ESTA máquina
+            { headers: { "Content-Type": "application/json" } }
+        );
+
+        // 6. (Opcional) Guardar resultado en caché o DB para no re-calcular inmediatamente
+        // await saveAnalysisResult(machineId, analysisResult);
+
+        return res.status(200).json({
+            machine: {
+                id: machine.id,
+                name: machine.name,
+                code: machine.code
+            },
+            analysis: analysisResult
+        });
+
+    } catch (error: any) {
+        if (axios.isAxiosError(error)) {
+            const status = error.response?.status || 502;
+            console.error(`❌ Error IA (${status}):`, error.response?.data);
+            return res.status(status).json({ error: "Fallo en el servicio de inteligencia artificial" });
+        }
+
+        console.error("❌ Error interno analizando máquina:", error);
+        return res.status(500).json({ error: "Error interno del servidor" });
     }
 };

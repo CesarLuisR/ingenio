@@ -7,7 +7,7 @@ declare module "express-session" {
             email: string;
             name: string;
             role: string;
-            ingenioId: number;
+            ingenioId: number | null;
         };
     }
 }

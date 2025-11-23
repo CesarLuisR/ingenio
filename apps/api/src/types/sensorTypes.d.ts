@@ -71,3 +71,8 @@ export interface IMachineData {
     config: ConfigData;
     readings: ReadingData[];
 }
+
+export interface IMachineData {
+    config: ConfigData;
+    readings: ReadingData[];
+}

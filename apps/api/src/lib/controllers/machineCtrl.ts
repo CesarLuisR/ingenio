@@ -4,11 +4,25 @@ import hasPermission from "../utils/permissionUtils";
 import { UserRole } from "@prisma/client";
 
 export const getAllMachines: RequestHandler = async (req, res) => {
-    const ingenioId = req.session.user?.ingenioId;
+    const user = req.session.user;
+    const where: any = {};
 
-    // Un ADMIN, TECNICO o LECTOR solo debe ver máquinas de su ingenio
+    if (user?.role !== UserRole.SUPERADMIN) {
+        // Un ADMIN, TECNICO o LECTOR solo debe ver máquinas de su ingenio
+        if (!user?.ingenioId) {
+            return res.json([]);
+        }
+        where.ingenioId = user.ingenioId;
+    } else {
+        // Superadmin puede filtrar por ingenio
+        const { ingenioId } = req.query;
+        if (ingenioId) {
+            where.ingenioId = Number(ingenioId);
+        }
+    }
+
     const machines = await prisma.machine.findMany({
-        where: { ingenioId },
+        where,
         include: { maintenances: true, sensors: true, failures: true }
     });
 

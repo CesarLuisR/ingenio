@@ -5,6 +5,43 @@ const fadeIn = keyframes`
   to { opacity: 1; transform: translateY(0); }
 `;
 
+export const SelectInput = styled.select`
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: #334155; /* Slate 700 */
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0; /* Slate 200 */
+  border-radius: 8px;
+  outline: none;
+  transition: all 0.2s ease-in-out;
+  appearance: none; /* Elimina el estilo nativo del SO */
+  cursor: pointer;
+
+  /* Icono de flecha custom (opcional, para que se vea mejor que el nativo) */
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 0.5rem center;
+  background-repeat: no-repeat;
+  background-size: 1.5em 1.5em;
+  padding-right: 2.5rem; /* Espacio para la flecha */
+
+  &:hover:not(:disabled) {
+    border-color: #cbd5e1; /* Slate 300 */
+  }
+
+  &:focus {
+    border-color: #3b82f6; /* Blue 500 */
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  }
+
+  &:disabled {
+    background-color: #f1f5f9; /* Slate 100 */
+    color: #94a3b8; /* Slate 400 */
+    cursor: not-allowed;
+  }
+`;
+
 // --- Layout ---
 export const Container = styled.div`
   padding: 32px 40px;

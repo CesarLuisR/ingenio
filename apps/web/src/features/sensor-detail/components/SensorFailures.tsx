@@ -1,11 +1,17 @@
 import { InfoSection } from "../styled";
-import type { Failure } from "../../../types";
+import { ROLES, type Failure } from "../../../types";
+import { useSessionStore } from "../../../store/sessionStore";
 
 interface SensorFailuresProps {
 	items: Failure[];
 }
 
 export function SensorFailures({ items }: SensorFailuresProps) {
+	const user = useSessionStore(s => s.user);
+    const isSuperAdmin = user?.role === ROLES.SUPERADMIN;
+
+	if (isSuperAdmin) return;
+
 	return (
 		<InfoSection>
 			<h2>Fallas</h2>

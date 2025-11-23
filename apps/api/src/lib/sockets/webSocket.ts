@@ -4,6 +4,7 @@ import { sessionMiddleware } from "../../app";
 
 interface ClientWithIngenio extends WebSocket {
 	ingenioId?: number;
+	isSuperAdmin?: boolean;
 }
 
 export class WebSocketBus implements IMessageBus {
@@ -13,14 +14,19 @@ export class WebSocketBus implements IMessageBus {
 		this.wss.on("connection", (ws, req: any) => {
 			sessionMiddleware(req, {} as any, () => {
 				const user = req.session?.user;
-				if (!user || !user.ingenioId) {
-					console.error("❌ Cliente conectado sin ingenioId");
+
+				// Permitir conexión si tiene ingenioId O es Superadmin
+				if (!user || (!user.ingenioId && user.role !== "SUPERADMIN")) {
+					console.error("❌ Cliente conectado sin permisos (sin ingenioId y no es Superadmin)");
 					ws.close();
 					return;
 				}
 
-				(ws as ClientWithIngenio).ingenioId = user.ingenioId;
-				this.clients.add(ws as ClientWithIngenio);
+				const client = ws as ClientWithIngenio;
+				client.ingenioId = user.ingenioId;
+				client.isSuperAdmin = user.role === "SUPERADMIN";
+
+				this.clients.add(client);
 			});
 			console.log("✅ Cliente conectado al WebSocket");
 
@@ -43,7 +49,11 @@ export class WebSocketBus implements IMessageBus {
 	publishToIngenio(event: string, payload: any, ingenioId: number): void {
 		const msg = JSON.stringify({ type: event, payload });
 		for (const client of this.clients) {
-			if (client.readyState === WebSocket.OPEN && client.ingenioId === ingenioId) {
+			// Enviar si pertenece al ingenio O si es Superadmin (ve todo)
+			if (
+				client.readyState === WebSocket.OPEN &&
+				(client.ingenioId === ingenioId || client.isSuperAdmin)
+			) {
 				client.send(msg);
 			}
 		}

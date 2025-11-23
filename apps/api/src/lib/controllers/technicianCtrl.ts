@@ -7,7 +7,7 @@ export const getAllTechnicians = async (req: Request, res: Response) => {
     try {
         const technicians = await prisma.technician.findMany({
             include: { maintenances: true },
-            where: { ingenioId: req.session.user?.ingenioId },
+            where: { ingenioId: req.session.user?.ingenioId! },
         });
         res.json(technicians);
     } catch (error) {

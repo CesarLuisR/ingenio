@@ -12,6 +12,7 @@ model Ingenio {
   name         String
   code         String        @unique
   location     String?
+  active       Boolean       @default(true)
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
@@ -159,8 +160,8 @@ model User {
   createdAt    DateTime   @default(now())
 
   // Multi-ingenio
-  ingenioId    Int
-  ingenio      Ingenio    @relation(fields: [ingenioId], references: [id])
+  ingenioId    Int?
+  ingenio      Ingenio?    @relation(fields: [ingenioId], references: [id])
   auditLogs    AuditLog[]
 }
 

@@ -3,7 +3,6 @@ import { Request, Response } from "express";
 import RedisRepository from "../repositories/cache/redisRepository";
 import hasPermission from "../utils/permissionUtils";
 import { UserRole } from "@prisma/client";
-import { ConfigData } from "../../types/sensorTypes";
 
 const cacheRepository = new RedisRepository();
 
@@ -12,8 +11,26 @@ const cacheRepository = new RedisRepository();
 ----------------------------------------------------------- */
 export const getAllSensors = async (req: Request, res: Response) => {
 	try {
+		const user = req.session.user;
+		const where: any = {};
+
+		// Si no es superadmin, debe filtrar por ingenio
+		if (user?.role !== UserRole.SUPERADMIN) {
+			if (!user?.ingenioId) {
+				// Si no tiene ingenio asignado y no es superadmin, no ve nada
+				return res.json([]);
+			}
+			where.ingenioId = user.ingenioId;
+		} else {
+			// Si es SUPERADMIN, permitir filtrar por query param
+			const { ingenioId } = req.query;
+			if (ingenioId) {
+				where.ingenioId = Number(ingenioId);
+			}
+		}
+
 		const sensors = await prisma.sensor.findMany({
-			where: { ingenioId: req.session.user?.ingenioId },
+			where,
 			include: {
 				failures: true,
 				machine: true,      // Ahora que sensor pertenece a machine
@@ -183,21 +200,21 @@ export const deactivateSensor = async (req: Request, res: Response) => {
    PATCH /sensors/:sensorId/activate
 ----------------------------------------------------------- */
 export const activateSensor = async (req: Request, res: Response) => {
-    try {
-        const { sensorId } = req.params;
+	try {
+		const { sensorId } = req.params;
 
-        const existing = await prisma.sensor.findUnique({
-            where: { sensorId },
-        });
+		const existing = await prisma.sensor.findUnique({
+			where: { sensorId },
+		});
 
-        if (!existing) {
-            return res.status(404).json({ error: "Sensor not found" });
-        }
+		if (!existing) {
+			return res.status(404).json({ error: "Sensor not found" });
+		}
 
-        // Validar permisos (misma lógica que deactivate)
-        if (existing.ingenioId !== req.session.user?.ingenioId) {
-            return res.status(403).json({ message: "Forbidden access" });
-        }
+		// Validar permisos (misma lógica que deactivate)
+		if (existing.ingenioId !== req.session.user?.ingenioId) {
+			return res.status(403).json({ message: "Forbidden access" });
+		}
 
 		const currentConfig = (existing.config as Record<string, any>) || {};
 		currentConfig.active = true;
@@ -207,19 +224,19 @@ export const activateSensor = async (req: Request, res: Response) => {
 		await cacheRepository.set(
 			`sensor:${sensorId}-updated`,
 			JSON.stringify(currentConfig)
-		);	
+		);
 
-        const sensor = await prisma.sensor.update({
-            where: { sensorId },
-            data: { active: true, config: currentConfig },
-        });
+		const sensor = await prisma.sensor.update({
+			where: { sensorId },
+			data: { active: true, config: currentConfig },
+		});
 
-        return res.json({
-            message: `Sensor ${sensorId} activated successfully.`,
-            sensor,
-        });
-    } catch (error: any) {
-        console.error("Error activating sensor:", error);
-        return res.status(500).json({ error: "Internal server error" });
-    }
+		return res.json({
+			message: `Sensor ${sensorId} activated successfully.`,
+			sensor,
+		});
+	} catch (error: any) {
+		console.error("Error activating sensor:", error);
+		return res.status(500).json({ error: "Internal server error" });
+	}
 };

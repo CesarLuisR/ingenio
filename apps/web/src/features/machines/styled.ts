@@ -733,3 +733,9 @@ export const InlineInfoPill = styled.div`
 
 // Exports necesarios para mantener compatibilidad pero que no se usan visualmente igual
 export const ListHeaderRow = styled.div`display: none;`;
+
+export const Select = styled.select`
+  ${inputStyles}
+  cursor: pointer;
+  appearance: none;
+`;

@@ -35,6 +35,26 @@ class ApiClient {
 		return response.json();
 	}
 
+    // ======================
+    // 📈 DASHBOARD SPECIFIC
+    // ======================
+
+    getDashboardHistory(ingenioId: number): Promise<{ time: string; availability: number; failures: number }[]> {
+        return this.request(`/api/dashboard/${ingenioId}/history`);
+    }
+
+    getRecentActivity(ingenioId: number): Promise<Array<{
+        id: string;
+        type: 'failure' | 'maintenance';
+        title: string;
+        machine: string;
+        status: string;
+        timestamp: string;
+        meta: string;
+    }>> {
+        return this.request(`/api/dashboard/${ingenioId}/activity`);
+    }
+
 	// ======================
 	// 🔐 AUTH
 	// ======================
@@ -94,12 +114,25 @@ class ApiClient {
 		});
 	}
 
+	activateIngenio(id: number): Promise<void> {
+		return this.request<void>(`/api/ingenios/${id}/activate`, {
+			method: "PUT",
+		});
+	}
+
+	deactivateIngenio(id: number): Promise<void> {
+		return this.request<void>(`/api/ingenios/${id}/deactivate`, {
+			method: "PUT",
+		});
+	}
+
 	// ======================
 	// 🏭 MACHINES
 	// ======================
 
-	getMachines(): Promise<Machine[]> {
-		return this.request<Machine[]>("/api/machines");
+	getMachines(ingenioId?: number): Promise<Machine[]> {
+		const query = ingenioId ? `?ingenioId=${ingenioId}` : "";
+		return this.request<Machine[]>(`/api/machines${query}`);
 	}
 
 	getMachine(id: number): Promise<Machine> {
@@ -150,8 +183,9 @@ class ApiClient {
 	// 📡 SENSORS
 	// ======================
 
-	getSensors(): Promise<Sensor[]> {
-		return this.request<Sensor[]>("/api/sensors");
+	getSensors(ingenioId?: number): Promise<Sensor[]> {
+		const query = ingenioId ? `?ingenioId=${ingenioId}` : "";
+		return this.request<Sensor[]>(`/api/sensors${query}`);
 	}
 
 	getSensor(sensorId: string): Promise<Sensor> {
@@ -283,8 +317,9 @@ class ApiClient {
 	// 👤 USERS
 	// ======================
 
-	getUsers(): Promise<User[]> {
-		return this.request<User[]>("/api/users");
+	getUsers(ingenioId?: number): Promise<User[]> {
+		const url = ingenioId ? `/api/users?ingenioId=${ingenioId}` : "/api/users";
+		return this.request<User[]>(url);
 	}
 
 	createUser(data: Partial<User>): Promise<User> {
@@ -311,12 +346,11 @@ class ApiClient {
 	// 🧠 ANALYSIS
 	// ======================
 
-	analyzeData(sensorIds: string[]): Promise<AnalysisResponse> {
-		return this.request<AnalysisResponse>("/api/analyze", {
-			method: "POST",
-			body: JSON.stringify(sensorIds),
-		});
-	}
+    analyzeMachine(machineId: number): Promise<{ machine: any; analysis: AnalysisResponse }> {
+        return this.request(`/api/analyze/machine/${machineId}`, {
+            method: "GET",
+        });
+    }
 
 	// ======================
 	// 🔄 INGEST

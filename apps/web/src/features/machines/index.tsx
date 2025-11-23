@@ -1,254 +1,292 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMachines, type MachineWithRelations } from "./hooks/useMachine";
 import { MachineFormModal } from "./components/MachineModal";
 import { MachineCard } from "./components/MachineCard";
 import { api } from "../../lib/api";
 import { useSessionStore } from "../../store/sessionStore";
-import { ROLES } from "../../types";
+import { ROLES, type Ingenio } from "../../types";
 import { hasPermission } from "../../lib/hasPermission";
 
 import {
-	Container,
-	Header,
-	HeaderRight,
-	Title,
-	SubTitle,
-	ListSummary,
-	Button,
-	MachineList,
-	LoadingText,
-	ErrorBox,
-	EmptyState,
-	FiltersBar,
-	FiltersRight,
-	CheckboxLabel,
-	ResetFiltersButton,
-	SortDirButton,
-	TextInput,
+    Container,
+    Header,
+    HeaderRight,
+    Title,
+    SubTitle,
+    ListSummary,
+    Button,
+    MachineList,
+    LoadingText,
+    ErrorBox,
+    EmptyState,
+    FiltersBar,
+    FiltersRight,
+    CheckboxLabel,
+    ResetFiltersButton,
+    SortDirButton,
+    TextInput,
+    Select,
 } from "./styled";
 
 type SortField = "name" | "code" | "createdAt";
 
 export default function MachinesPage() {
-	const navigate = useNavigate();
-	const { user } = useSessionStore();
-	const { machines, loading, error, setMachines } = useMachines();
+    const navigate = useNavigate();
+    const { user } = useSessionStore();
+    
+    const isSuperAdmin = user?.role === ROLES.SUPERADMIN;
+    // Solo Admin del ingenio puede gestionar (crear/borrar/editar)
+    // SuperAdmin ve todo pero generalmente en modo lectura global en esta vista
+    const canManage = hasPermission(user?.role || "", ROLES.ADMIN) && !isSuperAdmin; 
 
-	const [search, setSearch] = useState("");
-	const [onlyActive, setOnlyActive] = useState(false);
-	const [sortField, setSortField] = useState<SortField>("name");
-	const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+    // --- Lógica de Ingenios (Solo Super Admin) ---
+    const [ingenios, setIngenios] = useState<Ingenio[]>([]);
+    const [selectedIngenioId, setSelectedIngenioId] = useState<number | undefined>(undefined);
 
-	const [modalOpen, setModalOpen] = useState(false);
-	const [modalMode, setModalMode] = useState<"create" | "edit">("create");
-	const [selectedMachine, setSelectedMachine] =
-		useState<MachineWithRelations | null>(null);
+    useEffect(() => {
+        if (isSuperAdmin) {
+            api.getAllIngenios().then(setIngenios).catch(console.error);
+        }
+    }, [isSuperAdmin]);
 
-	const canManage = hasPermission(user?.role || "", ROLES.ADMIN);
+    // Pasamos el ID seleccionado al hook
+    const { machines, loading, error, setMachines } = useMachines(selectedIngenioId);
 
-	const filteredMachines = useMemo(() => {
-		let data = [...machines];
+    const [search, setSearch] = useState("");
+    const [onlyActive, setOnlyActive] = useState(false);
+    const [sortField, setSortField] = useState<SortField>("name");
+    const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
-		if (search.trim()) {
-			const term = search.toLowerCase();
-			data = data.filter(
-				(m) =>
-					m.name.toLowerCase().includes(term) ||
-					m.code.toLowerCase().includes(term) ||
-					(m.location ?? "").toLowerCase().includes(term)
-			);
-		}
+    const [modalOpen, setModalOpen] = useState(false);
+    const [modalMode, setModalMode] = useState<"create" | "edit">("create");
+    const [selectedMachine, setSelectedMachine] = useState<MachineWithRelations | null>(null);
 
-		if (onlyActive) {
-			data = data.filter((m) => m.active);
-		}
+    const filteredMachines = useMemo(() => {
+        let data = [...machines];
 
-		data.sort((a, b) => {
-			let av: string | number = "";
-			let bv: string | number = "";
+        if (search.trim()) {
+            const term = search.toLowerCase();
+            data = data.filter(
+                (m) =>
+                    m.name.toLowerCase().includes(term) ||
+                    m.code.toLowerCase().includes(term) ||
+                    (m.location ?? "").toLowerCase().includes(term)
+            );
+        }
 
-			if (sortField === "name") {
-				av = a.name.toLowerCase();
-				bv = b.name.toLowerCase();
-			} else if (sortField === "code") {
-				av = a.code.toLowerCase();
-				bv = b.code.toLowerCase();
-			} else {
-				av = new Date(a.createdAt).getTime();
-				bv = new Date(b.createdAt).getTime();
-			}
+        if (onlyActive) {
+            data = data.filter((m) => m.active);
+        }
 
-			if (av < bv) return sortDir === "asc" ? -1 : 1;
-			if (av > bv) return sortDir === "asc" ? 1 : -1;
-			return 0;
-		});
+        data.sort((a, b) => {
+            let av: string | number = "";
+            let bv: string | number = "";
 
-		return data;
-	}, [machines, search, onlyActive, sortField, sortDir]);
+            if (sortField === "name") {
+                av = a.name.toLowerCase();
+                bv = b.name.toLowerCase();
+            } else if (sortField === "code") {
+                av = a.code.toLowerCase();
+                bv = b.code.toLowerCase();
+            } else {
+                av = new Date(a.createdAt).getTime();
+                bv = new Date(b.createdAt).getTime();
+            }
 
-	const total = machines.length;
-	const activeCount = machines.filter((m) => m.active).length;
+            if (av < bv) return sortDir === "asc" ? -1 : 1;
+            if (av > bv) return sortDir === "asc" ? 1 : -1;
+            return 0;
+        });
 
-	const openCreateModal = () => {
-		setModalMode("create");
-		setSelectedMachine(null);
-		setModalOpen(true);
-	};
+        return data;
+    }, [machines, search, onlyActive, sortField, sortDir]);
 
-	const openEditModal = (machine: MachineWithRelations) => {
-		setModalMode("edit");
-		setSelectedMachine(machine);
-		setModalOpen(true);
-	};
+    // Estadísticas
+    const total = machines.length;
+    const operativeCount = machines.filter(m => m.active && !m.failures?.some(f => !f.resolvedAt)).length;
+    const warningCount = machines.filter(m => m.active && m.failures?.some(f => !f.resolvedAt)).length;
+    const inactiveCount = machines.filter(m => !m.active).length;
 
-	const handleSaved = (saved: MachineWithRelations) => {
-		setMachines((prev) => {
-			const exists = prev.some((m) => m.id === saved.id);
-			if (exists) {
-				return prev.map((m) =>
-					m.id === saved.id ? { ...m, ...saved } : m
-				);
-			}
-			return [...prev, saved];
-		});
-	};
+    const openCreateModal = () => {
+        setModalMode("create");
+        setSelectedMachine(null);
+        setModalOpen(true);
+    };
 
-	const handleDelete = async (machine: MachineWithRelations) => {
-		const confirmDelete = window.confirm(
-			`¿Seguro que deseas eliminar la máquina "${machine.name}"?`
-		);
-		if (!confirmDelete) return;
+    const openEditModal = (machine: MachineWithRelations) => {
+        setModalMode("edit");
+        setSelectedMachine(machine);
+        setModalOpen(true);
+    };
 
-		try {
-			await api.deleteMachine(machine.id);
-			setMachines((prev) => prev.filter((m) => m.id !== machine.id));
-		} catch (err: any) {
-			alert(
-				err?.message ||
-					"Error al eliminar la máquina. Intenta nuevamente."
-			);
-		}
-	};
+    const handleSaved = (saved: MachineWithRelations) => {
+        setMachines((prev) => {
+            const exists = prev.some((m) => m.id === saved.id);
+            if (exists) {
+                return prev.map((m) =>
+                    m.id === saved.id ? { ...m, ...saved } : m
+                );
+            }
+            return [...prev, saved];
+        });
+    };
 
-	const handleResetFilters = () => {
-		setSearch("");
-		setOnlyActive(false);
-		setSortField("name");
-		setSortDir("asc");
-	};
+    const handleDelete = async (machine: MachineWithRelations) => {
+        const confirmDelete = window.confirm(
+            `¿Seguro que deseas eliminar la máquina "${machine.name}"?`
+        );
+        if (!confirmDelete) return;
 
-	const handleView = (machine: MachineWithRelations) => {
-		navigate(`/maquinas/${machine.id}`);
-	};
+        try {
+            await api.deleteMachine(machine.id);
+            setMachines((prev) => prev.filter((m) => m.id !== machine.id));
+        } catch (err: any) {
+            alert(err?.message || "Error al eliminar la máquina. Intenta nuevamente.");
+        }
+    };
 
-	return (
-		<Container>
-			<Header>
-				<div>
-					<Title>Máquinas</Title>
-					<SubTitle>
-						Inventario de equipos del ingenio. Inspecciona sensores, estado,
-						mantenimientos y fallas.
-					</SubTitle>
+    const handleResetFilters = () => {
+        setSearch("");
+        setOnlyActive(false);
+        setSortField("name");
+        setSortDir("asc");
+    };
 
-					<ListSummary>
-						<span>{total} máquinas</span>
-						<span>{activeCount} activas</span>
-						<span>{total - activeCount} inactivas</span>
-					</ListSummary>
-				</div>
+    const handleView = (machine: MachineWithRelations) => {
+        // Bloquear acceso a detalles si es Super Admin (vista global)
+        if (isSuperAdmin) {
+            // Opcional: Mostrar un toast o alerta
+            return;
+        }
+        navigate(`/maquinas/${machine.id}`);
+    };
 
-				<HeaderRight>
-					{canManage && (
-						<Button onClick={openCreateModal}>Nueva máquina</Button>
-					)}
-				</HeaderRight>
-			</Header>
+    return (
+        <Container>
+            <Header>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                        <Title>Máquinas</Title>
+                        
+                        {/* Selector de Ingenios solo para Super Admin */}
+                        {isSuperAdmin && (
+                            <Select
+                                value={selectedIngenioId || ""}
+                                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedIngenioId(e.target.value ? Number(e.target.value) : undefined)}
+                                style={{ width: '220px', margin: 0, fontSize: 14 }}
+                            >
+                                <option value="">🏢 Todos los Ingenios</option>
+                                {ingenios.map(ing => (
+                                    <option key={ing.id} value={ing.id}>{ing.name}</option>
+                                ))}
+                            </Select>
+                        )}
+                    </div>
 
-			<FiltersBar>
-				<TextInput
-					placeholder="Buscar por nombre, código o ubicación…"
-					value={search}
-					onChange={(e) => setSearch(e.target.value)}
-				/>
+                    <SubTitle>
+                        Inventario de equipos del ingenio. Inspecciona sensores, estado,
+                        mantenimientos y fallas.
+                    </SubTitle>
 
-				<select
-					value={sortField}
-					onChange={(e) => setSortField(e.target.value as SortField)}
-					style={{
-						padding: "8px 12px",
-						borderRadius: "10px",
-						border: "1px solid #cbd5e1",
-						fontSize: "14px",
-						background: "white",
-					}}
-				>
-					<option value="name">Ordenar por nombre</option>
-					<option value="code">Ordenar por código</option>
-					<option value="createdAt">Ordenar por fecha de creación</option>
-				</select>
+                    <ListSummary>
+                        <span>Total: {total}</span>
+                        <span style={{color: '#16a34a'}}>Operativas: {operativeCount}</span>
+                        <span style={{color: '#d97706'}}>Advertencia: {warningCount}</span>
+                        <span style={{color: '#94a3b8'}}>Inactivas: {inactiveCount}</span>
+                    </ListSummary>
+                </div>
 
-				<FiltersRight>
-					<CheckboxLabel>
-						<input
-							type="checkbox"
-							checked={onlyActive}
-							onChange={(e) => setOnlyActive(e.target.checked)}
-						/>
-						Solo activas
-					</CheckboxLabel>
+                <HeaderRight>
+                    {canManage && (
+                        <Button onClick={openCreateModal}>Nueva máquina</Button>
+                    )}
+                </HeaderRight>
+            </Header>
 
-					<SortDirButton
-						type="button"
-						onClick={() =>
-							setSortDir((d) => (d === "asc" ? "desc" : "asc"))
-						}
-					>
-						{sortDir === "asc" ? "Ascendente ↑" : "Descendente ↓"}
-					</SortDirButton>
+            <FiltersBar>
+                <TextInput
+                    placeholder="Buscar por nombre, código o ubicación…"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                />
 
-					<ResetFiltersButton type="button" onClick={handleResetFilters}>
-						Reiniciar
-					</ResetFiltersButton>
-				</FiltersRight>
-			</FiltersBar>
+                <select
+                    value={sortField}
+                    onChange={(e) => setSortField(e.target.value as SortField)}
+                    style={{
+                        padding: "8px 12px",
+                        borderRadius: "10px",
+                        border: "1px solid #cbd5e1",
+                        fontSize: "14px",
+                        background: "white",
+                    }}
+                >
+                    <option value="name">Ordenar por nombre</option>
+                    <option value="code">Ordenar por código</option>
+                    <option value="createdAt">Ordenar por fecha de creación</option>
+                </select>
 
-			{loading && <LoadingText>Cargando máquinas…</LoadingText>}
-			{error && !loading && <ErrorBox>{error}</ErrorBox>}
+                <FiltersRight>
+                    <CheckboxLabel>
+                        <input
+                            type="checkbox"
+                            checked={onlyActive}
+                            onChange={(e) => setOnlyActive(e.target.checked)}
+                        />
+                        Solo activas
+                    </CheckboxLabel>
 
-			{!loading && !error && filteredMachines.length === 0 && (
-				<EmptyState>
-					<p>No se encontraron máquinas con los filtros actuales.</p>
-					{canManage && (
-						<button type="button" onClick={openCreateModal}>
-							Registrar máquina
-						</button>
-					)}
-				</EmptyState>
-			)}
+                    <SortDirButton
+                        type="button"
+                        onClick={() =>
+                            setSortDir((d) => (d === "asc" ? "desc" : "asc"))
+                        }
+                    >
+                        {sortDir === "asc" ? "Ascendente ↑" : "Descendente ↓"}
+                    </SortDirButton>
 
-			{!loading && !error && filteredMachines.length > 0 && (
-				<MachineList>
-					{filteredMachines.map((m) => (
-						<MachineCard
-							key={m.id}
-							machine={m}
-							onView={handleView}
-							onEdit={openEditModal}
-							onDelete={handleDelete}
-						/>
-					))}
-				</MachineList>
-			)}
+                    <ResetFiltersButton type="button" onClick={handleResetFilters}>
+                        Reiniciar
+                    </ResetFiltersButton>
+                </FiltersRight>
+            </FiltersBar>
 
-			<MachineFormModal
-				isOpen={modalOpen}
-				onClose={() => setModalOpen(false)}
-				mode={modalMode}
-				onSaved={handleSaved}
-				initialMachine={modalMode === "edit" ? selectedMachine : null}
-			/>
-		</Container>
-	);
+            {loading && <LoadingText>Cargando máquinas…</LoadingText>}
+            {error && !loading && <ErrorBox>{error}</ErrorBox>}
+
+            {!loading && !error && filteredMachines.length === 0 && (
+                <EmptyState>
+                    <p>No se encontraron máquinas con los filtros actuales.</p>
+                    {canManage && (
+                        <button type="button" onClick={openCreateModal}>
+                            Registrar máquina
+                        </button>
+                    )}
+                </EmptyState>
+            )}
+
+            {!loading && !error && filteredMachines.length > 0 && (
+                <MachineList>
+                    {filteredMachines.map((m) => (
+                        <MachineCard
+                            key={m.id}
+                            machine={m}
+                            onView={handleView} // handleView bloquea si es Super Admin
+                            onEdit={openEditModal}
+                            onDelete={handleDelete}
+                        />
+                    ))}
+                </MachineList>
+            )}
+
+            <MachineFormModal
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                mode={modalMode}
+                onSaved={handleSaved}
+                initialMachine={modalMode === "edit" ? selectedMachine : null}
+            />
+        </Container>
+    );
 }

@@ -70,3 +70,31 @@ export const deleteIngenio: RequestHandler = async (req, res) => {
 
     res.status(204).send();
 };
+
+export const activateIngenio: RequestHandler = async (req, res) => {
+    if (!hasPermission(req.session.user?.role as UserRole, UserRole.SUPERADMIN))
+        return res.status(403).json({ message: "Forbidden access " });
+
+    const id = Number(req.params.id);
+
+    await prisma.ingenio.update({
+        where: { id },
+        data: { active: true },
+    });
+
+    res.status(204).send();
+};
+
+export const deactivateIngenio: RequestHandler = async (req, res) => {
+    if (!hasPermission(req.session.user?.role as UserRole, UserRole.SUPERADMIN))
+        return res.status(403).json({ message: "Forbidden access " });
+
+    const id = Number(req.params.id);
+
+    await prisma.ingenio.update({
+        where: { id },
+        data: { active: false },
+    });
+
+    res.status(204).send();
+};

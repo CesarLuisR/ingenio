@@ -11,8 +11,13 @@ export const getAllUsers = async (req: Request, res: Response) => {
     // Si NO es superadmin, filtrar por su ingenio
     if (currentUser?.role !== UserRole.SUPERADMIN) {
         whereClause.ingenioId = currentUser?.ingenioId;
+    } else {
+        // Si es SUPERADMIN, permitir filtrar por query param
+        const { ingenioId } = req.query;
+        if (ingenioId) {
+            whereClause.ingenioId = Number(ingenioId);
+        }
     }
-    // Si es SUPERADMIN, no aplicamos filtro (ve todos), o podría filtrar por query param si se implementara
 
     const users = await prisma.user.findMany({
         where: whereClause,

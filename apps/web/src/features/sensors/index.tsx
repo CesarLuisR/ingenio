@@ -1,13 +1,14 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useReadingsStore } from "../../store/readingState";
 import { useSensors } from "./hooks/useSensors";
 import { useActiveSensors } from "./hooks/useActiveSensors";
-import type { Sensor } from "../../types";
+import type { Sensor, Ingenio } from "../../types";
 import { useSessionStore } from "../../store/sessionStore";
 import { hasPermission } from "../../lib/hasPermission";
 import { ROLES } from "../../types";
+import { api } from "../../lib/api";
 
 import {
     Container,
@@ -39,6 +40,19 @@ import SensorForm from "./components/SensorForm";
 
 export default function Sensores() {
     const navigate = useNavigate();
+    const { user } = useSessionStore();
+    const isSuperAdmin = user?.role === ROLES.SUPERADMIN;
+    const canManage = hasPermission(user?.role || "", ROLES.ADMIN);
+
+    const [ingenios, setIngenios] = useState<Ingenio[]>([]);
+    const [selectedIngenioId, setSelectedIngenioId] = useState<number | undefined>(undefined);
+
+    // Cargar ingenios si es superadmin
+    useEffect(() => {
+        if (isSuperAdmin) {
+            api.getAllIngenios().then(setIngenios).catch(console.error);
+        }
+    }, [isSuperAdmin]);
 
     const {
         sensors,
@@ -49,11 +63,8 @@ export default function Sensores() {
         setSearchTerm,
         reload,
         deactivateSensor,
-        activateSensor, // <--- Importamos la nueva función
-    } = useSensors();
-
-    const { user } = useSessionStore();
-    const canManage = hasPermission(user?.role || "", ROLES.ADMIN);
+        activateSensor,
+    } = useSensors(selectedIngenioId);
 
     const [showForm, setShowForm] = useState(false);
     const [editingSensor, setEditingSensor] = useState<Sensor | null>(null);
@@ -148,11 +159,25 @@ export default function Sensores() {
     return (
         <Container>
             <Header>
-                <div>
-                    <Title>Sensores</Title>
-                    <p style={{color: '#64748b', margin: '8px 0 0 0'}}>
-                        Monitoreo en tiempo real del estado y configuración de dispositivos.
-                    </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                    <div>
+                        <Title>Sensores</Title>
+                        <p style={{color: '#64748b', margin: '8px 0 0 0'}}>
+                            Monitoreo en tiempo real del estado y configuración de dispositivos.
+                        </p>
+                    </div>
+                    {isSuperAdmin && (
+                        <Select
+                            value={selectedIngenioId || ""}
+                            onChange={(e) => setSelectedIngenioId(e.target.value ? Number(e.target.value) : undefined)}
+                            style={{ width: '200px', margin: 0 }}
+                        >
+                            <option value="">Todos los Ingenios</option>
+                            {ingenios.map(ing => (
+                                <option key={ing.id} value={ing.id}>{ing.name}</option>
+                            ))}
+                        </Select>
+                    )}
                 </div>
                 {canManage && (
                     <ActionButton onClick={() => alert("Próximamente")}>

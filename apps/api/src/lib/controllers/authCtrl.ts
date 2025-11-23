@@ -23,10 +23,22 @@ export const loginCtrl: RequestHandler = async (req, res) => {
         ingenioId: user.ingenioId
     };
 
+    const ingenio = user.ingenioId
+        ? await prisma.ingenio.findUnique({ where: { id: user.ingenioId } })
+        : null;
+
+    if (!ingenio) {
+        return res.json({ message: "Login successful", user: req.session.user });
+    }
+
+    if (ingenio?.active === false) {
+        return res.status(401).json({ message: "Ingenio inactivo" });
+    }
+
     res.json({ message: "Login successful", user: req.session.user });
 };
 
-export const logoutCtrl: RequestHandler = (req, res) => {   
+export const logoutCtrl: RequestHandler = (req, res) => {
     req.session.destroy((err) => {
         if (err) {
             return res.status(500).json({ message: "Logout failed" });
@@ -37,7 +49,7 @@ export const logoutCtrl: RequestHandler = (req, res) => {
 
 export const getSessionCtrl: RequestHandler = (req, res) => {
     if (req.session.user) {
-        res.json({ user: req.session.user });   
+        res.json({ user: req.session.user });
     } else {
         res.json({ user: null });
     }

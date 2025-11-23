@@ -91,7 +91,7 @@ export async function createUsers() {
                 role: UserRole.SUPERADMIN,
                 passwordHash:
                     "$2b$10$y9EfTvn5iCRn.QvFZO2mO.hwO3wPXXtYBNnu1ONsw5Tv8Og4Eo8ba",
-                ingenioId: ingenio.id
+                ingenioId: null 
             },
         });
 

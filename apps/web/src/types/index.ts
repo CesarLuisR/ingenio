@@ -130,14 +130,6 @@ export interface BaseMetrics {
 	mtta: number | null;
 }
 
-export interface MetricAnalysis {
-	tendencia: "subiendo" | "bajando" | "estable";
-	pendiente: number;
-	valorActual: number;
-	rango: { min?: number; max?: number };
-	urgencia: "normal" | "moderada" | "⚠️ muy alta" | "🚨 fuera de rango";
-}
-
 export interface ChartPoint {
 	timestamp: string;
 	value: number;
@@ -154,12 +146,6 @@ export interface ChartData {
 
 export interface CategorySummary {
 	[metricName: string]: MetricAnalysis | { message: string };
-}
-
-export interface SensorReport {
-	sensorId: string;
-	resumen: Record<string, CategorySummary>;
-	chartData: ChartData;
 }
 
 export interface AnalysisResponse {
@@ -204,4 +190,51 @@ export interface SensorHealth {
 	active: boolean;
 	lastSeen: string | null;
 	lastAnalysis: any | null;
+}
+
+// NEW TYPES
+
+export interface ChartPoint {
+    timestamp: string;
+    value: number;
+}
+
+export interface ChartMetric {
+    metric: string;
+    data: ChartPoint[];
+}
+
+export interface MetricAnalysis {
+    tendencia: "subiendo" | "bajando" | "estable";
+    pendiente: number;
+    valorActual: number;
+    rango: {
+        min: number;
+        max: number;
+    };
+    urgencia: "normal" | "moderada" | "⚠️ muy alta" | "🚨 fuera de rango";
+    message?: string; // Opcional, ya que en tu JSON a veces no viene
+}
+
+export interface SensorReport {
+    sensorId: string;
+    // Resumen: Objeto anidado por categoría -> métrica -> análisis
+    resumen: Record<string, Record<string, MetricAnalysis>>;
+    // ChartData: Objeto anidado por categoría -> array de gráficos
+    chartData: Record<string, ChartMetric[]>;
+}
+
+export interface AnalysisResponse {
+    timestamp: string;
+    report: SensorReport[];
+}
+
+// Tipo envoltorio que devuelve tu endpoint analyzeMachine
+export interface MachineAnalysisResponse {
+    machine: {
+        id: number;
+        name: string;
+        code: string;
+    };
+    analysis: AnalysisResponse;
 }

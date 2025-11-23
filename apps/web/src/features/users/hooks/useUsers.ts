@@ -3,7 +3,7 @@ import { api } from "../../../lib/api";
 import type { User } from "../../../types";
 import { useSessionStore } from "../../../store/sessionStore";
 
-export default function useUsers() {
+export default function useUsers(ingenioId?: number) {
     const sessionUser = useSessionStore((s) => s.user);
 
     const [users, setUsers] = useState<User[]>([]);
@@ -14,11 +14,12 @@ export default function useUsers() {
 
     useEffect(() => {
         loadUsers();
-    }, []);
+    }, [ingenioId]);
 
     const loadUsers = async () => {
         try {
-            const data = await api.getUsers();
+            setLoading(true);
+            const data = await api.getUsers(ingenioId);
             setUsers(data);
         } catch (err) {
             console.error("Error cargando usuarios:", err);

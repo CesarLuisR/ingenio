@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
     Container,
     Header,
@@ -15,15 +16,31 @@ import {
     RoleBadge,
     Actions,
     ActionButton,
+    Select,
 } from "./styled";
 
 import useUsers from "./hooks/useUsers";
 import UserForm from "./components/UserForm";
-import { ROLES } from "../../types";
+import { ROLES, type Ingenio } from "../../types";
 import { useSessionStore } from "../../store/sessionStore";
 import { hasPermission } from "../../lib/hasPermission";
+import { api } from "../../lib/api";
 
 export default function Usuarios() {
+    const { user } = useSessionStore();
+    const isSuperAdmin = user?.role === ROLES.SUPERADMIN;
+    const canManage = hasPermission(user?.role || "", ROLES.ADMIN);
+
+    const [ingenios, setIngenios] = useState<Ingenio[]>([]);
+    const [selectedIngenioId, setSelectedIngenioId] = useState<number | undefined>(undefined);
+
+    // Cargar ingenios si es superadmin
+    useEffect(() => {
+        if (isSuperAdmin) {
+            api.getAllIngenios().then(setIngenios).catch(console.error);
+        }
+    }, [isSuperAdmin]);
+
     const {
         users,
         loading,
@@ -33,17 +50,29 @@ export default function Usuarios() {
         setEditing,
         loadUsers,
         deleteUser,
-    } = useUsers();
+    } = useUsers(selectedIngenioId);
 
-    const { user } = useSessionStore();
-    const canManage = hasPermission(user?.role || "", ROLES.ADMIN);
-
-    if (loading) return <LoadingText>Cargando usuarios...</LoadingText>;
+    if (loading && !users.length) return <LoadingText>Cargando usuarios...</LoadingText>;
 
     return (
         <Container>
             <Header>
-                <Title>Gestión de Usuarios</Title>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                    <Title>Gestión de Usuarios</Title>
+                    {isSuperAdmin && (
+                        <Select
+                            value={selectedIngenioId || ""}
+                            onChange={(e) => setSelectedIngenioId(e.target.value ? Number(e.target.value) : undefined)}
+                            style={{ width: '200px', margin: 0 }}
+                        >
+                            <option value="">Todos los Ingenios</option>
+                            {ingenios.map(ing => (
+                                <option key={ing.id} value={ing.id}>{ing.name}</option>
+                            ))}
+                        </Select>
+                    )}
+                </div>
+                
                 {canManage && (
                     <Button
                         onClick={() => {
@@ -63,7 +92,7 @@ export default function Usuarios() {
                             <TableHeader>Nombre</TableHeader>
                             <TableHeader>Email</TableHeader>
                             <TableHeader>Rol</TableHeader>
-                            <TableHeader>Ingenio ID</TableHeader>
+                            <TableHeader>Ingenio</TableHeader>
                             <TableHeader>Fecha Creación</TableHeader>
                             {canManage && <TableHeader>Acciones</TableHeader>}
                         </tr>
@@ -88,7 +117,7 @@ export default function Usuarios() {
 
                                 <TableCell>
                                     <span style={{color: '#64748b', fontSize: 13}}>
-                                        #{u.ingenioId ?? "-"}
+                                        {u.ingenio ? u.ingenio.name : (u.ingenioId ? `#${u.ingenioId}` : "-")}
                                     </span>
                                 </TableCell>
 
