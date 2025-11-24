@@ -43,6 +43,7 @@ export default function Analisis() {
         try {
             const response = await api.analyzeMachine(Number(selectedMachineId));
             setFullResult(response);
+            console.log(response);
         } catch (error: any) {
             console.error(error);
             alert(error.message || "Error al analizar");

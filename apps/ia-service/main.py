@@ -8,10 +8,7 @@ from datetime import datetime, timedelta
 
 app = FastAPI(title="Ingenio AI Brain 🧠")
 
-# ==========================================
-# 1. MODELOS DE DATOS (Pydantic)
-# ==========================================
-
+# --- Modelos ---
 class MetricConfig(BaseModel):
     min: Optional[float] = None
     max: Optional[float] = None
@@ -28,220 +25,270 @@ class MachineData(BaseModel):
     config: SensorConfig
     readings: List[Reading]
 
-# ==========================================
-# 2. LÓGICA MATEMÁTICA Y ESTADÍSTICA
-# ==========================================
-
+# --- Helpers Generales ---
 def calculate_volatility(series):
-    """
-    Calcula el Coeficiente de Variación (CV).
-    Indica qué tan inestable es la señal (0.0 = plana, 0.5 = muy nerviosa).
-    """
     mean = series.mean()
     if mean == 0: return 0
     return series.std() / mean
 
 def detect_historical_anomalies(df, threshold=3):
-    """
-    Detecta cuántos puntos en la historia se desviaron más de 3 sigmas.
-    Útil para saber si la máquina ha estado comportándose raro recientemente.
-    """
     mean = df['y'].mean()
     std = df['y'].std()
     if std == 0: return 0
-    
-    # Z-Score robusto
     anomalies = df[np.abs(df['y'] - mean) > (threshold * std)]
     return len(anomalies)
 
-def generate_recommendation(status, trend, rul):
-    """Genera un mensaje legible para humanos basado en los datos."""
+def generate_recommendation(status, trend, rul, strategy):
+    prefix = "[IA] " if strategy == "prophet" else "[Estadística] "
+    
     if status == "critical":
-        return "⚠️ PARADA INMINENTE: Los valores actuales son críticos. Revisión inmediata."
-    
+        return prefix + "⚠️ PARADA INMINENTE: Revisión inmediata."
     if rul and rul < 24:
-        return f"ALERTA: Vida útil estimada menor a 24h ({rul}h). Planificar recambio."
-    
-    if rul and rul < 48:
-        return "Mantenimiento preventivo sugerido a corto plazo."
-    
+        return prefix + f"ALERTA: Vida útil estimada menor a 24h ({rul}h)."
     if status == "warning":
-        return "Precaución: Valores fuera de rango operativo óptimo. Monitorear."
-    
+        return prefix + "Precaución: Valores fuera de rango operativo."
     if trend == "increasing":
-        return "Tendencia ascendente detectada. Verificar carga de trabajo o lubricación."
-    
-    return "Operación normal. Parámetros estables."
+        return prefix + "Tendencia ascendente detectada."
+    return prefix + "Operación normal y estable."
 
-def analyze_metric_advanced(history_df, min_val, max_val):
-    """
-    Núcleo del análisis. Entrena Prophet, fusiona datos reales con predicciones
-    y calcula estadísticas de ingeniería.
-    """
+# ==========================================
+# ESTRATEGIA A: CORTO PLAZO (NumPy / Regresión Lineal)
+# Para cuando tenemos pocos datos (< 6 horas)
+# ==========================================
+def analyze_short_term(df, min_val, max_val):
+    # Convertimos fechas a números para regresión lineal
+    df['timestamp_num'] = df['ds'].apply(lambda x: x.timestamp())
     
-    # --- A. LIMPIEZA DE DATOS ---
-    # Eliminar zona horaria para evitar conflictos con Prophet
-    if history_df['ds'].dt.tz is not None:
-        history_df['ds'] = history_df['ds'].dt.tz_localize(None)
+    # Ajuste lineal (y = mx + b)
+    # m = pendiente, b = intercepto
+    m, b = np.polyfit(df['timestamp_num'], df['y'], 1)
     
-    current_val = history_df.iloc[-1]['y']
-    historical_max = history_df['y'].max()
+    current_time = df.iloc[-1]['ds']
+    current_val = df.iloc[-1]['y']
     
-    # Estadísticas sobre datos REALES (no predicciones)
-    volatility = calculate_volatility(history_df['y'])
-    anomalies = detect_historical_anomalies(history_df)
+    # Proyectar 24h (pero con mucho cuidado)
+    future_seconds = 24 * 3600
+    future_time = current_time + timedelta(seconds=future_seconds)
+    predicted_val = m * future_time.timestamp() + b
 
-    # --- B. ENTRENAMIENTO DE IA (Prophet) ---
-    try:
-        # Configuración ajustada para realismo:
-        # - changepoint_prior_scale=0.5: Hace al modelo flexible para seguir curvas reales.
-        # - seasonality_mode='additive': Evita explosiones exponenciales locas.
-        # - daily_seasonality=True: Busca patrones de día/noche.
-        m = Prophet(
-            changepoint_prior_scale=0.5, 
-            seasonality_prior_scale=10.0,
-            seasonality_mode='additive', 
-            daily_seasonality=True
-        )
-        m.fit(history_df)
-        
-        # Predecir 24 horas al futuro
-        future = m.make_future_dataframe(periods=24, freq='H')
-        forecast = m.predict(future)
-    except Exception as e:
-        print(f"Error entrenando Prophet: {e}")
-        return None
+    # Seguridad: Si la pendiente es minúscula, asumimos estabilidad total
+    # Esto evita que 0.0001 de subida se convierta en algo grande en 24h
+    if abs(m) < 0.00001: 
+        predicted_val = current_val
+        m = 0
 
-    # --- C. POST-PROCESAMIENTO Y SEGURIDAD ---
-    
-    # Clamping: Recortamos la predicción futura si se vuelve loca (más del doble del histórico)
-    # Esto evita que una gráfica de 220V muestre 8000V por una alucinación matemática.
-    limit_ceiling = historical_max * 2.0 if historical_max > 0 else 1000
-    forecast['yhat'] = forecast['yhat'].clip(upper=limit_ceiling)
-    forecast['yhat_upper'] = forecast['yhat_upper'].clip(upper=limit_ceiling * 1.2)
-
-    # --- D. CÁLCULOS DE TENDENCIA Y RUL ---
-    
-    future_slice = forecast.tail(24)
-    predicted_24h = future_slice.iloc[-1]['yhat']
-    
-    # Pendiente: Diferencia entre lo que será mañana y lo que es hoy
-    slope = (predicted_24h - current_val)
-
-    # Tendencia cualitativa
-    trend = "stable"
-    threshold = abs(current_val) * 0.02 # Umbral de sensibilidad del 2%
-    if slope > threshold: trend = "increasing"
-    elif slope < -threshold: trend = "decreasing"
-
-    # Estado del Semáforo
-    status = "ok"
-    if max_val is not None:
-        if current_val > max_val: status = "critical"
-        elif predicted_24h > max_val: status = "warning"
-        elif min_val is not None and current_val < min_val: status = "critical"
-    
-    # Si hay muchas anomalías pasadas, subimos a warning aunque el valor actual esté bien
-    if anomalies > 5 and status == "ok":
-        status = "warning"
-
-    # RUL (Remaining Useful Life)
+    # RUL Lineal
     rul_hours = None
-    if max_val is not None:
-        # Buscamos cuándo la predicción cruza el límite máximo
-        danger_zone = future_slice[future_slice['yhat'] >= max_val]
-        if not danger_zone.empty:
-            fail_time = danger_zone.iloc[0]['ds']
-            now_time = datetime.now()
-            delta = fail_time - now_time
-            rul_hours = max(0, round(delta.total_seconds() / 3600, 1))
+    if max_val is not None and m > 0:
+        # Tiempo = (Meta - Actual) / Velocidad
+        seconds_to_fail = (max_val - current_val) / m
+        if seconds_to_fail > 0:
+            rul_hours = round(seconds_to_fail / 3600, 1)
+            # Si el RUL es mayor a 30 días, lo ignoramos por ser poco fiable
+            if rul_hours > 720: rul_hours = None 
 
-    # --- E. PREPARACIÓN DE LA GRÁFICA (REAL vs PREDICCIÓN) ---
-    
-    # MAGIA AQUÍ: Unimos los datos REALES (history_df) con la predicción (forecast)
-    # history_df tiene ['ds', 'y'] -> Datos reales ruidosos
-    # forecast tiene ['ds', 'yhat', ...] -> Línea suave de la IA
-    
-    merged = pd.merge(forecast, history_df[['ds', 'y']], on='ds', how='left')
-    
-    # Tomamos una ventana de tiempo útil para el frontend (ej: últimos 3 días + 1 día futuro)
-    final_data = merged.tail(96) 
+    # Generar puntos para la gráfica (Solo 2 puntos: inicio y fin de la recta)
     chart_export = []
-    now = datetime.now()
+    
+    # Punto actual
+    chart_export.append({
+        "timestamp": current_time.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
+        "value": round(current_val, 2),
+        "confidenceLow": round(current_val * 0.95, 2), # Margen fijo 5%
+        "confidenceHigh": round(current_val * 1.05, 2),
+        "isFuture": True # Marcamos como inicio de la proyección
+    })
+    
+    # Punto futuro
+    chart_export.append({
+        "timestamp": future_time.strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
+        "value": round(predicted_val, 2),
+        "confidenceLow": round(predicted_val * 0.90, 2), # Margen se abre al 10%
+        "confidenceHigh": round(predicted_val * 1.10, 2),
+        "isFuture": True
+    })
 
-    for _, row in final_data.iterrows():
-        is_future = row['ds'] > now
-        
-        # LÓGICA DE VISUALIZACIÓN:
-        # 1. Si es pasado y tenemos dato real ('y'), usamos el REAL.
-        # 2. Si es pasado pero falta dato (sensor off), usamos la estimación ('yhat') para rellenar el hueco.
-        # 3. Si es futuro, usamos obligatoriamente la predicción ('yhat').
-        
-        final_value = row['yhat'] if is_future else (row['y'] if pd.notna(row['y']) else row['yhat'])
-
-        chart_export.append({
-            "timestamp": row['ds'].strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
-            "value": round(float(final_value), 2),
-            "confidenceLow": round(row['yhat_lower'], 2),
-            "confidenceHigh": round(row['yhat_upper'], 2),
-            "isFuture": is_future
-        })
+    slope_per_hour = m * 3600
+    trend = "stable"
+    if slope_per_hour > (current_val * 0.01): trend = "increasing"
+    elif slope_per_hour < -(current_val * 0.01): trend = "decreasing"
 
     return {
-        "status": status,
-        "currentValue": round(current_val, 2),
-        "predictedValue24h": round(predicted_24h, 2),
+        "strategy": "linear",
+        "current_val": current_val,
+        "predicted_val": predicted_val,
+        "slope": slope_per_hour,
         "trend": trend,
-        "slope": round(slope, 4),
-        "volatility": round(volatility, 3),
-        "anomalyCount": anomalies,
-        "rulHours": rul_hours,
-        "recommendation": generate_recommendation(status, trend, rul_hours),
-        "chartData": chart_export
+        "rul": rul_hours,
+        "chart_data": chart_export
     }
 
 # ==========================================
-# 3. ENDPOINT PRINCIPAL
+# ESTRATEGIA B: LARGO PLAZO (Prophet IA)
+# Para cuando tenemos historia real (> 6 horas)
 # ==========================================
+def analyze_long_term(df, min_val, max_val, historical_max):
+    try:
+        m = Prophet(
+            changepoint_prior_scale=0.1, # Moderado
+            seasonality_mode='additive', 
+            daily_seasonality=True
+        )
+        m.fit(df)
+        future = m.make_future_dataframe(periods=24, freq='H')
+        forecast = m.predict(future)
+    except:
+        return None # Fallback
+
+    # Clamping inteligente
+    limit_ceiling = historical_max * 1.5 if historical_max > 0 else 1000
+    forecast['yhat'] = forecast['yhat'].clip(upper=limit_ceiling)
+
+    future_slice = forecast.tail(24)
+    current_val = df.iloc[-1]['y']
+    predicted_val = future_slice.iloc[-1]['yhat']
+    slope = (predicted_val - current_val)
+
+    trend = "stable"
+    threshold = abs(current_val) * 0.02 
+    if slope > threshold: trend = "increasing"
+    elif slope < -threshold: trend = "decreasing"
+
+    rul_hours = None
+    if max_val is not None:
+        danger_zone = future_slice[future_slice['yhat'] >= max_val]
+        if not danger_zone.empty:
+            delta = danger_zone.iloc[0]['ds'] - datetime.now()
+            rul_hours = max(0, round(delta.total_seconds() / 3600, 1))
+
+    chart_export = []
+    for _, row in forecast.tail(24).iterrows(): # Solo exportamos la parte futura
+        if row['ds'] > datetime.now():
+            chart_export.append({
+                "timestamp": row['ds'].strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
+                "value": round(row['yhat'], 2),
+                "confidenceLow": round(row['yhat_lower'], 2),
+                "confidenceHigh": round(row['yhat_upper'], 2),
+                "isFuture": True
+            })
+
+    return {
+        "strategy": "prophet",
+        "current_val": current_val,
+        "predicted_val": predicted_val,
+        "slope": slope,
+        "trend": trend,
+        "rul": rul_hours,
+        "chart_data": chart_export
+    }
+
+
+# ==========================================
+# DISPATCHER PRINCIPAL
+# ==========================================
+def analyze_metric_smart(history_df, min_val, max_val):
+    # Limpieza
+    if history_df['ds'].dt.tz is not None:
+        history_df['ds'] = history_df['ds'].dt.tz_localize(None)
+
+    # Calcular duración de la historia disponible
+    start_time = history_df['ds'].min()
+    end_time = history_df['ds'].max()
+    duration_hours = (end_time - start_time).total_seconds() / 3600
+
+    current_val = history_df.iloc[-1]['y']
+    historical_max = history_df['y'].max()
+    
+    # Métricas base
+    volatility = calculate_volatility(history_df['y'])
+    anomalies = detect_historical_anomalies(history_df)
+    
+    result = None
+
+    # DECISIÓN DE ESTRATEGIA
+    # Si tenemos menos de 6 horas de datos, Prophet es peligroso. Usamos Lineal.
+    if duration_hours < 6:
+        result = analyze_short_term(history_df, min_val, max_val)
+    else:
+        result = analyze_long_term(history_df, min_val, max_val, historical_max)
+        if not result: # Fallback si Prophet falla
+             result = analyze_short_term(history_df, min_val, max_val)
+
+    # Construcción de respuesta común
+    status = "ok"
+    if max_val is not None:
+        if result['current_val'] > max_val: status = "critical"
+        elif result['predicted_val'] > max_val: status = "warning"
+        elif min_val is not None and result['current_val'] < min_val: status = "critical"
+    
+    if anomalies > 5 and status == "ok": status = "warning"
+
+    # PREPARACIÓN FINAL DEL GRÁFICO (Merging)
+    # Queremos mostrar la historia REAL + la predicción de la estrategia elegida
+    
+    # 1. Historia Real (Downsampled)
+    TARGET_POINTS = 100
+    past_data = history_df.copy()
+    if len(past_data) > TARGET_POINTS:
+        indices = np.linspace(0, len(past_data) - 1, TARGET_POINTS, dtype=int)
+        past_data = past_data.iloc[indices]
+
+    final_chart = []
+    
+    # Agregar historia
+    for _, row in past_data.iterrows():
+        final_chart.append({
+            "timestamp": row['ds'].strftime('%Y-%m-%dT%H:%M:%S.%fZ'),
+            "value": round(float(row['y']), 2),
+            # En el pasado no hay incertidumbre de IA
+            "confidenceLow": round(float(row['y']), 2), 
+            "confidenceHigh": round(float(row['y']), 2),
+            "isFuture": False
+        })
+    
+    # Agregar futuro (que viene de la estrategia seleccionada)
+    final_chart.extend(result['chart_data'])
+
+    return {
+        "status": status,
+        "currentValue": round(result['current_val'], 2),
+        "predictedValue24h": round(result['predicted_val'], 2),
+        "trend": result['trend'],
+        "slope": round(result['slope'], 4),
+        "volatility": round(volatility, 3),
+        "anomalyCount": anomalies,
+        "rulHours": result['rul'],
+        "recommendation": generate_recommendation(status, result['trend'], result['rul'], result['strategy']),
+        "chartData": final_chart
+    }
 
 @app.post("/analyze")
 def analyze_sensors(payload: List[MachineData]):
     reports = []
-    
     for item in payload:
         sensor_id = item.config.sensorId
         readings = item.readings
         metrics_config = item.config.metricsConfig
 
-        if not readings:
-            continue
+        if not readings: continue
 
-        sensor_report = {
-            "sensorId": sensor_id,
-            "resumen": {},
-            "chartData": {}
-        }
-
-        # Aplanar lecturas para Pandas
+        sensor_report = { "sensorId": sensor_id, "resumen": {}, "chartData": {} }
+        
         flat_data = []
         for r in readings:
             row = {"ds": r.timestamp}
             for cat, metrics in r.metrics.items():
                 for name, val in metrics.items():
-                    if val is not None:
-                        row[f"{cat}__{name}"] = float(val)
+                    if val is not None: row[f"{cat}__{name}"] = float(val)
             flat_data.append(row)
         
         df_main = pd.DataFrame(flat_data)
         if df_main.empty: continue
-        
-        # Parsear fechas
         df_main['ds'] = pd.to_datetime(df_main['ds'])
         
-        # Necesitamos historial mínimo para que la estadística sea válida
-        if len(df_main) < 10: continue 
+        # Permitimos análisis con menos datos ahora que tenemos la estrategia Lineal
+        if len(df_main) < 2: continue 
 
-        # Iterar por cada métrica configurada
         for category, metrics in metrics_config.items():
             if category not in sensor_report["resumen"]:
                 sensor_report["resumen"][category] = {}
@@ -249,36 +296,27 @@ def analyze_sensors(payload: List[MachineData]):
 
             for metric_name, config in metrics.items():
                 col_key = f"{category}__{metric_name}"
-                
                 if col_key not in df_main.columns: continue
 
-                # Extraer serie de tiempo limpia para esta métrica
                 df_metric = df_main[['ds', col_key]].rename(columns={col_key: 'y'}).dropna()
-                
-                if len(df_metric) < 5: continue
+                if len(df_metric) < 2: continue
 
                 try:
-                    # Ejecutar análisis avanzado
-                    result = analyze_metric_advanced(df_metric, config.min, config.max)
+                    # USAMOS LA NUEVA LÓGICA SMART
+                    result = analyze_metric_smart(df_metric, config.min, config.max)
                     
                     if result:
-                        # Extraer datos de gráfico para mantener el JSON limpio
                         chart_points = result.pop("chartData")
-                        
                         sensor_report["resumen"][category][metric_name] = result
                         sensor_report["chartData"][category].append({
-                            "metric": metric_name,
-                            "data": chart_points
+                            "metric": metric_name, "data": chart_points
                         })
                 except Exception as e:
-                    print(f"❌ Error analizando {sensor_id}::{col_key}: {e}")
+                    print(f"❌ Error {col_key}: {e}")
 
         reports.append(sensor_report)
 
-    return {
-        "timestamp": datetime.now().isoformat(),
-        "report": reports
-    }
+    return { "timestamp": datetime.now().isoformat(), "report": reports }
 
 if __name__ == "__main__":
     import uvicorn
