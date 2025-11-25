@@ -1,10 +1,11 @@
 import type React from "react";
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom"; // Importamos useLocation
 import { api } from "../../lib/api";
 import { type MachineAnalysisResponse, type Machine } from "../../types";
 import { useSessionStore } from "../../store/sessionStore";
 
-// Importamos el componente nuevo
+// Importamos el componente de tarjeta de sensor
 import SensorAnalysisCard from "./components/SensorAnalysisCard";
 
 import {
@@ -16,11 +17,14 @@ import {
 
 export default function Analisis() {
     const { user } = useSessionStore();
+    const location = useLocation(); // Hook para acceder al estado de navegación
+    
     const [machines, setMachines] = useState<Machine[]>([]);
     const [selectedMachineId, setSelectedMachineId] = useState<string>("");
     const [loading, setLoading] = useState(false);
     const [fullResult, setFullResult] = useState<MachineAnalysisResponse | null>(null);
 
+    // 1. Cargar lista de máquinas para el Select
     useEffect(() => {
         const loadMachines = async () => {
             try {
@@ -33,6 +37,25 @@ export default function Analisis() {
         loadMachines();
     }, []);
 
+    // 2. DETECTAR DATOS PRE-CARGADOS (Desde MachineDetailPage)
+    useEffect(() => {
+        // Verificamos si venimos con un estado "preloadedResult"
+        if (location.state && location.state.preloadedResult) {
+            const preloaded = location.state.preloadedResult as MachineAnalysisResponse;
+            
+            console.log("Recuperando análisis guardado:", preloaded);
+
+            // 1. Seleccionamos la máquina en el dropdown visualmente
+            setSelectedMachineId(String(preloaded.machine.id));
+            
+            // 2. Seteamos el resultado directamente sin llamar al backend
+            setFullResult(preloaded);
+            
+            // Opcional: Limpiamos el estado del historial para que al recargar no se "reinstale"
+            // window.history.replaceState({}, document.title);
+        }
+    }, [location]);
+
     const handleAnalyze = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedMachineId) return alert("Selecciona una máquina");
@@ -43,7 +66,6 @@ export default function Analisis() {
         try {
             const response = await api.analyzeMachine(Number(selectedMachineId));
             setFullResult(response);
-            console.log(response);
         } catch (error: any) {
             console.error(error);
             alert(error.message || "Error al analizar");
@@ -64,7 +86,7 @@ export default function Analisis() {
                     <PanelHeader>
                         <h3>Selección de Maquinaria</h3>
                         <ActionButton type="submit" disabled={loading || !selectedMachineId}>
-                            {loading ? "Procesando IA..." : "Ejecutar Diagnóstico"}
+                            {loading ? "Procesando IA..." : "Ejecutar Nuevo Diagnóstico"}
                         </ActionButton>
                     </PanelHeader>
                     
@@ -93,11 +115,11 @@ export default function Analisis() {
                     <div style={{ gridColumn: '1 / -1', marginBottom: 16 }}>
                         <h2 style={{ margin: 0, color: '#1e293b' }}>Reporte: {fullResult.machine.name}</h2>
                         <p style={{ margin: 0, color: '#64748b', fontSize: 14 }}>
-                            {new Date(fullResult.analysis.timestamp).toLocaleString()}
+                            Generado el: {new Date(fullResult.analysis.timestamp).toLocaleString()}
                         </p>
                     </div>
 
-                    {/* Usamos el nuevo componente modular por sensor */}
+                    {/* Renderizamos cada tarjeta de sensor del reporte */}
                     {fullResult.analysis.report.map((sensorReport) => (
                         <SensorAnalysisCard 
                             key={sensorReport.sensorId} 

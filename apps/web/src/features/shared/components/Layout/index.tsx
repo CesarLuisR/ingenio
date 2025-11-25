@@ -19,8 +19,12 @@ import { api } from "../../../../lib/api";
 import type { Ingenio } from "../../../../types";
 import { ROLES } from "../../../../types";
 
+// Importamos el nuevo modal (ajusta la ruta si lo guardaste en otro lado)
+import ChangePasswordModal from "./ChangePasswordModal"; 
+
 export default function Layout() {
     const location = useLocation();
+    
     // Detectar si la ruta empieza con el path (para subrutas activas)
     const isActive = (path: string) => {
         if (path === "/") return location.pathname === "/";
@@ -29,6 +33,9 @@ export default function Layout() {
 
     const user = useSessionStore((s) => s.user);
     const [ingenio, setIngenio] = useState<Ingenio>();
+    
+    // Estado para controlar el modal de cambio de contraseña
+    const [showPasswordModal, setShowPasswordModal] = useState(false);
 
     useEffect(() => {
         const getIngenioInfo = async () => {
@@ -119,16 +126,35 @@ export default function Layout() {
                 {/* Footer con información del usuario logueado */}
                 <SidebarFooter>
                     <div style={{display: 'flex', alignItems: 'center', gap: 12, width: '100%'}}>
-                        <UserAvatar>{initials}</UserAvatar>
-                        <UserInfo>
-                            <span className="name">{user?.name || "Usuario"}</span>
-                            <span className="role">{user?.role || "Invitado"}</span>
-                        </UserInfo>
+                        {/* Hacemos clickable el área del usuario */}
+                        <div 
+                            style={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: 12, 
+                                flex: 1, 
+                                cursor: 'pointer',
+                                padding: '4px',
+                                borderRadius: '8px',
+                                transition: 'background 0.2s'
+                            }}
+                            onClick={() => setShowPasswordModal(true)}
+                            title="Cambiar contraseña"
+                            onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                            <UserAvatar>{initials}</UserAvatar>
+                            <UserInfo>
+                                <span className="name">{user?.name || "Usuario"}</span>
+                                <span className="role">{user?.role || "Invitado"}</span>
+                            </UserInfo>
+                        </div>
+
                         <LogoutButton 
                             onClick={() => useSessionStore.getState().logout()}
                             title="Cerrar Sesión"
                         >
-                            🚪Cerrar Sesión
+                            🚪
                         </LogoutButton>
                     </div>
                 </SidebarFooter>
@@ -137,6 +163,11 @@ export default function Layout() {
             <MainContent>
                 <Outlet />
             </MainContent>
+
+            {/* Renderizamos el modal si el estado es true */}
+            {showPasswordModal && (
+                <ChangePasswordModal onClose={() => setShowPasswordModal(false)} />
+            )}
         </Container>
     );
 }

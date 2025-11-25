@@ -2,7 +2,7 @@
   "sensorId": "motor-01",
   "type": "induction-motor",
   "location": "Planta A - Línea 2",
-  "intervalMs": 60000,
+  "intervalMs": 1000,
   "metricsConfig": {
     "thermal": {
       "motorTemperature": {

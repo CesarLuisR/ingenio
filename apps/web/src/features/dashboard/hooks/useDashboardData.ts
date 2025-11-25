@@ -4,49 +4,102 @@ import { type Sensor } from "../../../types";
 import { useReadingsStore } from "../../../store/readingState";
 
 export interface SensorWithStatus extends Sensor {
-	active: boolean;
-	lastReadingTime?: number;
-	lastStatus?: string;
+    active: boolean;
+    lastReadingTime?: number;
+    lastStatus?: string;
 }
 
 export function useDashboardData() {
-	const sensorMap = useReadingsStore((s) => s.sensorMap);
-	const [sensors, setSensors] = useState<SensorWithStatus[]>([]);
-	const [loading, setLoading] = useState(true);
+    const sensorMap = useReadingsStore((s) => s.sensorMap);
+    const [sensors, setSensors] = useState<SensorWithStatus[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [now, setNow] = useState(Date.now());
 
-	useEffect(() => {
-		(async () => {
-			try {
-				const data = await api.getSensors();
+    // Reloj para actualizar estado "active" visualmente cada segundo
+    useEffect(() => {
+        const interval = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(interval);
+    }, []);
 
-				const enriched = data.map((sensor) => {
-					const readings = sensorMap.get(sensor.id.toString());
-					if (!readings || readings.length === 0)
-						return { ...sensor, active: false };
+    useEffect(() => {
+        let isMounted = true;
 
-					const last = readings[readings.length - 1];
-					const lastTime = typeof last.timestamp === "string"
-						? new Date(last.timestamp).getTime()
-						: Number(last.timestamp);
+        (async () => {
+            try {
+                // Solo llamamos a la API si es la carga inicial
+                // (Para evitar llamadas infinitas, idealmente esto se cachea)
+                if (sensors.length === 0) {
+                    const data = await api.getSensors();
+                    if (!isMounted) return;
+                    
+                    // Inicializamos la estructura básica
+                    const initialMap = data.map(s => ({
+                        ...s,
+                        active: false, // Se calculará abajo
+                        lastReadingTime: s.lastSeen ? new Date(s.lastSeen).getTime() : undefined
+                    }));
+                    setSensors(initialMap);
+                    setLoading(false);
+                }
+            } catch (e) {
+                console.error(e);
+                if (isMounted) setLoading(false);
+            }
+        })();
 
-					const active = Date.now() - lastTime < 30_000;
+        return () => { isMounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Solo al montar
 
-					return {
-						...sensor,
-						active,
-						lastReadingTime: lastTime,
-						lastStatus: last.status,
-					};
-				});
+    // EFECTO: Sincronizar datos del Store con la lista de sensores
+    useEffect(() => {
+        if (sensors.length === 0) return;
 
-				setSensors(enriched);
-			} catch (e) {
-				console.error("Error cargando sensores:", e);
-			} finally {
-				setLoading(false);
-			}
-		})();
-	}, [sensorMap]);
+        setSensors(prevSensors => {
+            return prevSensors.map(sensor => {
+                // CRÍTICO: Usar la misma key que usa el WebSocket (sensorId)
+                const key = sensor.sensorId ?? String(sensor.id);
+                const readings = sensorMap.get(key);
 
-	return { sensors, loading };
+                // 1. Configuración de umbral (Default 60s, Tolerancia 2.5x)
+                const config = sensor.config as any;
+                const configuredInterval = config?.intervalMs ? Number(config.intervalMs) : 60000;
+                const threshold = Math.max(configuredInterval * 2.5, 15000); // Minimo 15s
+
+                // 2. Buscar la lectura más reciente (Store vs Estado previo)
+                let lastTime = sensor.lastReadingTime;
+                let lastStatus = sensor.lastStatus;
+
+                if (readings && readings.length > 0) {
+                    const last = readings[readings.length - 1];
+                    const storeTime = typeof last.timestamp === "string" 
+                        ? new Date(last.timestamp).getTime() 
+                        : Number(last.timestamp);
+                    
+                    // Solo actualizamos si la del store es más nueva
+                    if (!lastTime || storeTime > lastTime) {
+                        lastTime = storeTime;
+                        lastStatus = last.status;
+                    }
+                }
+
+                // 3. Calcular si está activo AHORA mismo
+                const isActive = lastTime ? (now - lastTime < threshold) : false;
+
+                // Optimización: Si nada cambió, devolver la misma referencia (React performance)
+                if (sensor.active === isActive && sensor.lastReadingTime === lastTime) {
+                    return sensor;
+                }
+
+                return {
+                    ...sensor,
+                    active: isActive,
+                    lastReadingTime: lastTime,
+                    lastStatus: lastStatus,
+                };
+            });
+        });
+    }, [sensorMap, now]); // Se ejecuta cada segundo (now) o cuando llegan datos (sensorMap)
+
+    return { sensors, loading };
 }

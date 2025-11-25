@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom"; // Importamos useNavigate
 import { useMachineDetail } from "./hooks/useMachineDetail";
 import {
     Container,
@@ -27,7 +27,7 @@ import {
     EmptyMessage,
 } from "./detailStyled";
 
-// --- FUNCIÓN DE AYUDA PARA FORMATEAR KPIS ---
+// --- HELPER ---
 const formatMetric = (value: number | undefined | null, suffix: string = "") => {
     if (value === undefined || value === null) return "-";
     return `${Number(value).toFixed(2)}${suffix}`;
@@ -35,6 +35,7 @@ const formatMetric = (value: number | undefined | null, suffix: string = "") => 
 
 export default function MachineDetailPage() {
     const { id } = useParams();
+    const navigate = useNavigate(); // Hook para navegar
     const machineId = Number(id);
 
     const {
@@ -50,35 +51,51 @@ export default function MachineDetailPage() {
 
     const [tab, setTab] = useState<"mantenimientos" | "fallas" | "sensores">("mantenimientos");
 
-    /* LÓGICA DE ESTADO (Advertencia vs Operativa) */
-    // Filtramos las fallas que NO tienen fecha de resolución (están abiertas)
+    /* LÓGICA DE NAVEGACIÓN AL REPORTE */
+    const handleViewReport = () => {
+        // Solo navegamos si hay datos guardados
+        if (!machine || !machine.lastAnalysis) return;
+
+        // Estructura compatible con MachineAnalysisResponse
+        const preloadedResult = {
+            machine: {
+                id: machine.id,
+                name: machine.name,
+                code: machine.code
+            },
+            analysis: machine.lastAnalysis
+        };
+
+        // Navegamos a /analisis pasando el objeto en el state
+        navigate("/analisis", { state: { preloadedResult } });
+    };
+
+    /* LÓGICA DE ESTADO VISUAL */
     const activeFailures = failures.filter(f => !f.resolvedAt);
     const hasWarnings = activeFailures.length > 0;
 
-    // Determinamos el texto y el color del estado
     let statusConfig = {
         text: "Fuera de Servicio",
-        style: { background: "#fef2f2", color: "#b91c1c", borderColor: "#fecaca" } // Rojo
+        style: { background: "#fef2f2", color: "#b91c1c", borderColor: "#fecaca" }
     };
 
     if (machine?.active) {
         if (hasWarnings) {
             statusConfig = {
                 text: "Advertencia",
-                style: { background: "#fffbeb", color: "#d97706", borderColor: "#fcd34d" } // Ámbar/Amarillo
+                style: { background: "#fffbeb", color: "#d97706", borderColor: "#fcd34d" }
             };
         } else {
             statusConfig = {
                 text: "Operativa",
-                style: { background: "#ecfdf5", color: "#059669", borderColor: "#a7f3d0" } // Verde
+                style: { background: "#ecfdf5", color: "#059669", borderColor: "#a7f3d0" }
             };
         }
     }
 
-    /* LOADING */
+    /* LOADING & ERROR */
     if (loading) return <Container>Cargando información...</Container>;
 
-    /* ERROR */
     if (error) return (
         <Container>
             <div style={{ padding: 40, textAlign: "center", background: '#fee2e2', color: '#b91c1c', borderRadius: 12 }}>
@@ -87,7 +104,6 @@ export default function MachineDetailPage() {
         </Container>
     );
 
-    /* NO MACHINE */
     if (!machine) return (
         <Container>
             <EmptyMessage>No se encontró la máquina solicitada.</EmptyMessage>
@@ -108,7 +124,6 @@ export default function MachineDetailPage() {
                         </SubInfo>
                     </div>
                     
-                    {/* TAG DE ESTADO DINÁMICO */}
                     <StatusTag 
                         $active={machine.active} 
                         style={{
@@ -125,7 +140,6 @@ export default function MachineDetailPage() {
                     {machine.type && <Tag>{machine.type}</Tag>}
                     <Tag>{sensors.length} sensores</Tag>
                     <Tag>{maintenances.length} mantenimientos</Tag>
-                    {/* Tag de fallas: Muestra rojo si hay fallas activas, no solo historial */}
                     <Tag style={{ color: hasWarnings ? '#ef4444' : 'inherit', fontWeight: hasWarnings ? 700 : 400 }}>
                         {activeFailures.length} fallas activas ({failures.length} total)
                     </Tag>
@@ -133,7 +147,7 @@ export default function MachineDetailPage() {
             </Header>
 
             <ContentGrid>
-                {/* COLUMNA IZQUIERDA: CONTENIDO (TABS) */}
+                {/* COLUMNA IZQUIERDA: CONTENIDO */}
                 <div>
                     <TabsRow>
                         <TabButton $active={tab === "mantenimientos"} onClick={() => setTab("mantenimientos")}>
@@ -147,7 +161,7 @@ export default function MachineDetailPage() {
                         </TabButton>
                     </TabsRow>
 
-                    {/* --- MANTENIMIENTOS --- */}
+                    {/* TABS CONTENT */}
                     {tab === "mantenimientos" && (
                         <Section>
                             <SectionTitle>
@@ -181,7 +195,6 @@ export default function MachineDetailPage() {
                         </Section>
                     )}
 
-                    {/* --- FALLAS --- */}
                     {tab === "fallas" && (
                         <Section>
                             <SectionTitle>Incidencias reportadas</SectionTitle>
@@ -215,7 +228,6 @@ export default function MachineDetailPage() {
                         </Section>
                     )}
 
-                    {/* --- SENSORES --- */}
                     {tab === "sensores" && (
                         <Section>
                             <SectionTitle>Monitoreo en tiempo real</SectionTitle>
@@ -248,7 +260,7 @@ export default function MachineDetailPage() {
 
                 {/* COLUMNA DERECHA: SIDEBAR */}
                 <Sidebar>
-                    {/* CARD: INFO GENERAL */}
+                    {/* INFO GENERAL */}
                     <SidebarCard>
                         <SectionTitle style={{ marginBottom: 16 }}>Ficha Técnica</SectionTitle>
                         <InfoList>
@@ -272,7 +284,7 @@ export default function MachineDetailPage() {
                         )}
                     </SidebarCard>
 
-                    {/* CARD: KPIs / MÉTRICAS */}
+                    {/* KPIs */}
                     <SidebarCard>
                         <SectionTitle style={{ marginBottom: 16 }}>KPIs de Rendimiento</SectionTitle>
                         {!metrics ? (
@@ -307,9 +319,17 @@ export default function MachineDetailPage() {
                         )}
                     </SidebarCard>
 
-                    {/* CARD: ÚLTIMO REPORTE */}
+                    {/* ÚLTIMO REPORTE */}
                     <SidebarCard>
                         <SectionTitle style={{ marginBottom: 12 }}>Último Reporte</SectionTitle>
+                        
+                        {/* Mostramos la fecha del último análisis si existe */}
+                        {machine.lastAnalyzedAt && (
+                            <div style={{ fontSize: 11, color: '#64748b', marginBottom: 8, textAlign: 'right' }}>
+                                {new Date(machine.lastAnalyzedAt).toLocaleString()}
+                            </div>
+                        )}
+
                         <div style={{
                             background: '#f0f9ff',
                             border: '1px solid #bae6fd',
@@ -319,27 +339,33 @@ export default function MachineDetailPage() {
                         }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                                 <span style={{ fontSize: 18 }}>📋</span>
-                                <span style={{ fontWeight: 700, color: '#0369a1', fontSize: 14 }}>Análisis Diario</span>
+                                <span style={{ fontWeight: 700, color: '#0369a1', fontSize: 14 }}>Análisis IA</span>
                             </div>
                             <p style={{ fontSize: 12, color: '#0c4a6e', margin: 0, lineHeight: 1.4 }}>
-                                {hasWarnings 
-                                    ? "Se detectan fallas pendientes que requieren atención inmediata." 
-                                    : "El rendimiento es estable. No se detectan anomalías críticas recientes."}
+                                {machine.lastAnalysis 
+                                    ? "Reporte completo disponible. Incluye predicción de tendencias y detección de anomalías." 
+                                    : "No se han generado reportes de IA para esta máquina aún."}
                             </p>
                         </div>
-                        <button style={{
-                            width: '100%',
-                            padding: '8px',
-                            background: 'white',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: 6,
-                            fontSize: 12,
-                            fontWeight: 600,
-                            color: '#475569',
-                            cursor: 'not-allowed',
-                            opacity: 0.7
-                        }} disabled>
-                            Ver reporte completo (Próximamente)
+                        
+                        <button 
+                            onClick={handleViewReport}
+                            disabled={!machine.lastAnalysis}
+                            style={{
+                                width: '100%',
+                                padding: '8px',
+                                background: machine.lastAnalysis ? '#2563eb' : '#f1f5f9',
+                                border: machine.lastAnalysis ? 'none' : '1px solid #e2e8f0',
+                                borderRadius: 6,
+                                fontSize: 12,
+                                fontWeight: 600,
+                                color: machine.lastAnalysis ? 'white' : '#94a3b8',
+                                cursor: machine.lastAnalysis ? 'pointer' : 'not-allowed',
+                                opacity: machine.lastAnalysis ? 1 : 0.7,
+                                transition: 'all 0.2s'
+                            }}
+                        >
+                            {machine.lastAnalysis ? "Ver reporte completo" : "Sin reporte disponible"}
                         </button>
                     </SidebarCard>
                 </Sidebar>

@@ -23,6 +23,21 @@ export interface Sensor {
     failures?: Failure[];
 }
 
+// --- ConfigData ---
+export interface ConfigData {
+    sensorId: string;
+    name: string;
+    type: string;
+    location?: string | null;
+    active: boolean;
+    config: Record<string, any>;
+    lastSeen?: string | null;
+    createdAt: string;
+    updatedAt: string;
+    machineId: number;
+    ingenioId: number;
+}
+
 // --- Machine ---
 export interface Machine {
     id: number;
@@ -34,6 +49,9 @@ export interface Machine {
     active: boolean;
     createdAt: string;
     updatedAt: string;
+
+    lastAnalyzedAt?: string | null;
+    lastAnalysis?: any | null;
 
     ingenioId: number;
     ingenio?: Ingenio;

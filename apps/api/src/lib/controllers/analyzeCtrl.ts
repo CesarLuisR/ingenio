@@ -94,15 +94,34 @@ export const analyzeMachine = async (req: Request, res: Response) => {
             { headers: { "Content-Type": "application/json" } }
         );
 
-        console.log(`🚀 Resultado de análisis:`, analysisResult);
+        console.log(`🚀 Resultado de análisis recibido.`);
+
+        // ============================================================
+        // 4.5. GUARDAR RESULTADO EN LA MÁQUINA (POSTGRES)
+        // ============================================================
+        const now = new Date();
+        
+        await prisma.machine.update({
+            where: { id: machineId },
+            data: {
+                lastAnalysis: analysisResult as any, // Cast a 'any' o 'Prisma.InputJsonValue' para evitar conflictos de tipos estrictos
+                lastAnalyzedAt: now
+            }
+        });
+
+        console.log(`💾 Análisis guardado exitosamente en Máquina ID: ${machineId}`);
+
         // 5. Responder al Frontend
         return res.status(200).json({
             machine: {
                 id: machine.id,
                 name: machine.name,
-                code: machine.code
+                code: machine.code,
+                // Devolvemos los datos frescos que acabamos de guardar
+                lastAnalysis: analysisResult,
+                lastAnalyzedAt: now
             },
-            analysis: analysisResult
+            analysis: analysisResult // Mantenemos esto por si el frontend lo espera separado
         });
 
     } catch (error: any) {

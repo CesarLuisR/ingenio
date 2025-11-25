@@ -3,6 +3,8 @@ import { Request, Response } from "express";
 import RedisRepository from "../repositories/cache/redisRepository";
 import hasPermission from "../utils/permissionUtils";
 import { UserRole } from "@prisma/client";
+import { ConfigData } from "../../types/sensorTypes";
+import { toConfigJson } from "../utils/toConfigJson";
 
 const cacheRepository = new RedisRepository();
 
@@ -71,6 +73,34 @@ export const getSensorById = async (req: Request, res: Response) => {
 		res.json(sensor);
 	} catch (error) {
 		console.error("Error fetching sensor:", error);
+		res.status(500).json({ error: "Internal server error" });
+	}
+};
+
+/* ----------------------------------------------------------
+   POST /sensors
+----------------------------------------------------------- */
+export const createSensor = async (req: Request, res: Response) => {
+	try {
+		const data: ConfigData = req.body;
+
+		const sensor = await prisma.sensor.create({
+			data: {
+				sensorId: data.sensorId,
+				name: "NOCONFIGURADO",
+				type: "NOCONFIGURADO",
+				location: "NOCONFIGURADO",
+				config: toConfigJson(data),
+				lastSeen: new Date(),
+				createdAt: new Date(),
+				machineId: data.machineId,
+				ingenioId: data.ingenioId
+			}
+		});
+
+		res.json(sensor);
+	} catch (error) {
+		console.error("Error creating sensor:", error);
 		res.status(500).json({ error: "Internal server error" });
 	}
 };

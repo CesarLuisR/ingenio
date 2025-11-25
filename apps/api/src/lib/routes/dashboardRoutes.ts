@@ -1,10 +1,20 @@
-import { Router } from "express";
-import { getDashboardHistory, getRecentActivity } from "../controllers/dashboardCtrl";
+import { Router } from 'express';
+// Importación nombrada (Named Import) para coincidir con el controller
+import { 
+    getIngenioMetrics, 
+    getDashboardHistory, 
+    getRecentActivity 
+} from '../controllers/dashboardCtrl'; 
 
 const router = Router();
 
-// Ojo: Asegúrate de tener validación de sesión/permisos aquí
-router.get("/:ingenioId/history", getDashboardHistory);
-router.get("/:ingenioId/activity", getRecentActivity);
+// GET /api/dashboard/:ingenioId/metrics
+router.get('/:ingenioId/metrics', getIngenioMetrics);
+
+// GET /api/dashboard/:ingenioId/history
+router.get('/:ingenioId/history', getDashboardHistory);
+
+// GET /api/dashboard/:ingenioId/activity
+router.get('/:ingenioId/activity', getRecentActivity);
 
 export default router;

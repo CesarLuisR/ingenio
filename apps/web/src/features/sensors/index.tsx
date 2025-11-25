@@ -9,6 +9,7 @@ import { useSessionStore } from "../../store/sessionStore";
 import { hasPermission } from "../../lib/hasPermission";
 import { ROLES } from "../../types";
 import { api } from "../../lib/api";
+import CreateSensorModal from "./components/CreateSensorModal";
 
 import {
     Container,
@@ -34,6 +35,7 @@ import {
     GhostButton,
     DangerTextButton,
     Loading,
+    BadgeCount // Nuevo componente importado
 } from "./styled";
 
 import SensorForm from "./components/SensorForm";
@@ -46,6 +48,7 @@ export default function Sensores() {
 
     const [ingenios, setIngenios] = useState<Ingenio[]>([]);
     const [selectedIngenioId, setSelectedIngenioId] = useState<number | undefined>(undefined);
+    const [showCreateModal, setShowCreateModal] = useState(false);
 
     // Cargar ingenios si es superadmin
     useEffect(() => {
@@ -69,9 +72,9 @@ export default function Sensores() {
     const [showForm, setShowForm] = useState(false);
     const [editingSensor, setEditingSensor] = useState<Sensor | null>(null);
     
-    // Agregamos 'disabled' a los modos de filtro
+    // Filtros: Agregamos 'unconfigured'
     const [filterMode, setFilterMode] =
-        useState<"all" | "active" | "inactive" | "recent" | "disabled">("all");
+        useState<"all" | "active" | "inactive" | "recent" | "disabled" | "unconfigured">("all");
 
     const [machineFilterId, setMachineFilterId] =
         useState<"all" | number>("all");
@@ -113,6 +116,9 @@ export default function Sensores() {
                 metricsCount = Object.keys(lastReading.metrics || {}).length;
             }
 
+            // DETECCION: Si el nombre es exactamente "NOCONFIGURADO"
+            const isUnconfigured = sensor.name === "NOCONFIGURADO";
+
             return {
                 ...sensor,
                 lastReading,
@@ -122,12 +128,18 @@ export default function Sensores() {
                 totalIssues,
                 metricsCount,
                 isActive: !!activeMap[key],
-                isEnabled: sensor.active, // Mapeamos el estado de la BD
+                isEnabled: sensor.active, 
+                isUnconfigured, // Bandera para la UI
             };
         });
     }, [filteredSensors, sensorMap, activeMap]);
 
-    // --- LÓGICA DE FILTRADO MEJORADA ---
+    // Contador para el badge rojo del botón de filtro
+    const unconfiguredCount = useMemo(() => 
+        enrichedSensors.filter(s => s.isUnconfigured && s.isEnabled).length, 
+    [enrichedSensors]);
+
+    // --- LÓGICA DE FILTRADO ---
     const displayedSensors = useMemo(() => {
         let base = enrichedSensors;
 
@@ -144,15 +156,16 @@ export default function Sensores() {
         // 3. Para el resto de modos, ocultamos los desactivados por defecto
         base = base.filter((s) => s.isEnabled);
 
-        // 4. Filtros específicos de estado (Online/Offline)
+        // 4. Filtros específicos de estado
         switch (filterMode) {
-            case "active": return base.filter((s) => s.isActive); // Online
-            case "inactive": return base.filter((s) => !s.isActive); // Offline
+            case "unconfigured": return base.filter((s) => s.isUnconfigured);
+            case "active": return base.filter((s) => s.isActive && !s.isUnconfigured);
+            case "inactive": return base.filter((s) => !s.isActive && !s.isUnconfigured);
             case "recent":
                 return [...base]
                     .filter((s) => s.lastReadingTime)
                     .sort((a, b) => (b.lastReadingTime ?? 0) - (a.lastReadingTime ?? 0));
-            default: return base; // 'all' (pero solo habilitados)
+            default: return base; // 'all'
         }
     }, [enrichedSensors, machineFilterId, filterMode]);
 
@@ -179,8 +192,8 @@ export default function Sensores() {
                         </Select>
                     )}
                 </div>
-                {canManage && (
-                    <ActionButton onClick={() => alert("Próximamente")}>
+                {isSuperAdmin && (
+                    <ActionButton onClick={() => setShowCreateModal(true)}>
                         + Nuevo Sensor
                     </ActionButton>
                 )}
@@ -212,6 +225,19 @@ export default function Sensores() {
                     <FilterButton $active={filterMode === "all"} onClick={() => setFilterMode("all")}>
                         Todos
                     </FilterButton>
+
+                    {/* BOTÓN "POR CONFIGURAR" */}
+                    <FilterButton 
+                        $active={filterMode === "unconfigured"} 
+                        onClick={() => setFilterMode("unconfigured")}
+                        style={{ position: 'relative' }}
+                    >
+                        Por Configurar
+                        {unconfiguredCount > 0 && (
+                            <BadgeCount>{unconfiguredCount}</BadgeCount>
+                        )}
+                    </FilterButton>
+
                     <FilterButton $active={filterMode === "active"} onClick={() => setFilterMode("active")}>
                         Online
                     </FilterButton>
@@ -221,7 +247,6 @@ export default function Sensores() {
                     <FilterButton $active={filterMode === "recent"} onClick={() => setFilterMode("recent")}>
                         Recientes
                     </FilterButton>
-                    {/* Botón separado visualmente para ver la "papelera" o desactivados */}
                     <FilterButton 
                         $active={filterMode === "disabled"} 
                         onClick={() => setFilterMode("disabled")}
@@ -237,13 +262,15 @@ export default function Sensores() {
             ) : (
                 <Grid>
                     {displayedSensors.map((sensor) => {
-                        // Lógica visual del Badge
                         let badgeStatus = "unknown";
                         let badgeText = "Desconocido";
 
                         if (!sensor.isEnabled) {
-                            badgeStatus = "unknown"; // O crear un estilo 'disabled' gris
+                            badgeStatus = "unknown";
                             badgeText = "Deshabilitado";
+                        } else if (sensor.isUnconfigured) {
+                            badgeStatus = "warning"; // ESTADO NUEVO
+                            badgeText = "Sin Configurar";
                         } else if (sensor.isActive) {
                             badgeStatus = "active";
                             badgeText = "Online";
@@ -256,8 +283,13 @@ export default function Sensores() {
                             <Card
                                 key={sensor.id}
                                 $isActive={sensor.isActive}
-                                style={{ opacity: sensor.isEnabled ? 1 : 0.7 }} // Opacidad visual para los desactivados
+                                $isUnconfigured={sensor.isUnconfigured} // Pasamos la prop de estilo
+                                style={{ opacity: sensor.isEnabled ? 1 : 0.7 }}
                                 onClick={() => {
+                                    // BLOQUEO DE NAVEGACIÓN
+                                    if (sensor.isUnconfigured) {
+                                        return; 
+                                    }
                                     if (sensor.isEnabled) {
                                         navigate(`/sensor/${sensor.sensorId ?? sensor.id}`);
                                     }
@@ -268,7 +300,9 @@ export default function Sensores() {
                                         <CardTitle>{sensor.name}</CardTitle>
                                         <CardSubtitle>
                                             {sensor.type}
-                                            {sensor.location && <span>• 📍 {sensor.location}</span>}
+                                            {sensor.location !== "NOCONFIGURADO" && 
+                                                <span>• 📍 {sensor.location}</span>
+                                            }
                                         </CardSubtitle>
                                     </CardTitleBlock>
                                     <Badge $status={badgeStatus}>
@@ -303,15 +337,14 @@ export default function Sensores() {
                                     {canManage && (
                                         <GhostButton
                                             onClick={(e) => {
-                                                e.stopPropagation();
+                                                e.stopPropagation(); // Importante para que no intente navegar
                                                 setEditingSensor(sensor);
                                                 setShowForm(true);
                                             }}>
-                                            Editar
+                                            {sensor.isUnconfigured ? "Configurar Ahora" : "Editar"}
                                         </GhostButton>
                                     )}
 
-                                    {/* Botón dinámico: Activar o Desactivar */}
                                     {canManage && (
                                         sensor.isEnabled ? (
                                             <DangerTextButton
@@ -353,6 +386,19 @@ export default function Sensores() {
                     onSave={reload}
                 />
             )}
-        </Container>
-    );
+
+            {/* Modal de Crear Sensor */}
+            {showCreateModal && (
+                <CreateSensorModal
+                    machines={machines} // Pasamos las máquinas que ya tienes cargadas
+                    onClose={() => setShowCreateModal(false)}
+                    onSuccess={() => {
+                    reload(); // Recarga la lista para ver el nuevo sensor
+                    // Opcional: Cambiar filtro a "Por Configurar" para verlo
+                    setFilterMode("unconfigured"); 
+                }}
+            />
+        )}
+    </Container>
+);
 }

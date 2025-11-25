@@ -71,7 +71,7 @@ export const SearchInput = styled.input`
 `;
 
 export const Select = styled.select`
-  padding: 10px 36px 10px 16px; /* Espacio extra para la flecha custom si se usara */
+  padding: 10px 36px 10px 16px;
   border-radius: 10px;
   border: 1px solid #cbd5e1;
   background-color: #ffffff;
@@ -112,6 +112,24 @@ export const FilterButton = styled.button<{ $active: boolean }>`
   }
 `;
 
+// --- NUEVO: CONTADOR ROJO PARA BOTONES ---
+export const BadgeCount = styled.span`
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background-color: #ef4444;
+  color: white;
+  font-size: 10px;
+  font-weight: 800;
+  height: 18px;
+  width: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+`;
+
 export const ActionButton = styled.button`
   padding: 12px 24px;
   background: #2563eb;
@@ -137,7 +155,8 @@ export const Grid = styled.div`
   gap: 24px;
 `;
 
-export const Card = styled.div<{ $isActive: boolean }>`
+// --- CARD MODIFICADA: Soporte para $isUnconfigured ---
+export const Card = styled.div<{ $isActive: boolean; $isUnconfigured?: boolean }>`
   background: white;
   border-radius: 20px;
   padding: 24px;
@@ -147,7 +166,9 @@ export const Card = styled.div<{ $isActive: boolean }>`
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   animation: ${fadeIn} 0.4s ease-out;
-  cursor: pointer;
+
+  /* Si no está configurado, el cursor es default (indica no clickeable para navegar) */
+  cursor: ${(p) => (p.$isUnconfigured ? "default" : "pointer")};
 
   /* Indicador lateral de estado */
   &::before {
@@ -157,12 +178,16 @@ export const Card = styled.div<{ $isActive: boolean }>`
     top: 0;
     bottom: 0;
     width: 5px;
-    background: ${(p) => (p.$isActive ? "#10b981" : "#cbd5e1")};
+    /* Prioridad: Unconfigured (Ámbar) > Active (Verde) > Inactive (Gris) */
+    background: ${(p) => 
+        p.$isUnconfigured ? "#f59e0b" : 
+        p.$isActive ? "#10b981" : "#cbd5e1"};
     opacity: 0.8;
   }
 
   &:hover {
-    transform: translateY(-4px);
+    /* Si no está configurado, no se levanta */
+    transform: ${(p) => p.$isUnconfigured ? "none" : "translateY(-4px)"};
     box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
     border-color: #e2e8f0;
   }
@@ -199,6 +224,7 @@ export const CardSubtitle = styled.span`
   svg { width: 14px; height: 14px; }
 `;
 
+// --- BADGE MODIFICADO: Soporte para status "warning" ---
 export const Badge = styled.span<{ $status: string }>`
   padding: 4px 10px;
   border-radius: 999px;
@@ -208,11 +234,19 @@ export const Badge = styled.span<{ $status: string }>`
   letter-spacing: 0.5px;
 
   background: ${(p) =>
-    p.$status === "active" ? "#ecfdf5" : p.$status === "inactive" ? "#fef2f2" : "#f1f5f9"};
+    p.$status === "active" ? "#ecfdf5" : 
+    p.$status === "inactive" ? "#fef2f2" : 
+    p.$status === "warning" ? "#fffbeb" : "#f1f5f9"}; /* warning = amarillo claro */
+    
   color: ${(p) =>
-    p.$status === "active" ? "#059669" : p.$status === "inactive" ? "#b91c1c" : "#64748b"};
+    p.$status === "active" ? "#059669" : 
+    p.$status === "inactive" ? "#b91c1c" : 
+    p.$status === "warning" ? "#b45309" : "#64748b"}; /* warning = ámbar oscuro */
+    
   border: 1px solid ${(p) =>
-    p.$status === "active" ? "#a7f3d0" : p.$status === "inactive" ? "#fecaca" : "#e2e8f0"};
+    p.$status === "active" ? "#a7f3d0" : 
+    p.$status === "inactive" ? "#fecaca" : 
+    p.$status === "warning" ? "#fcd34d" : "#e2e8f0"};
 `;
 
 // --- Métricas dentro de la Card ---
@@ -302,7 +336,7 @@ export const Loading = styled.div`
   border: 1px dashed #cbd5e1;
 `;
 
-// --- MODAL & FORMULARIOS ---
+// --- MODAL & FORMULARIOS (Conservados del original) ---
 
 export const Modal = styled.div`
   position: fixed;
@@ -421,7 +455,7 @@ export const SubmitButton = styled(BaseButton)`
   }
 `;
 
-// --- EDITOR DE CONFIGURACIÓN (MetricsConfigEditor) ---
+// --- EDITOR DE CONFIGURACIÓN (MetricsConfigEditor) (Conservados) ---
 
 export const EditorContainer = styled.div`
   display: flex;

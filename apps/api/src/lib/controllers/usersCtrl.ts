@@ -137,6 +137,29 @@ export const updateUser = async (req: Request, res: Response) => {
     }
 };
 
+export const changePassword = async (req: Request, res: Response) => {
+    try {
+        const currentUser = req.session.user;
+        if (!currentUser) {
+            return res.status(401).json({ error: "No authenticated" });
+        }
+
+        if (!req.body.password) {
+            return res.status(400).json({ error: "No password provided" });
+        }
+
+        const user = await prisma.user.update({
+            where: { id: currentUser.id },
+            data: { passwordHash: await hashPassword(req.body.password) },
+        });
+
+        res.json(user);
+    } catch (error) {
+        console.error("Error updating password:", error);
+        res.status(500).json({ message: "Error interno al actualizar contraseña" });
+    }
+};
+
 /* ------------------------------------------
    DELETE: Eliminar usuario (solo admin)
 ------------------------------------------- */

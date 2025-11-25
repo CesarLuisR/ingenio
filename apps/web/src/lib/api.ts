@@ -9,6 +9,7 @@ import type {
 	Technician,
 	User,
 	Machine,
+	ConfigData,
 } from "../types";
 
 const API_BASE_URL =
@@ -199,6 +200,17 @@ class ApiClient {
 		});
 	}
 
+	createSensor(data: {
+		sensorId: string;
+		machineId: number;
+		ingenioId: number;
+	}): Promise<Sensor> {
+		return this.request<Sensor>(`/api/sensors`, {
+			method: "POST",
+			body: JSON.stringify(data),
+		});
+	}
+
 	deactivateSensor(sensorId: string): Promise<Sensor> {
 		// backend: PATCH /api/sensors/:sensorId/deactivate
 		return this.request<Sensor>(`/api/sensors/${sensorId}/deactivate`, {
@@ -339,6 +351,13 @@ class ApiClient {
 	deleteUser(id: string): Promise<void> {
 		return this.request<void>(`/api/users/${id}`, {
 			method: "DELETE",
+		});
+	}
+
+	changePassword(password: string): void {
+		this.request<void>(`/api/users/change-password`, {
+			method: "POST",
+			body: JSON.stringify({ password }),
 		});
 	}
 
