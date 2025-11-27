@@ -8,9 +8,9 @@ const fadeIn = keyframes`
 // --- LAYOUT GENERAL ---
 export const Container = styled.div`
   padding: 32px 40px;
-  background-color: #f8fafc; /* Slate 50 */
+  background-color: #f8fafc;
   min-height: 100vh;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
   animation: ${fadeIn} 0.4s ease-out;
 
   @media (max-width: 768px) {
@@ -56,14 +56,16 @@ export const Button = styled.button`
     transform: translateY(-1px);
     box-shadow: 0 8px 12px -2px rgba(37, 99, 235, 0.3);
   }
-  &:active { transform: translateY(0); }
+  &:active {
+    transform: translateY(0);
+  }
 `;
 
 export const ImportButton = styled(Button)`
   background: white;
   color: #059669;
   border: 1px solid #d1fae5;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 
   &:hover {
     background: #ecfdf5;
@@ -82,7 +84,7 @@ export const FiltersBar = styled.div`
   padding: 16px;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 `;
 
 // --- TARJETAS DE MANTENIMIENTO ---
@@ -92,7 +94,6 @@ export const MaintenanceList = styled.div`
   gap: 16px;
 `;
 
-// Group Header (Máquina)
 export const MachineGroupHeader = styled.h3`
   font-size: 14px;
   font-weight: 700;
@@ -105,7 +106,7 @@ export const MachineGroupHeader = styled.h3`
   gap: 8px;
 
   &::after {
-    content: '';
+    content: "";
     flex: 1;
     height: 1px;
     background: #e2e8f0;
@@ -115,14 +116,17 @@ export const MachineGroupHeader = styled.h3`
 export const MaintenanceCard = styled.div<{ $type: string }>`
   background: white;
   border-radius: 12px;
-  /* Borde izquierdo de color según el tipo */
-  border-left: 4px solid ${({ $type }) => 
-    $type === 'Correctivo' ? '#ef4444' : 
-    $type === 'Predictivo' ? '#8b5cf6' : '#22c55e'};
+  border-left: 4px solid
+    ${({ $type }) =>
+      $type === "Correctivo"
+        ? "#ef4444"
+        : $type === "Predictivo"
+        ? "#8b5cf6"
+        : "#22c55e"};
   border-right: 1px solid #e2e8f0;
   border-top: 1px solid #e2e8f0;
   border-bottom: 1px solid #e2e8f0;
-  
+
   padding: 20px;
   display: flex;
   flex-direction: column;
@@ -132,7 +136,7 @@ export const MaintenanceCard = styled.div<{ $type: string }>`
 
   &:hover {
     transform: translateX(4px);
-    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
   }
 `;
 
@@ -200,14 +204,24 @@ const badgeBase = css`
 export const TypeTag = styled.span<{ $type: string }>`
   ${badgeBase};
   background-color: ${({ $type }) =>
-    $type === "Correctivo" ? "#fef2f2" :
-    $type === "Predictivo" ? "#f5f3ff" : "#f0fdf4"};
+    $type === "Correctivo"
+      ? "#fef2f2"
+      : $type === "Predictivo"
+      ? "#f5f3ff"
+      : "#f0fdf4"};
   color: ${({ $type }) =>
-    $type === "Correctivo" ? "#b91c1c" :
-    $type === "Predictivo" ? "#6d28d9" : "#15803d"};
-  border: 1px solid ${({ $type }) =>
-    $type === "Correctivo" ? "#fecaca" :
-    $type === "Predictivo" ? "#ddd6fe" : "#bbf7d0"};
+    $type === "Correctivo"
+      ? "#b91c1c"
+      : $type === "Predictivo"
+      ? "#6d28d9"
+      : "#15803d"};
+  border: 1px solid
+    ${({ $type }) =>
+      $type === "Correctivo"
+        ? "#fecaca"
+        : $type === "Predictivo"
+        ? "#ddd6fe"
+        : "#bbf7d0"};
 `;
 
 export const SimpleTag = styled.span`
@@ -230,7 +244,7 @@ export const InfoGrid = styled.div`
 export const InfoItem = styled.div`
   display: flex;
   flex-direction: column;
-  
+
   span:first-child {
     font-size: 11px;
     color: #94a3b8;
@@ -278,6 +292,7 @@ export const ModalContent = styled.div`
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
   max-height: 90vh;
   overflow-y: auto;
+  position: relative;
 `;
 
 export const ModalTitle = styled.h2`
@@ -298,7 +313,9 @@ export const CloseIconButton = styled.button`
   font-size: 24px;
   color: #94a3b8;
   cursor: pointer;
-  &:hover { color: #475569; }
+  &:hover {
+    color: #475569;
+  }
 `;
 
 // --- FORMULARIOS ---
@@ -312,7 +329,9 @@ export const FormRow = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
-  @media (max-width: 500px) { grid-template-columns: 1fr; }
+  @media (max-width: 500px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 export const Field = styled.div`
@@ -346,9 +365,15 @@ const inputStyles = css`
   }
 `;
 
-export const TextInput = styled.input`${inputStyles}`;
-export const NumberInput = styled.input.attrs({ type: "number" })`${inputStyles}`;
-export const SelectInput = styled.select`${inputStyles}`;
+export const TextInput = styled.input`
+  ${inputStyles}
+`;
+export const NumberInput = styled.input.attrs({ type: "number" })`
+  ${inputStyles}
+`;
+export const SelectInput = styled.select`
+  ${inputStyles}
+`;
 export const TextArea = styled.textarea`
   ${inputStyles};
   min-height: 80px;
@@ -385,14 +410,20 @@ export const CancelButton = styled(BaseButton)`
   background: white;
   border: 1px solid #cbd5e1;
   color: #475569;
-  &:hover { background: #f1f5f9; color: #1e293b; }
+  &:hover {
+    background: #f1f5f9;
+    color: #1e293b;
+  }
 `;
 
 export const SubmitButton = styled(BaseButton)`
   background: #2563eb;
   color: white;
   box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
-  &:hover { background: #1d4ed8; transform: translateY(-1px); }
+  &:hover {
+    background: #1d4ed8;
+    transform: translateY(-1px);
+  }
 `;
 
 export const LoadingText = styled.div`
@@ -402,8 +433,7 @@ export const LoadingText = styled.div`
   font-size: 16px;
 `;
 
-// --- ESTILOS PARA EL REPORTE DE IMPORTACIÓN ---
-
+// --- REPORTE DE IMPORTACIÓN ---
 export const ReportContainer = styled.div`
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -414,8 +444,14 @@ export const ReportContainer = styled.div`
   animation: fadeIn 0.3s ease-out;
 
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 `;
 
@@ -443,7 +479,7 @@ export const ReportStats = styled.div`
   gap: 12px;
 `;
 
-export const StatBadge = styled.span<{ type: 'success' | 'error' | 'info' }>`
+export const StatBadge = styled.span<{ $type: "success" | "error" | "info" }>`
   font-size: 12px;
   font-weight: 600;
   padding: 4px 10px;
@@ -452,38 +488,58 @@ export const StatBadge = styled.span<{ type: 'success' | 'error' | 'info' }>`
   align-items: center;
   gap: 6px;
 
-  ${({ type }) => type === 'success' && css`
-    background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0;
-  `}
-  ${({ type }) => type === 'error' && css`
-    background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca;
-  `}
-  ${({ type }) => type === 'info' && css`
-    background: #eff6ff; color: #1d4ed8; border: 1px solid #dbeafe;
-  `}
+  ${({ $type }) =>
+    $type === "success" &&
+    css`
+      background: #dcfce7;
+      color: #15803d;
+      border: 1px solid #bbf7d0;
+    `}
+  ${({ $type }) =>
+    $type === "error" &&
+    css`
+      background: #fee2e2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    `}
+  ${({ $type }) =>
+    $type === "info" &&
+    css`
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #dbeafe;
+    `}
 `;
 
 export const ReportContent = styled.div`
   max-height: 250px;
   overflow-y: auto;
   padding: 0;
-  
-  /* Scrollbar bonita */
-  &::-webkit-scrollbar { width: 6px; }
-  &::-webkit-scrollbar-track { background: #f1f5f9; }
-  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+  }
 `;
 
-export const LogRow = styled.div<{ type: 'success' | 'error' }>`
+export const LogRow = styled.div<{ $type: "success" | "error" }>`
   padding: 10px 20px;
   border-bottom: 1px solid #f1f5f9;
   font-size: 13px;
   display: flex;
   align-items: center;
   gap: 12px;
-  background: ${({ type }) => type === 'error' ? '#fff5f5' : '#ffffff'};
+  background: ${({ $type }) => ($type === "error" ? "#fff5f5" : "#ffffff")};
 
-  &:last-child { border-bottom: none; }
+  &:last-child {
+    border-bottom: none;
+  }
 `;
 
 export const ReportActions = styled.div`
@@ -495,7 +551,7 @@ export const ReportActions = styled.div`
   gap: 8px;
 `;
 
-export const ActionButton = styled.button<{ variant?: 'primary' | 'secondary' }>`
+export const ActionButton = styled.button<{ $variant?: "primary" | "secondary" }>`
   padding: 8px 16px;
   border-radius: 6px;
   font-size: 13px;
@@ -504,17 +560,74 @@ export const ActionButton = styled.button<{ variant?: 'primary' | 'secondary' }>
   border: 1px solid;
   transition: all 0.2s;
 
-  ${({ variant }) => variant === 'primary' ? css`
-    background: #ffffff;
-    border-color: #cbd5e1;
-    color: #475569;
-    &:hover { background: #f8fafc; border-color: #94a3b8; }
-  ` : css`
-    background: transparent;
-    border-color: transparent;
-    color: #64748b;
-    &:hover { color: #dc2626; background: #fef2f2; }
-  `}
+  ${({ $variant }) =>
+    $variant === "primary"
+      ? css`
+          background: #ffffff;
+          border-color: #cbd5e1;
+          color: #475569;
+          &:hover {
+            background: #f8fafc;
+            border-color: #94a3b8;
+          }
+        `
+      : css`
+          background: transparent;
+          border-color: transparent;
+          color: #64748b;
+          &:hover {
+            color: #dc2626;
+            background: #fef2f2;
+          }
+        `}
 `;
 
-// ... resto de tus estilos
+// --- PAGINACIÓN ---
+export const PaginationContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 24px;
+  gap: 16px;
+  padding-bottom: 40px;
+`;
+
+export const PaginationButton = styled.button`
+  background: white;
+  border: 1px solid #cbd5e1;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+    color: #1e293b;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #f8fafc;
+  }
+`;
+
+export const PaginationInfo = styled.span`
+  color: #475569;
+  font-size: 0.95rem;
+
+  strong {
+    color: #1e293b;
+    font-weight: 600;
+  }
+
+  .total {
+    margin-left: 8px;
+    color: #94a3b8;
+    font-size: 0.85em;
+  }
+`;

@@ -6,17 +6,47 @@ import { UserRole } from "@prisma/client";
 export const getAllMaintenances = async (req: Request, res: Response) => {
     try {
         const ingenioId = req.session.user?.ingenioId;
+        if (!ingenioId) {
+            throw new Error("Not authenticated");
+        }
 
-        const maintenances = await prisma.maintenance.findMany({
-            where: { ingenioId },
-            include: {
-                machine: true,
-                technician: true,
-                failures: true,
-            },
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 30;
+        const skip = (page - 1) * limit;
+
+        type OrderType = "asc" | "desc" | undefined;
+        const raw = req.query.order?.toString();
+        const order: OrderType = raw === "asc" || raw == "desc" ? raw : undefined;
+
+        const [maintenances, total] = await prisma.$transaction([
+            prisma.maintenance.findMany({
+                where: { ingenioId },
+                include: {
+                    machine: true,
+                    technician: true,
+                    failures: true
+                },
+                skip: skip,
+                take: limit,
+                orderBy: { performedAt: order }
+            }),
+            prisma.maintenance.count({
+                where: { ingenioId }
+            })
+        ]);
+
+        const totalPages = Math.ceil(total / limit);
+        res.json({
+            data: maintenances,
+            meta: {
+                totalItems: total,
+                currentPage: page,
+                totalPages: totalPages,
+                itemsPerPage: limit,
+                hasNextPage: page < totalPages,
+                hasPreviousPage: page > 1
+            }
         });
-
-        res.json(maintenances);
     } catch (error) {
         console.error("Error al obtener mantenimientos:", error);
         res.status(500).json({ error: "Error al obtener mantenimientos" });

@@ -70,7 +70,8 @@ export function useMachines(selectedIngenioId?: number): UseMachinesResult {
             // 3. Petición Única al Backend
             // Ya no llamamos a getSensors, getMaintenances, etc. por separado.
             // El backend debe hacer el JOIN y devolver todo el árbol de datos.
-            const data = await api.getMachines(idToFetch);
+            // todo: No se si sera asi que va pero asi funciona
+            const data = await api.getMachines({ ingenioId: idToFetch });
 
             // 4. Actualización del Estado
             // Hacemos un cast a MachineWithRelations[] porque sabemos que el objeto

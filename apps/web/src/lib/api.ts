@@ -1,46 +1,82 @@
 import type {
-	AnalysisResponse,
-	BaseMetrics,
-	Failure,
-	Ingenio,
-	Maintenance,
-	Reading,
-	Sensor,
-	Technician,
-	User,
-	Machine,
-	ConfigData,
+    AnalysisResponse,
+    BaseMetrics,
+    Failure,
+    Ingenio,
+    Maintenance,
+    Reading,
+    Sensor,
+    Technician,
+    User,
+    Machine,
+    PaginatedResponse,
 } from "../types";
 
 const API_BASE_URL =
-	import.meta.env.VITE_API_URL?.replace(/\/$/, "") || "http://localhost:5000";
+    import.meta.env.VITE_API_URL?.replace(/\/$/, "") || "http://localhost:5000";
 
-class ApiClient {
-	private async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-		const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-			credentials: "include",
-			...options,
-			headers: {
-				"Content-Type": "application/json",
-				...options?.headers,
-			},
-		});
+// --- CLIENTE BASE ---
+class BaseApiClient {
+    protected async request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+            credentials: "include",
+            ...options,
+            headers: {
+                "Content-Type": "application/json",
+                ...options?.headers,
+            },
+        });
 
-		if (!response.ok) {
-			const errText = await response.text();
-			throw new Error(`API Error ${response.status}: ${errText}`);
-		}
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`API Error ${response.status}: ${errText}`);
+        }
 
-		if (response.status === 204) return undefined as T;
+        if (response.status === 204) return undefined as T;
 
-		return response.json();
-	}
+        return response.json();
+    }
 
-    // ======================
-    // 📈 DASHBOARD SPECIFIC
-    // ======================
+    protected buildQuery(params?: Record<string, any>): string {
+        if (!params) return "";
+        const query = new URLSearchParams();
+        Object.entries(params).forEach(([key, value]) => {
+            if (value !== undefined && value !== null && value !== "") {
+                query.append(key, String(value));
+            }
+        });
+        const queryString = query.toString();
+        return queryString ? `?${queryString}` : "";
+    }
+}
 
-    getDashboardHistory(ingenioId: number): Promise<{ time: string; availability: number; failures: number }[]> {
+// --- SERVICIOS MODULARES ---
+
+class AuthService extends BaseApiClient {
+    async login(email: string, password: string): Promise<User> {
+        const data = await this.request<{ user: User }>("/api/auth/login", {
+            method: "POST",
+            body: JSON.stringify({ email, password }),
+        });
+        return data.user;
+    }
+
+    async logout(): Promise<void> {
+        return this.request<void>("/api/auth/logout", { method: "POST" });
+    }
+
+    async getSession(): Promise<User | null> {
+        try {
+            const data = await this.request<{ user: User | null }>("/api/auth/session");
+            return data.user ?? null;
+        } catch {
+            return null;
+        }
+    }
+}
+
+class DashboardService extends BaseApiClient {
+    getHistory(ingenioId: number): Promise<{ time: string; availability: number; failures: number }[]> {
         return this.request(`/api/dashboard/${ingenioId}/history`);
     }
 
@@ -55,339 +91,363 @@ class ApiClient {
     }>> {
         return this.request(`/api/dashboard/${ingenioId}/activity`);
     }
+}
 
-	// ======================
-	// 🔐 AUTH
-	// ======================
+class IngenioService extends BaseApiClient {
+    getAll(): Promise<Ingenio[]> {
+        return this.request<Ingenio[]>("/api/ingenios");
+    }
 
-	async login(email: string, password: string): Promise<User> {
-		const data = await this.request<{ user: User }>("/api/auth/login", {
-			method: "POST",
-			body: JSON.stringify({ email, password }),
-		});
-		return data.user;
-	}
+    getOne(id: number): Promise<Ingenio> {
+        return this.request<Ingenio>(`/api/ingenios/${id}`);
+    }
 
-	async logout(): Promise<void> {
-		return this.request<void>("/api/auth/logout", {
-			method: "POST",
-		});
-	}
-
-	async getSession(): Promise<User | null> {
-		try {
-			const data = await this.request<{ user: User | null }>("/api/auth/session");
-			return data.user ?? null;
-		} catch {
-			return null;
-		}
-	}
-
-	// ======================
-	// 🌾 INGENIOS
-	// ======================
-
-	getAllIngenios(): Promise<Ingenio[]> {
-		return this.request<Ingenio[]>("/api/ingenios");
-	}
-
-	getIngenio(id: number): Promise<Ingenio> {
-		return this.request<Ingenio>(`/api/ingenios/${id}`);
-	}
-
-	createIngenio(data: Partial<Ingenio>): Promise<Ingenio> {
-		return this.request<Ingenio>("/api/ingenios", {
-			method: "POST",
-			body: JSON.stringify(data),
-		});
-	}
-
-	updateIngenio(id: number, data: Partial<Ingenio>): Promise<Ingenio> {
-		return this.request<Ingenio>(`/api/ingenios/${id}`, {
-			method: "PUT",
-			body: JSON.stringify(data),
-		});
-	}
-
-	deleteIngenio(id: number): Promise<void> {
-		return this.request<void>(`/api/ingenios/${id}`, {
-			method: "DELETE",
-		});
-	}
-
-	activateIngenio(id: number): Promise<void> {
-		return this.request<void>(`/api/ingenios/${id}/activate`, {
-			method: "PUT",
-		});
-	}
-
-	deactivateIngenio(id: number): Promise<void> {
-		return this.request<void>(`/api/ingenios/${id}/deactivate`, {
-			method: "PUT",
-		});
-	}
-
-	// ======================
-	// 🏭 MACHINES
-	// ======================
-
-	getMachines(ingenioId?: number): Promise<Machine[]> {
-		const query = ingenioId ? `?ingenioId=${ingenioId}` : "";
-		return this.request<Machine[]>(`/api/machines${query}`);
-	}
-
-	getMachine(id: number): Promise<Machine> {
-		return this.request<Machine>(`/api/machines/${id}`);
-	}
-
-	createMachine(data: Partial<Machine>): Promise<Machine> {
-		return this.request<Machine>("/api/machines", {
-			method: "POST",
-			body: JSON.stringify(data),
-		});
-	}
-
-	updateMachine(id: number, data: Partial<Machine>): Promise<Machine> {
-		return this.request<Machine>(`/api/machines/${id}`, {
-			method: "PUT",
-			body: JSON.stringify(data),
-		});
-	}
-
-	deleteMachine(id: number): Promise<void> {
-		return this.request<void>(`/api/machines/${id}`, {
-			method: "DELETE",
-		});
-	}
-
-	// ======================
-	// 📊 METRICS
-	// ======================
-
-	getMachineMetrics(machineId: number): Promise<BaseMetrics> {
-		return this.request<BaseMetrics>(`/api/metrics/machine/${machineId}`);
-	}
-
-	getIngenioMetrics(ingenioId: number): Promise<BaseMetrics> {
-		return this.request<BaseMetrics>(`/api/metrics/ingenio/${ingenioId}`);
-	}
-
-	getSensorHealth(id: number): Promise<{
-		active: boolean;
-		lastSeen: string | null;
-		lastAnalysis: any | null;
-	}> {
-		return this.request(`/api/metrics/sensor/${id}/health`);
-	}
-
-	// ======================
-	// 📡 SENSORS
-	// ======================
-
-	getSensors(ingenioId?: number): Promise<Sensor[]> {
-		const query = ingenioId ? `?ingenioId=${ingenioId}` : "";
-		return this.request<Sensor[]>(`/api/sensors${query}`);
-	}
-
-	getSensor(sensorId: string): Promise<Sensor> {
-		return this.request<Sensor>(`/api/sensors/${sensorId}`);
-	}
-
-	updateSensor(sensorId: string, data: Partial<Sensor>): Promise<Sensor> {
-		return this.request<Sensor>(`/api/sensors/${sensorId}`, {
-			method: "PUT",
-			body: JSON.stringify(data),
-		});
-	}
-
-	createSensor(data: {
-		sensorId: string;
-		machineId: number;
-		ingenioId: number;
-	}): Promise<Sensor> {
-		return this.request<Sensor>(`/api/sensors`, {
-			method: "POST",
-			body: JSON.stringify(data),
-		});
-	}
-
-	deactivateSensor(sensorId: string): Promise<Sensor> {
-		// backend: PATCH /api/sensors/:sensorId/deactivate
-		return this.request<Sensor>(`/api/sensors/${sensorId}/deactivate`, {
-			method: "PATCH",
-		});
-	}
-
-	activateSensor(sensorId: string): Promise<Sensor> {
-		// backend: PATCH /api/sensors/:sensorId/activate
-		return this.request<Sensor>(`/api/sensors/${sensorId}/activate`, {
-			method: "PATCH",
-		});
-	}
-
-	getSensorReadings(sensorId: string): Promise<Reading[]> {
-		return this.request<Reading[]>(`/api/sensors/${sensorId}/readings`);
-	}
-
-	// ======================
-	// 🛠 MAINTENANCES
-	// ======================
-
-	getMaintenances(): Promise<Maintenance[]> {
-		return this.request<Maintenance[]>("/api/maintenances");
-	}
-
-	getMaintenance(id: string): Promise<Maintenance> {
-		return this.request<Maintenance>(`/api/maintenances/${id}`);
-	}
-
-	createMaintenance(data: Partial<Maintenance>): Promise<Maintenance> {
-		return this.request<Maintenance>("/api/maintenances", {
-			method: "POST",
-			body: JSON.stringify(data),
-		});
-	}
-
-	updateMaintenance(id: string, data: Partial<Maintenance>): Promise<Maintenance> {
-		return this.request<Maintenance>(`/api/maintenances/${id}`, {
-			method: "PUT",
-			body: JSON.stringify(data),
-		});
-	}
-
-	deleteMaintenance(id: string): Promise<void> {
-		return this.request<void>(`/api/maintenances/${id}`, {
-			method: "DELETE",
-		});
-	}
-
-	// ======================
-	// ⚠️ FAILURES
-	// ======================
-
-	getFailures(): Promise<Failure[]> {
-		return this.request<Failure[]>("/api/failures");
-	}
-
-	getFailure(id: string): Promise<Failure> {
-		return this.request<Failure>(`/api/failures/${id}`);
-	}
-
-	createFailure(data: Partial<Failure>): Promise<Failure> {
-		return this.request<Failure>("/api/failures", {
-			method: "POST",
-			body: JSON.stringify(data),
-		});
-	}
-
-	updateFailure(id: string, data: Partial<Failure>): Promise<Failure> {
-		return this.request<Failure>(`/api/failures/${id}`, {
-			method: "PUT",
-			body: JSON.stringify(data),
-		});
-	}
-
-	deleteFailure(id: string): Promise<void> {
-		return this.request<void>(`/api/failures/${id}`, {
-			method: "DELETE",
-		});
-	}
-
-	// ======================
-	// 👷 TECHNICIANS
-	// ======================
-
-	getTechnicians(): Promise<Technician[]> {
-		return this.request<Technician[]>("/api/technicians");
-	}
-
-	getTechnician(id: string): Promise<Technician> {
-		return this.request<Technician>(`/api/technicians/${id}`);
-	}
-
-	createTechnician(data: Partial<Technician>): Promise<Technician> {
-		return this.request<Technician>("/api/technicians", {
-			method: "POST",
-			body: JSON.stringify(data),
-		});
-	}
-
-	updateTechnician(id: string, data: Partial<Technician>): Promise<Technician> {
-		return this.request<Technician>(`/api/technicians/${id}`, {
-			method: "PUT",
-			body: JSON.stringify(data),
-		});
-	}
-
-	deleteTechnician(id: string): Promise<void> {
-		return this.request<void>(`/api/technicians/${id}`, {
-			method: "DELETE",
-		});
-	}
-
-	// ======================
-	// 👤 USERS
-	// ======================
-
-	getUsers(ingenioId?: number): Promise<User[]> {
-		const url = ingenioId ? `/api/users?ingenioId=${ingenioId}` : "/api/users";
-		return this.request<User[]>(url);
-	}
-
-	createUser(data: Partial<User>): Promise<User> {
-		return this.request<User>("/api/users", {
-			method: "POST",
-			body: JSON.stringify(data),
-		});
-	}
-
-	updateUser(id: string, data: Partial<User>): Promise<User> {
-		return this.request<User>(`/api/users/${id}`, {
-			method: "PUT",
-			body: JSON.stringify(data),
-		});
-	}
-
-	deleteUser(id: string): Promise<void> {
-		return this.request<void>(`/api/users/${id}`, {
-			method: "DELETE",
-		});
-	}
-
-	changePassword(password: string): void {
-		this.request<void>(`/api/users/change-password`, {
-			method: "POST",
-			body: JSON.stringify({ password }),
-		});
-	}
-
-	// ======================
-	// 🧠 ANALYSIS
-	// ======================
-
-    analyzeMachine(machineId: number): Promise<{ machine: any; analysis: AnalysisResponse }> {
-        return this.request(`/api/analyze/machine/${machineId}`, {
-            method: "GET",
+    create(data: Partial<Ingenio>): Promise<Ingenio> {
+        return this.request<Ingenio>("/api/ingenios", {
+            method: "POST",
+            body: JSON.stringify(data),
         });
     }
 
-	// ======================
-	// 🔄 INGEST
-	// ======================
+    update(id: number, data: Partial<Ingenio>): Promise<Ingenio> {
+        return this.request<Ingenio>(`/api/ingenios/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(data),
+        });
+    }
 
-	ingestData(data: any): Promise<void> {
-		return this.request<void>("/api/ingest", {
-			method: "POST",
-			body: JSON.stringify(data),
-		});
-	}
+    delete(id: number): Promise<void> {
+        return this.request<void>(`/api/ingenios/${id}`, { method: "DELETE" });
+    }
 
-	ingestSensorData(data: any): Promise<void> {
-		return this.request<void>("/api/ingest/sensor", {
-			method: "POST",
-			body: JSON.stringify(data),
-		});
-	}
+    activate(id: number): Promise<void> {
+        return this.request<void>(`/api/ingenios/${id}/activate`, { method: "PUT" });
+    }
+
+    deactivate(id: number): Promise<void> {
+        return this.request<void>(`/api/ingenios/${id}/deactivate`, { method: "PUT" });
+    }
 }
 
-export const api = new ApiClient();
+class MachineService extends BaseApiClient {
+    getAll(params?: { ingenioId?: number }): Promise<Machine[]> {
+        return this.request<Machine[]>(`/api/machines${this.buildQuery(params)}`);
+    }
+
+    getOne(id: number): Promise<Machine> {
+        return this.request<Machine>(`/api/machines/${id}`);
+    }
+
+    create(data: Partial<Machine>): Promise<Machine> {
+        return this.request<Machine>("/api/machines", {
+            method: "POST",
+            body: JSON.stringify(data),
+        });
+    }
+
+    update(id: number, data: Partial<Machine>): Promise<Machine> {
+        return this.request<Machine>(`/api/machines/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(data),
+        });
+    }
+
+    delete(id: number): Promise<void> {
+        return this.request<void>(`/api/machines/${id}`, { method: "DELETE" });
+    }
+}
+
+class SensorService extends BaseApiClient {
+    getAll(params?: { ingenioId?: number }): Promise<Sensor[]> {
+        return this.request<Sensor[]>(`/api/sensors${this.buildQuery(params)}`);
+    }
+
+    getOne(sensorId: string): Promise<Sensor> {
+        return this.request<Sensor>(`/api/sensors/${sensorId}`);
+    }
+
+    create(data: { sensorId: string; machineId: number; ingenioId: number }): Promise<Sensor> {
+        return this.request<Sensor>(`/api/sensors`, {
+            method: "POST",
+            body: JSON.stringify(data),
+        });
+    }
+
+    update(sensorId: string, data: Partial<Sensor>): Promise<Sensor> {
+        return this.request<Sensor>(`/api/sensors/${sensorId}`, {
+            method: "PUT",
+            body: JSON.stringify(data),
+        });
+    }
+
+    activate(sensorId: string): Promise<Sensor> {
+        return this.request<Sensor>(`/api/sensors/${sensorId}/activate`, { method: "PATCH" });
+    }
+
+    deactivate(sensorId: string): Promise<Sensor> {
+        return this.request<Sensor>(`/api/sensors/${sensorId}/deactivate`, { method: "PATCH" });
+    }
+
+    getReadings(sensorId: string): Promise<Reading[]> {
+        return this.request<Reading[]>(`/api/sensors/${sensorId}/readings`);
+    }
+}
+
+class MaintenanceService extends BaseApiClient {
+    getAll(params?: Record<string, any>): Promise<PaginatedResponse<Maintenance>> {
+        return this.request<PaginatedResponse<Maintenance>>(`/api/maintenances${this.buildQuery(params)}`);
+    }
+
+    getOne(id: string): Promise<Maintenance> {
+        return this.request<Maintenance>(`/api/maintenances/${id}`);
+    }
+
+    create(data: Partial<Maintenance>): Promise<Maintenance> {
+        return this.request<Maintenance>("/api/maintenances", {
+            method: "POST",
+            body: JSON.stringify(data),
+        });
+    }
+
+    update(id: string, data: Partial<Maintenance>): Promise<Maintenance> {
+        return this.request<Maintenance>(`/api/maintenances/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(data),
+        });
+    }
+
+    delete(id: string): Promise<void> {
+        return this.request<void>(`/api/maintenances/${id}`, { method: "DELETE" });
+    }
+}
+
+class FailureService extends BaseApiClient {
+    getAll(params?: { ingenioId?: number }): Promise<Failure[]> {
+        return this.request<Failure[]>(`/api/failures${this.buildQuery(params)}`);
+    }
+
+    getOne(id: string): Promise<Failure> {
+        return this.request<Failure>(`/api/failures/${id}`);
+    }
+
+    create(data: Partial<Failure>): Promise<Failure> {
+        return this.request<Failure>("/api/failures", {
+            method: "POST",
+            body: JSON.stringify(data),
+        });
+    }
+
+    update(id: string, data: Partial<Failure>): Promise<Failure> {
+        return this.request<Failure>(`/api/failures/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(data),
+        });
+    }
+
+    delete(id: string): Promise<void> {
+        return this.request<void>(`/api/failures/${id}`, { method: "DELETE" });
+    }
+}
+
+class TechnicianService extends BaseApiClient {
+    getAll(params?: { ingenioId?: number }): Promise<Technician[]> {
+        return this.request<Technician[]>(`/api/technicians${this.buildQuery(params)}`);
+    }
+
+    getOne(id: string): Promise<Technician> {
+        return this.request<Technician>(`/api/technicians/${id}`);
+    }
+
+    create(data: Partial<Technician>): Promise<Technician> {
+        return this.request<Technician>("/api/technicians", {
+            method: "POST",
+            body: JSON.stringify(data),
+        });
+    }
+
+    update(id: string, data: Partial<Technician>): Promise<Technician> {
+        return this.request<Technician>(`/api/technicians/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(data),
+        });
+    }
+
+    delete(id: string): Promise<void> {
+        return this.request<void>(`/api/technicians/${id}`, { method: "DELETE" });
+    }
+}
+
+class UserService extends BaseApiClient {
+    getAll(params?: { ingenioId?: number }): Promise<User[]> {
+        return this.request<User[]>(`/api/users${this.buildQuery(params)}`);
+    }
+
+    create(data: Partial<User>): Promise<User> {
+        return this.request<User>("/api/users", {
+            method: "POST",
+            body: JSON.stringify(data),
+        });
+    }
+
+    update(id: string, data: Partial<User>): Promise<User> {
+        return this.request<User>(`/api/users/${id}`, {
+            method: "PUT",
+            body: JSON.stringify(data),
+        });
+    }
+
+    delete(id: string): Promise<void> {
+        return this.request<void>(`/api/users/${id}`, { method: "DELETE" });
+    }
+
+    changePassword(password: string): void {
+        this.request<void>(`/api/users/change-password`, {
+            method: "POST",
+            body: JSON.stringify({ password }),
+        });
+    }
+}
+
+class MetricsService extends BaseApiClient {
+    getMachineMetrics(machineId: number): Promise<BaseMetrics> {
+        return this.request<BaseMetrics>(`/api/metrics/machine/${machineId}`);
+    }
+
+    getIngenioMetrics(ingenioId: number): Promise<BaseMetrics> {
+        return this.request<BaseMetrics>(`/api/metrics/ingenio/${ingenioId}`);
+    }
+
+    getSensorHealth(id: number): Promise<{
+        active: boolean;
+        lastSeen: string | null;
+        lastAnalysis: any | null;
+    }> {
+        return this.request(`/api/metrics/sensor/${id}/health`);
+    }
+    
+    analyzeMachine(machineId: number): Promise<{ machine: any; analysis: AnalysisResponse }> {
+        return this.request(`/api/analyze/machine/${machineId}`, { method: "GET" });
+    }
+}
+
+class IngestService extends BaseApiClient {
+    ingestData(data: any): Promise<void> {
+        return this.request<void>("/api/ingest", {
+            method: "POST",
+            body: JSON.stringify(data),
+        });
+    }
+
+    ingestSensorData(data: any): Promise<void> {
+        return this.request<void>("/api/ingest/sensor", {
+            method: "POST",
+            body: JSON.stringify(data),
+        });
+    }
+}
+
+// --- API FAÇADE (Para mantener compatibilidad) ---
+// Creamos una instancia de cada servicio
+const auth = new AuthService();
+const dashboard = new DashboardService();
+const ingenios = new IngenioService();
+const machines = new MachineService();
+const sensors = new SensorService();
+const maintenances = new MaintenanceService();
+const failures = new FailureService();
+const technicians = new TechnicianService();
+const users = new UserService();
+const metrics = new MetricsService();
+const ingest = new IngestService();
+
+/**
+ * Objeto API unificado.
+ * Expone los métodos antiguos mapeados a los nuevos servicios para retrocompatibilidad,
+ * o puedes empezar a usar api.machines.getAll() si prefieres.
+ */
+export const api = {
+    // Servicios expuestos directamente (Nueva forma recomendada)
+    auth,
+    dashboard,
+    ingenios,
+    machines,
+    sensors,
+    maintenances,
+    failures,
+    technicians,
+    users,
+    metrics,
+    ingest,
+
+    // --- MÉTODOS LEGACY (Mapeados para no romper tu código actual) ---
+    
+    // Auth
+    login: auth.login.bind(auth),
+    logout: auth.logout.bind(auth),
+    getSession: auth.getSession.bind(auth),
+
+    // Ingenios
+    getAllIngenios: ingenios.getAll.bind(ingenios),
+    getIngenio: ingenios.getOne.bind(ingenios),
+    createIngenio: ingenios.create.bind(ingenios),
+    updateIngenio: ingenios.update.bind(ingenios),
+    deleteIngenio: ingenios.delete.bind(ingenios),
+    activateIngenio: ingenios.activate.bind(ingenios),
+    deactivateIngenio: ingenios.deactivate.bind(ingenios),
+
+    // Machines
+    getMachines: machines.getAll.bind(machines),
+    getMachine: machines.getOne.bind(machines),
+    createMachine: machines.create.bind(machines),
+    updateMachine: machines.update.bind(machines),
+    deleteMachine: machines.delete.bind(machines),
+
+    // Sensors
+    getSensors: sensors.getAll.bind(sensors),
+    getSensor: sensors.getOne.bind(sensors),
+    createSensor: sensors.create.bind(sensors),
+    updateSensor: sensors.update.bind(sensors),
+    activateSensor: sensors.activate.bind(sensors),
+    deactivateSensor: sensors.deactivate.bind(sensors),
+    getSensorReadings: sensors.getReadings.bind(sensors),
+
+    // Maintenances
+    getMaintenances: maintenances.getAll.bind(maintenances),
+    getMaintenance: maintenances.getOne.bind(maintenances),
+    createMaintenance: maintenances.create.bind(maintenances),
+    updateMaintenance: maintenances.update.bind(maintenances),
+    deleteMaintenance: maintenances.delete.bind(maintenances),
+
+    // Failures
+    getFailures: failures.getAll.bind(failures),
+    getFailure: failures.getOne.bind(failures),
+    createFailure: failures.create.bind(failures),
+    updateFailure: failures.update.bind(failures),
+    deleteFailure: failures.delete.bind(failures),
+
+    // Technicians
+    getTechnicians: technicians.getAll.bind(technicians),
+    getTechnician: technicians.getOne.bind(technicians),
+    createTechnician: technicians.create.bind(technicians),
+    updateTechnician: technicians.update.bind(technicians),
+    deleteTechnician: technicians.delete.bind(technicians),
+
+    // Users
+    getUsers: users.getAll.bind(users),
+    createUser: users.create.bind(users),
+    updateUser: users.update.bind(users),
+    deleteUser: users.delete.bind(users),
+    changePassword: users.changePassword.bind(users),
+
+    // Metrics & Dashboard
+    getMachineMetrics: metrics.getMachineMetrics.bind(metrics),
+    getIngenioMetrics: metrics.getIngenioMetrics.bind(metrics),
+    getSensorHealth: metrics.getSensorHealth.bind(metrics),
+    analyzeMachine: metrics.analyzeMachine.bind(metrics),
+    getDashboardHistory: dashboard.getHistory.bind(dashboard),
+    getRecentActivity: dashboard.getRecentActivity.bind(dashboard),
+
+    // Ingest
+    ingestData: ingest.ingestData.bind(ingest),
+    ingestSensorData: ingest.ingestSensorData.bind(ingest),
+};
