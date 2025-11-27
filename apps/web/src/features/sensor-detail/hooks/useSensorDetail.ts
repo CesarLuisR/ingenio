@@ -1,102 +1,99 @@
 import { useEffect, useState } from "react";
-import {
-	type Maintenance,
-	type Failure,
-	type AnalysisResponse,
-} from "../../../types";
 import { useReadingsStore } from "../../../store/readingState";
 import { api } from "../../../lib/api";
+import { type Failure } from "../../../types";
 
 const MAX_POINTS = 30;
 
-/**
- * Hook central del detalle de sensor.
- * Gestiona la carga base (API), escucha WebSocket y genera chartData reactivo.
- */
 export function useSensorDetail(id?: string) {
-	const [sensorName, setSensorName] = useState<string>("");
-	const [maintenances, setMaintenances] = useState<Maintenance[]>([]);
-	const [failures, setFailures] = useState<Failure[]>([]);
-	const [analysis, setAnalysis] = useState<AnalysisResponse | null>(null);
-	const [chartData, setChartData] = useState<Record<string, any[]>>({});
-	const [sensorIntId, setSensorIntId] = useState<number | null>(null);
+    const [sensorName, setSensorName] = useState<string>("");
+    const [sensorIntId, setSensorIntId] = useState<number | null>(null);
+    
+    // Restauramos el estado para fallas
+    const [failures, setFailures] = useState<Failure[]>([]);
+    
+    const [chartData, setChartData] = useState<Record<string, any[]>>({});
 
-	const sensorMap = useReadingsStore((s) => s.sensorMap);
+    const sensorMap = useReadingsStore((s) => s.sensorMap);
 
-	// 🔹 Cargar datos estáticos e históricos al montar
-	useEffect(() => {
-		if (!id) return;
+    // 🔹 1. Cargar datos estáticos del sensor y sus fallas históricas
+    useEffect(() => {
+        if (!id) return;
 
-		(async () => {
-			try {
-				const sensor = await api.getSensor(String(id));
-				setSensorName(sensor.name);
-				setSensorIntId(sensor.id);
+        let mounted = true;
 
-				const [maints, fails, /*anal*/] = await Promise.all([
-					api.getMaintenances(),
-					api.getFailures(),
-					// api.analyzeData([String(id)]),
-				]);
+        const loadBaseData = async () => {
+            try {
+                // 1. Obtenemos el sensor para saber su ID numérico interno
+                const sensor = await api.getSensor(String(id));
+                
+                if (mounted) {
+                    setSensorName(sensor.name);
+                    setSensorIntId(sensor.id);
 
-				setMaintenances(maints.filter((m) => m.sensorId === sensor.id));
-				setFailures(fails.filter((f) => f.sensorId === sensor.id));
-				// setAnalysis(anal);
-			} catch (err) {
-				console.error("❌ Error cargando datos base:", err);
-			}
-		})();
-	}, [id]);
+                    // 2. Cargamos las fallas y filtramos por este sensor
+                    // (Idealmente el backend debería tener getFailures({ sensorId: ... }), 
+                    // pero mantenemos la lógica de filtrado que tenías)
+                    const allFailures = await api.getFailures();
+                    const sensorFailures = allFailures.filter(f => f.sensorId === sensor.id);
+                    
+                    setFailures(sensorFailures);
+                }
+            } catch (err) {
+                console.error("❌ Error cargando datos base del sensor:", err);
+            }
+        };
 
-	// 🔹 Historial de lecturas reactivas
-	const history = sensorMap.get(String(id)) || [];
+        loadBaseData();
 
-	// 🔹 Transformar lecturas → estructura compatible con Recharts
-	useEffect(() => {
-		if (history.length === 0) return;
+        return () => { mounted = false; };
+    }, [id]);
 
-		const newChartData: Record<string, any[]> = {};
+    // 🔹 2. Historial reactivo (WebSockets/Store)
+    const history = sensorMap.get(String(id)) || [];
 
-		history.forEach((reading) => {
-			const time =
-				typeof reading.timestamp === "string"
-					? new Date(reading.timestamp).toLocaleTimeString()
-					: new Date(Number(reading.timestamp)).toLocaleTimeString();
+    // 🔹 3. Transformación para gráficas
+    useEffect(() => {
+        if (history.length === 0) return;
 
-			Object.entries(reading.metrics || {}).forEach(([category, metrics]) => {
-				if (!newChartData[category]) newChartData[category] = [];
+        const newChartData: Record<string, any[]> = {};
 
-				const point: Record<string, any> = { time };
+        history.forEach((reading) => {
+            const time = typeof reading.timestamp === "string"
+                ? new Date(reading.timestamp).toLocaleTimeString()
+                : new Date(Number(reading.timestamp)).toLocaleTimeString();
 
-				Object.entries(metrics).forEach(([metric, val]) => {
-					const value =
-						typeof val === "object" && val !== null && "value" in val
-							? (val as any).value
-							: val;
-					point[metric] = value;
-				});
+            Object.entries(reading.metrics || {}).forEach(([category, metrics]) => {
+                if (!newChartData[category]) newChartData[category] = [];
 
-				newChartData[category].push(point);
-			});
-		});
+                const point: Record<string, any> = { time };
 
-		// 🔹 Limitar número de puntos
-		for (const key of Object.keys(newChartData)) {
-			newChartData[key] = newChartData[key].slice(-MAX_POINTS);
-		}
+                Object.entries(metrics).forEach(([metric, val]) => {
+                    const value = typeof val === "object" && val !== null && "value" in val
+                        ? (val as any).value
+                        : val;
+                    point[metric] = value;
+                });
 
-		setChartData(newChartData);
-	}, [history]);
+                newChartData[category].push(point);
+            });
+        });
 
-	const latest = history.at(-1);
+        // Limitar puntos
+        for (const key of Object.keys(newChartData)) {
+            newChartData[key] = newChartData[key].slice(-MAX_POINTS);
+        }
 
-	return {
-		sensorName,
-		sensorIntId,
-		maintenances,
-		failures,
-		analysis,
-		chartData,
-		latest,
-	};
+        setChartData(newChartData);
+    }, [history]);
+
+    const latest = history.at(-1);
+
+    return {
+        sensorName,
+        sensorIntId,
+        failures, // ✅ Aquí está de vuelta
+        chartData,
+        latest,
+    };
 }

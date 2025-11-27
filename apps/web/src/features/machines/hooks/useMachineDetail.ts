@@ -18,93 +18,72 @@ export function useMachineDetail(machineId: number): MachineDetailData {
     const { user } = useSessionStore();
 
     const [machine, setMachine] = useState<Machine | null>(null);
+    
+    // Estos estados son derivados de la máquina, pero los mantenemos por compatibilidad de interfaz
     const [sensors, setSensors] = useState<Sensor[]>([]);
     const [maintenances, setMaintenances] = useState<Maintenance[]>([]);
     const [failures, setFailures] = useState<Failure[]>([]);
+    
     const [metrics, setMetrics] = useState<BaseMetrics | null>(null);
-
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
     const reload = useCallback(async () => {
         if (!user?.ingenioId) {
-            setError("Usuario sin ingenio asignado");
-            return;
+            // Permitimos si es SuperAdmin, sino error
+            if (user?.role !== 'SUPERADMIN') {
+                setError("Contexto de usuario inválido");
+                return;
+            }
         }
 
         setLoading(true);
         setError(null);
 
         try {
-            // 1) Cargar máquina principal
+            // 1. Carga Principal Única
+            // Asumimos que el backend hace: prisma.machine.findUnique({ include: { sensors: true, maintenances: true, failures: true } })
             const m = await api.getMachine(machineId);
 
-            if (!m || m.ingenioId !== user.ingenioId)
-                throw new Error("Máquina no pertenece al ingenio del usuario");
+            if (!m) throw new Error("Máquina no encontrada");
+
+            // Validación de seguridad básica en cliente
+            if (user?.role !== 'SUPERADMIN' && m.ingenioId !== user?.ingenioId) {
+                throw new Error("No tienes permiso para ver esta máquina");
+            }
 
             setMachine(m);
 
-            // 2) Revisar datos que vienen directos de la máquina (inline)
-            const sensorsInline = m.sensors ?? [];
-            const maintInline = m.maintenances ?? [];
-            const failsInline = m.failures ?? [];
+            // 2. Extraer relaciones (si vienen en el objeto, si no, arrays vacíos)
+            // Esto evita tener que hacer peticiones extra.
+            setSensors(m.sensors || []);
+            setMaintenances(m.maintenances || []);
+            setFailures(m.failures || []);
 
-            // 3) LÓGICA DE CARGA INTELIGENTE:
-            // Determinamos si necesitamos pedir más datos a la API
-            const needSensors = sensorsInline.length === 0;
-            
-            // IMPORTANTE: Pedimos mantenimientos si la lista está vacía O 
-            // si detectamos que hay mantenimientos pero NO tienen el objeto técnico cargado.
-            const needMaints = maintInline.length === 0 || maintInline.some((mt: any) => !mt.technician);
-            
-            const needFails = failsInline.length === 0;
-
-            let sensorsData = sensorsInline;
-            let maintsData = maintInline;
-            let failsData = failsInline;
-
-            // --- Fetch Sensores ---
-            if (needSensors) {
-                const all = await api.getSensors();
-                sensorsData = all.filter(
-                    (s) => s.machineId === m.id && s.ingenioId === user.ingenioId
-                );
+            // 3. Carga de Métricas (Opcional / Paralela)
+            // Las métricas suelen ser calculadas, por eso se piden aparte.
+            try {
+                const metricsData = await api.getMachineMetrics(m.id);
+                setMetrics(metricsData);
+            } catch (err) {
+                console.warn("No se pudieron cargar métricas:", err);
+                // No rompemos la página si solo fallan los KPIs
             }
-
-            // --- Fetch Mantenimientos (Aquí se traerá el técnico actualizado) ---
-            if (needMaints) {
-                const all = await api.getMaintenances();
-                maintsData = all.filter(
-                    (mt) => mt.machineId === m.id && mt.ingenioId === user.ingenioId
-                );
-            }
-
-            // --- Fetch Fallas ---
-            if (needFails) {
-                const all = await api.getFailures();
-                failsData = all.filter(
-                    (f) => f.machineId === m.id && f.ingenioId === user.ingenioId
-                );
-            }
-
-            setSensors(sensorsData);
-            setMaintenances(maintsData);
-            setFailures(failsData);
-
-            // 4) Métricas de rendimiento
-            const metricsData = await api.getMachineMetrics(m.id);
-            setMetrics(metricsData);
 
         } catch (e: any) {
-            setError(e?.message ?? "Error cargando los datos de la máquina");
+            console.error("Error loading machine detail:", e);
+            setError(e.message || "Error al cargar datos de la máquina");
+            setMachine(null);
         } finally {
             setLoading(false);
         }
-    }, [machineId, user?.ingenioId]);
+    }, [machineId, user?.ingenioId, user?.role]);
 
     useEffect(() => {
-        void reload();
-    }, [reload]);
+        if (machineId) {
+            void reload();
+        }
+    }, [reload, machineId]);
 
     return {
         machine,

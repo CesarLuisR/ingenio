@@ -9,7 +9,6 @@ export default function SensorDetail() {
     const { id } = useParams<{ id: string }>();
     const {
         sensorName,
-        maintenances,
         failures,
         latest,
         chartData,
