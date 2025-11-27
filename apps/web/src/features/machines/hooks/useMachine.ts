@@ -9,6 +9,11 @@ import type {
 import { useSessionStore } from "../../../store/sessionStore";
 import { ROLES } from "../../../types";
 
+/**
+ * Tipo extendido para la UI.
+ * Asumimos que el backend envía estas relaciones anidadas 
+ * (Server-Side Join via Prisma include).
+ */
 export type MachineWithRelations = Machine & {
     sensors?: Sensor[];
     maintenances?: Maintenance[];
@@ -23,23 +28,31 @@ interface UseMachinesResult {
     setMachines: React.Dispatch<React.SetStateAction<MachineWithRelations[]>>;
 }
 
+/**
+ * Hook optimizado para cargar máquinas.
+ * * CAMBIO IMPORTANTE: 
+ * Se eliminó la lógica de "Client-side Joins". Ahora confiamos en que el backend
+ * devuelve la estructura completa en una sola petición.
+ */
 export function useMachines(selectedIngenioId?: number): UseMachinesResult {
     const { user } = useSessionStore();
+    
+    // Estado local
     const [machines, setMachines] = useState<MachineWithRelations[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     const isSuperAdmin = user?.role === ROLES.SUPERADMIN;
 
-    // Determinamos qué ID usar para filtrar (si aplica)
-    // Si es SuperAdmin y seleccionó algo -> usa ese ID.
-    // Si es SuperAdmin y NO seleccionó nada -> undefined (trae todo).
-    // Si NO es SuperAdmin -> usa su propio ingenioId.
-    const targetIngenioId = isSuperAdmin ? selectedIngenioId : user?.ingenioId;
-
+    // ------------------------------------------------------------------
+    // Función de Carga de Datos (Server-Side Approach)
+    // ------------------------------------------------------------------
     const loadMachines = useCallback(async () => {
-        // Si no es superadmin y no tiene ingenio, no cargar nada
-        if (!isSuperAdmin && !user?.ingenioId) {
+        // 1. Validaciones de Seguridad
+        if (!user) return;
+
+        // Si es usuario normal y no tiene contexto de ingenio, abortar.
+        if (!isSuperAdmin && !user.ingenioId) {
             setMachines([]);
             return;
         }
@@ -48,100 +61,35 @@ export function useMachines(selectedIngenioId?: number): UseMachinesResult {
         setError(null);
 
         try {
-            // 1) Cargar máquinas (suponemos que getMachines soporta filtrado o trae todas)
-            // Si el API no soporta params, traemos todas y filtramos en memoria abajo
-            const machinesRaw = await api.getMachines();
+            // 2. Determinación del Filtro (Ingenio ID)
+            // - Si es SuperAdmin y seleccionó un ingenio: enviamos ese ID.
+            // - Si es SuperAdmin y NO seleccionó: enviamos undefined (Backend trae todas).
+            // - Si es Usuario Normal: enviamos undefined (Backend usa req.session.user.ingenioId).
+            const idToFetch = isSuperAdmin ? selectedIngenioId : undefined;
 
-            // Filtrado en memoria
-            let filtered: MachineWithRelations[] = machinesRaw;
+            // 3. Petición Única al Backend
+            // Ya no llamamos a getSensors, getMaintenances, etc. por separado.
+            // El backend debe hacer el JOIN y devolver todo el árbol de datos.
+            const data = await api.getMachines(idToFetch);
 
-            if (targetIngenioId) {
-                filtered = machinesRaw.filter((m) => m.ingenioId === targetIngenioId);
-            } else if (!isSuperAdmin) {
-                // Seguridad extra: si no es superadmin, forzar filtro aunque targetIngenioId sea null
-                filtered = machinesRaw.filter((m) => m.ingenioId === user?.ingenioId);
-            }
-            // Si es SuperAdmin y targetIngenioId es undefined, mostramos TODAS.
+            // 4. Actualización del Estado
+            // Hacemos un cast a MachineWithRelations[] porque sabemos que el objeto
+            // en tiempo de ejecución trae los arrays, aunque el tipo base Machine sea estricto.
+            setMachines(data as MachineWithRelations[]);
 
-            // 2) Detectar si faltan relaciones
-            const needsSensors = filtered.some((m) => m.sensors == null);
-            const needsMaintenances = filtered.some((m) => m.maintenances == null);
-            const needsFailures = filtered.some((m) => m.failures == null);
-
-            let sensorsByMachine: Record<number, Sensor[]> = {};
-            let maintsByMachine: Record<number, Maintenance[]> = {};
-            let failuresByMachine: Record<number, Failure[]> = {};
-
-            // 3) Si faltan, llamar a los endpoints y filtrar
-            if (needsSensors) {
-                const allSensors = await api.getSensors();
-                // Filtramos sensores que coincidan con las máquinas visibles
-                const visibleMachineIds = new Set(filtered.map(m => m.id));
-                
-                const relevantSensors = allSensors.filter(s => 
-                    s.machineId && visibleMachineIds.has(s.machineId)
-                );
-
-                for (const sensor of relevantSensors) {
-                    if (!sensor.machineId) continue;
-                    if (!sensorsByMachine[sensor.machineId]) {
-                        sensorsByMachine[sensor.machineId] = [];
-                    }
-                    sensorsByMachine[sensor.machineId].push(sensor);
-                }
-            }
-
-            if (needsMaintenances) {
-                const allMaints = await api.getMaintenances();
-                const visibleMachineIds = new Set(filtered.map(m => m.id));
-
-                const relevantMaints = allMaints.filter(m => 
-                    m.machineId && visibleMachineIds.has(m.machineId)
-                );
-
-                for (const mt of relevantMaints) {
-                    if (!mt.machineId) continue;
-                    if (!maintsByMachine[mt.machineId]) {
-                        maintsByMachine[mt.machineId] = [];
-                    }
-                    maintsByMachine[mt.machineId].push(mt);
-                }
-            }
-
-            if (needsFailures) {
-                const allFails = await api.getFailures();
-                const visibleMachineIds = new Set(filtered.map(m => m.id));
-
-                const relevantFails = allFails.filter(f => 
-                    f.machineId && visibleMachineIds.has(f.machineId)
-                );
-
-                for (const f of relevantFails) {
-                    if (!f.machineId) continue;
-                    if (!failuresByMachine[f.machineId]) {
-                        failuresByMachine[f.machineId] = [];
-                    }
-                    failuresByMachine[f.machineId].push(f);
-                }
-            }
-
-            // 4) Enriquecer máquinas
-            filtered = filtered.map((m) => ({
-                ...m,
-                sensors: m.sensors ?? sensorsByMachine[m.id] ?? [],
-                maintenances: m.maintenances ?? maintsByMachine[m.id] ?? [],
-                failures: m.failures ?? failuresByMachine[m.id] ?? [],
-            }));
-
-            setMachines(filtered);
         } catch (e: any) {
-            console.error("Error loading machines", e);
-            setError(e.message || "Error al cargar máquinas");
+            console.error("Error loading machines:", e);
+            const errorMsg = e.message || "Error desconocido al cargar máquinas";
+            setError(errorMsg);
+            
+            // Limpiamos datos en caso de error para evitar estados inconsistentes
+            setMachines([]); 
         } finally {
             setLoading(false);
         }
-    }, [user?.ingenioId, isSuperAdmin, targetIngenioId]);
+    }, [user, isSuperAdmin, selectedIngenioId]);
 
+    // Efecto para cargar datos al montar o cambiar el filtro de ingenio
     useEffect(() => {
         void loadMachines();
     }, [loadMachines]);
