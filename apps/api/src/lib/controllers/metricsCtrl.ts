@@ -55,7 +55,6 @@ export const getSensorHealth: RequestHandler = async (req, res) => {
         res.json({
             active: sensor.active,
             lastSeen: sensor.lastSeen,
-            lastAnalysis: sensor.lastAnalysis,
         });
     } catch (error) {
         res.status(500).json({ error: "Error obteniendo salud del sensor" });

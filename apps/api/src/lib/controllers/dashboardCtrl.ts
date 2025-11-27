@@ -1,189 +1,258 @@
 import { Request, Response } from "express";
-import prisma from "../../database/postgres.db"; 
+import prisma from "../../database/postgres.db";
+import { Prisma } from "@prisma/client"; // Necesario para tipos Decimal
 
-// --- FUNCIÓN REUTILIZABLE DE CÁLCULO ---
-async function calculateAvailability(ingenioId: number, hoursBack: number) {
+// --- INTERFACES PARA TUS JSONB ---
+// Esto evita errores de "Property does not exist on type JsonValue"
+interface HourlyTotals {
+    reliability?: number;
+    mtbf?: number;
+    mttr?: number;
+    failuresCount?: number;
+    // Agrega aquí cualquier otra métrica acumulada que guardes en el JSON
+}
+
+// --- HELPER: CÁLCULO DE LA HORA ACTUAL EN VIVO ---
+// Calcula métricas desde el inicio de la hora actual hasta AHORA MISMO.
+async function calculateLiveHourAvailability(ingenioId: number) {
     const now = new Date();
-    const startTime = new Date(now.getTime() - hoursBack * 60 * 60 * 1000);
+    const startOfHour = new Date(now);
+    startOfHour.setMinutes(0, 0, 0); // Ej: 2:00:00 PM
 
-    // 1. Contamos máquinas activas (Capacidad total)
+    // 1. Contar máquinas activas en este Ingenio
     const machineCount = await prisma.machine.count({
         where: { 
-            // Asumiendo que hay relación ingenio -> machines o via sensores
-            // Ajusta esto a tu esquema real. Si Machine no tiene ingenioId directo:
-            sensors: { some: { ingenioId: ingenioId } },
+            ingenioId: ingenioId, 
             active: true 
         }
-    }) || 1;
+    }) || 1; // Evitar división por cero si no hay máquinas
 
-    // 2. Buscamos fallas en el rango
+    // 2. Calcular tiempo total disponible (Capacidad Ideal)
+    // (Milisegundos transcurridos en esta hora * cantidad de máquinas)
+    const elapsedMs = now.getTime() - startOfHour.getTime();
+    const totalCapacityMs = elapsedMs * machineCount;
+
+    if (totalCapacityMs <= 0) return { availability: 100, failuresCount: 0 };
+
+    // 3. Buscar fallas que impactan la hora actual
     const failures = await prisma.failure.findMany({
         where: {
             ingenioId: ingenioId,
-            occurredAt: { lt: now },
+            occurredAt: { lt: now }, // Ocurrieron antes de ahora
             OR: [
-                { resolvedAt: null },
-                { resolvedAt: { gt: startTime } }
+                { resolvedAt: null }, // Siguen abiertas
+                { resolvedAt: { gt: startOfHour } } // Se resolvieron dentro de esta hora
             ]
         }
     });
 
     let totalDowntimeMs = 0;
-    const windowEnd = now.getTime();
-    const windowStart = startTime.getTime();
+    const winStart = startOfHour.getTime();
+    const winEnd = now.getTime();
 
-    // 3. Sumamos tiempos muertos
+    // 4. Calcular intersección de tiempos (Matemática de tiempos)
     failures.forEach(f => {
         const failStart = new Date(f.occurredAt).getTime();
-        const failEnd = f.resolvedAt ? new Date(f.resolvedAt).getTime() : windowEnd;
+        // Si no está resuelta, asumimos que sigue fallando hasta "ahora"
+        const failEnd = f.resolvedAt ? new Date(f.resolvedAt).getTime() : winEnd;
 
-        const overlapStart = Math.max(failStart, windowStart);
-        const overlapEnd = Math.min(failEnd, windowEnd);
+        // Clampear (recortar) la falla para que encaje en la ventana de esta hora
+        const overlapStart = Math.max(failStart, winStart);
+        const overlapEnd = Math.min(failEnd, winEnd);
 
         if (overlapStart < overlapEnd) {
             totalDowntimeMs += (overlapEnd - overlapStart);
         }
     });
 
-    const totalCapacityMs = (windowEnd - windowStart) * machineCount;
-    // Evitar negativos por datos sucios
+    // 5. Calcular porcentaje
+    // Aseguramos no restar más tiempo del posible (sanity check)
     const realDowntime = Math.min(totalDowntimeMs, totalCapacityMs);
-    
     const availability = ((totalCapacityMs - realDowntime) / totalCapacityMs) * 100;
-    return Number(availability.toFixed(2));
+
+    return {
+        availability: Number(availability.toFixed(2)),
+        failuresCount: failures.length
+    };
 }
 
-// --- ENDPOINTS ---
-
+// ==========================================
+// ENDPOINT 1: TARJETAS DE MÉTRICAS (KPIs)
+// ==========================================
 export const getIngenioMetrics = async (req: Request, res: Response) => {
     try {
         const id = Number(req.params.ingenioId);
+        if (isNaN(id)) {
+             res.status(400).json({ error: "Invalid ID" });
+             return;
+        }
 
-        // 1. Calcular Disponibilidad Real (24h) usando la función compartida
-        const availability24h = await calculateAvailability(id, 24);
-
-        // 2. Calcular otras métricas (Simuladas o reales según tu lógica)
-        // MTBF, MTTR, Reliability... (Mantén tu lógica existente o usa placeholders)
-        
-        res.json({
-            availability: availability24h, // ¡Ahora coincide con la gráfica!
-            reliability: 98.5, // Ejemplo
-            mtbf: 120,         // Ejemplo
-            mttr: 2.5          // Ejemplo
+        // A. Obtener el último registro histórico cerrado (para leer MTBF, MTTR calculados por el Cron)
+        const lastRecord = await prisma.ingenioHourlyKPI.findFirst({
+            where: { ingenioId: id },
+            orderBy: { timestamp: 'desc' }
         });
+
+        // B. Calcular Disponibilidad Ponderada (Últimas 24h)
+        // Paso 1: Promedio de la base de datos (Histórico)
+        const yesterday = new Date();
+        yesterday.setHours(yesterday.getHours() - 24);
+
+        const dbAgg = await prisma.ingenioHourlyKPI.aggregate({
+            _avg: { availability: true },
+            where: {
+                ingenioId: id,
+                timestamp: { gte: yesterday }
+            }
+        });
+
+        // Paso 2: Dato en vivo (Hora actual)
+        const liveData = await calculateLiveHourAvailability(id);
+
+        // Paso 3: Unir ambos valores
+        let finalAvailability = 100;
+
+        if (dbAgg._avg.availability) {
+            // Prisma devuelve Decimal, convertimos a Number
+            const histVal = Number(dbAgg._avg.availability); 
+            // Promedio simple entre "Historia reciente" y "Ahora mismo"
+            // (Podrías ponderarlo: (histVal * 23 + liveData.availability) / 24)
+            finalAvailability = (histVal + liveData.availability) / 2; 
+        } else {
+            // Si no hay historial, usamos solo lo que vemos ahora
+            finalAvailability = liveData.availability;
+        }
+
+        // C. Extraer métricas del JSON (con seguridad de tipos)
+        const totals = (lastRecord?.totals as HourlyTotals) || {};
+
+        res.json({
+            availability: Number(finalAvailability.toFixed(2)),
+            reliability: totals.reliability ?? 100, 
+            mtbf: totals.mtbf ?? 0,
+            mttr: totals.mttr ?? 0,
+            oee: lastRecord?.oee ? Number(lastRecord.oee) : 0
+        });
+
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Error metrics" });
+        console.error("Error en getIngenioMetrics:", error);
+        res.status(500).json({ error: "Error interno del servidor calculando métricas" });
     }
 };
 
+// ==========================================
+// ENDPOINT 2: GRÁFICO DE HISTORIAL
+// ==========================================
 export const getDashboardHistory = async (req: Request, res: Response) => {
     try {
         const id = Number(req.params.ingenioId);
+        const hoursToShow = 12; 
+
+        // 1. Calcular fecha de corte
+        const cutoff = new Date();
+        cutoff.setHours(cutoff.getHours() - hoursToShow);
+
+        // 2. Buscar en la Base de Datos (Ya calculado, rápido)
+        const dbHistory = await prisma.ingenioHourlyKPI.findMany({
+            where: {
+                ingenioId: id,
+                timestamp: { gte: cutoff }
+            },
+            orderBy: { timestamp: 'asc' }
+        });
+
+        // 3. Formatear datos de la DB
+        const history = dbHistory.map(record => {
+            const totals = (record.totals as HourlyTotals) || {};
+            return {
+                // Formato de hora legible (ej: 14:00)
+                time: new Date(record.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+                // Conversión explícita de Decimal a Number
+                availability: Number(record.availability),
+                failures: totals.failuresCount || 0
+            };
+        });
+
+        // 4. Calcular y agregar la hora actual (EN VIVO)
+        // Esto evita que la gráfica se vea "quieta" en la última hora cerrada
+        const liveData = await calculateLiveHourAvailability(id);
         const now = new Date();
-        const history = [];
+        
+        history.push({
+            time: now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }),
+            availability: liveData.availability,
+            failures: liveData.failuresCount
+        });
 
-        // Generamos las últimas 24 horas
-        for (let i = 23; i >= 0; i--) {
-            const d = new Date(now.getTime() - i * 60 * 60 * 1000);
-            const startOfHour = new Date(d); startOfHour.setMinutes(0, 0, 0);
-            const endOfHour = new Date(d); endOfHour.setMinutes(59, 59, 999);
+        // 5. Devolver solo la cantidad solicitada (cortando desde el final)
+        res.json(history.slice(-hoursToShow));
 
-            // Aquí necesitamos calcular la disponibilidad DE ESA HORA ESPECÍFICA
-            // Reutilizamos la lógica pero restringida a esa ventana de 1 hora
-            
-            // (Copiamos la lógica interna de calculateAvailability para 1 hora específica)
-            // NOTA: En producción, sacar esto a una función helper para no repetir código.
-            const machineCount = await prisma.machine.count({
-                where: { sensors: { some: { ingenioId: id } }, active: true }
-            }) || 1;
-
-            const relevantFailures = await prisma.failure.findMany({
-                where: {
-                    ingenioId: id,
-                    occurredAt: { lt: endOfHour },
-                    OR: [{ resolvedAt: null }, { resolvedAt: { gt: startOfHour } }]
-                }
-            });
-
-            let downtimeMs = 0;
-            const winStart = startOfHour.getTime();
-            const winEnd = endOfHour.getTime();
-
-            relevantFailures.forEach(f => {
-                const fs = new Date(f.occurredAt).getTime();
-                const fe = f.resolvedAt ? new Date(f.resolvedAt).getTime() : now.getTime(); // Ojo: si es futuro no cuenta, pero estamos en historial
-                const effectiveEnd = Math.min(fe, winEnd); // No contar futuro si estamos en la hora actual
-
-                const os = Math.max(fs, winStart);
-                const oe = Math.min(fe, winEnd);
-
-                if (os < oe) downtimeMs += (oe - os);
-            });
-
-            const cap = (winEnd - winStart) * machineCount;
-            const val = ((cap - Math.min(downtimeMs, cap)) / cap) * 100;
-
-            history.push({
-                time: `${startOfHour.getHours()}:00`,
-                availability: Number(val.toFixed(2)),
-                failures: relevantFailures.filter(f => f.occurredAt >= startOfHour && f.occurredAt <= endOfHour).length
-            });
-        }
-
-        res.json(history);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Error history" });
+        console.error("Error en getDashboardHistory:", error);
+        res.status(500).json({ error: "Error obteniendo historial" });
     }
 };
 
-// ... getRecentActivity se mantiene igual
-
+// ==========================================
+// ENDPOINT 3: ACTIVIDAD RECIENTE (LOGS)
+// ==========================================
 export const getRecentActivity = async (req: Request, res: Response) => {
     try {
-        const { ingenioId } = req.params;
-        const id = Number(ingenioId);
+        const id = Number(req.params.ingenioId);
 
+        // Obtenemos fallas crudas recientes
         const failures = await prisma.failure.findMany({
             where: { ingenioId: id },
             take: 5,
             orderBy: { occurredAt: 'desc' },
-            include: { machine: { select: { name: true } } }
+            include: { 
+                machine: { 
+                    select: { name: true, code: true } 
+                } 
+            }
         });
 
+        // Obtenemos mantenimientos crudos recientes
         const maintenances = await prisma.maintenance.findMany({
             where: { ingenioId: id },
             take: 5,
             orderBy: { performedAt: 'desc' },
-            include: { machine: { select: { name: true } }, technician: { select: { name: true } } }
+            include: { 
+                machine: { select: { name: true } }, 
+                technician: { select: { name: true } } 
+            }
         });
 
+        // Unificamos en una sola lista
         const activity = [
             ...failures.map(f => ({
-                id: `F-${f.id}`,
+                id: `F-${f.id}`, // ID único para keys de React
                 type: 'failure',
-                title: f.description,
+                title: f.description || 'Falla no descrita',
                 machine: f.machine.name,
-                status: f.status,
+                status: f.resolvedAt ? 'resolved' : 'active',
                 timestamp: f.occurredAt,
-                meta: f.severity
+                severity: f.severity || 'low'
             })),
             ...maintenances.map(m => ({
                 id: `M-${m.id}`,
                 type: 'maintenance',
-                title: m.type,
+                title: m.type || 'Mantenimiento',
                 machine: m.machine.name,
                 status: 'completed',
                 timestamp: m.performedAt,
-                meta: m.technician?.name || 'Sin asignar'
+                technician: m.technician?.name || 'N/A'
             }))
         ];
 
+        // Ordenamos por fecha (el más reciente primero)
         activity.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-        res.json(activity.slice(0, 6));
+
+        // Devolvemos solo los 10 items más recientes combinados
+        res.json(activity.slice(0, 10));
+
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Error fetching activity" });
+        console.error("Error en getRecentActivity:", error);
+        res.status(500).json({ error: "Error obteniendo actividad reciente" });
     }
 };

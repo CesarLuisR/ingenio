@@ -3,6 +3,7 @@ import { connectDB as MongoDBConnect } from "./database/mongo.db";
 import redis from "./database/redis.db";
 import { clearDatabase, connectPostgresWithRetry } from "./database/postgres.db";
 import { createUsers } from "./lib/utils/createUsers";
+import { kpiCronJob } from "./workers/KPIJobs";
 
 async function run() {
     try {
@@ -18,7 +19,10 @@ async function run() {
         }
     
         const PORT = process.env.PORT || 5000;
-        server.listen(PORT, () => console.log(`Listening in port ${PORT}...`));
+        server.listen(PORT, () => {
+            console.log(`Listening in port ${PORT}...`);
+            kpiCronJob();
+        });
     } catch (error) {
         console.error("Failed to start the server:", error);
         process.exit(1);

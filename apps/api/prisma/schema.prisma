@@ -8,15 +8,15 @@ datasource db {
 }
 
 model Ingenio {
-  id           Int           @id @default(autoincrement())
-  name         String
-  code         String        @unique
-  location     String?
-  active       Boolean       @default(true)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  id        Int      @id @default(autoincrement())
+  name      String
+  code      String   @unique
+  location  String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  // Relaciones
+  // --- Relaciones Existentes ---
   users        User[]
   sensors      Sensor[]
   technicians  Technician[]
@@ -24,29 +24,76 @@ model Ingenio {
   failures     Failure[]
   auditLogs    AuditLog[]
   machines     Machine[]
+  hourlyStats IngenioHourlyKPI[]
 }
 
 model Machine {
-  id           Int           @id @default(autoincrement())
-  name         String
-  code         String        @unique
-  type         String?
-  location     String?
-  description  String?
-  active       Boolean       @default(true)
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  lastAnalysis Json?
-  lastAnalyzedAt DateTime? 
+  id             Int       @id @default(autoincrement())
+  name           String
+  code           String    @unique
+  type           String?
+  location       String?
+  description    String?
+  active         Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  
+  lastAnalysis   Json?     @db.JsonB
+  lastAnalyzedAt DateTime?
 
-  // Multi-ingenio
-  ingenioId    Int
-  ingenio      Ingenio       @relation(fields: [ingenioId], references: [id])
+  ingenioId Int
+  ingenio   Ingenio @relation(fields: [ingenioId], references: [id])
 
-  // Relaciones
   sensors      Sensor[]
   maintenances Maintenance[]
   failures     Failure[]
+
+  hourlyStats MachineHourlyKPI[]
+}
+
+model MachineHourlyKPI {
+  id           BigInt   @id @default(autoincrement()) // BigInt por volumen masivo
+  timestamp    DateTime // La hora exacta del bloque (ej: 2023-10-27 14:00:00)
+
+  machineId    Int
+  machine      Machine  @relation(fields: [machineId], references: [id])
+
+  // KPIs Estándar (Decimal para precisión, nunca Int)
+  availability Decimal  @db.Decimal(5, 2) // % (Ej: 98.50)
+  performance  Decimal  @default(0) @db.Decimal(5, 2) // %
+  quality      Decimal  @default(0) @db.Decimal(5, 2) // %
+  oee          Decimal  @default(0) @db.Decimal(5, 2) // %
+
+  // Métricas de Proceso Variables (JSON Flexible)
+  // Ej: { "avg_temp": 90.5, "pressure_psi": 120, "energy_kwh": 45, "cycles": 1500 }
+  processMetrics Json?    @db.JsonB
+
+  createdAt    DateTime @default(now()) // Cuándo se insertó el registro
+
+  // ÍNDICES: Vitales para que tu Dashboard vuele
+  @@index([machineId, timestamp]) // Buscar historial de una máquina
+  @@index([timestamp])            // Buscar historial global por fecha
+}
+
+// Nivel 2: Resumen por Ingenio (Rollup / Agregación)
+model IngenioHourlyKPI {
+  id           BigInt   @id @default(autoincrement())
+  timestamp    DateTime
+
+  ingenioId    Int
+  ingenio      Ingenio  @relation(fields: [ingenioId], references: [id])
+
+  // Promedios calculados de todas las máquinas
+  availability Decimal  @db.Decimal(5, 2)
+  oee          Decimal  @default(0) @db.Decimal(5, 2)
+
+  // Totales acumulados del Ingenio (Sumas)
+  // Ej: { "total_energy_kwh": 5000, "total_production_units": 100000 }
+  totals       Json?    @db.JsonB
+
+  createdAt    DateTime @default(now())
+
+  @@index([ingenioId, timestamp])
 }
 
 model Sensor {
@@ -164,7 +211,7 @@ model User {
 }
 
 model AuditLog {
-  id         Int       @id @default(autoincrement())
+  id         BigInt       @id @default(autoincrement())
   userId     Int?
   ingenioId  Int?
   action     String
