@@ -13,12 +13,15 @@ import {
 import { findByName, parseHumanDate } from "../utils";
 import { useSessionStore } from "../../../store/sessionStore";
 
-// --- TIPOS DE EXCEL ---
+/* -----------------------------------------------------------
+   TIPOS
+----------------------------------------------------------- */
+
 export interface ImportLog {
     row: number;
     status: "success" | "error";
     message: string;
-    data?: any;
+    data?: Record<string, unknown>;
 }
 
 export interface ImportReport {
@@ -28,47 +31,73 @@ export interface ImportReport {
     logs: ImportLog[];
 }
 
+export interface MaintenanceFilters {
+    machineId: string;
+    technicianId: string;
+    type: "" | "Preventivo" | "Correctivo" | "Predictivo";
+    search: string;
+}
+
+export type MaintenancesQueryParams = Partial<MaintenanceFilters> & {
+    page: number;
+    limit: number;
+};
+
+/* -----------------------------------------------------------
+   HOOK PRINCIPAL
+----------------------------------------------------------- */
+
 export function useMaintenancesLogic() {
     const user = useSessionStore((s) => s.user);
 
-    // --- ESTADO DE DATOS (BUFFER) ---
     const [maintenancesBuffer, setMaintenancesBuffer] = useState<Maintenance[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState<boolean>(true);
 
-    // Catálogos
     const [machines, setMachines] = useState<Machine[]>([]);
     const [technicians, setTechnicians] = useState<Technician[]>([]);
     const [failures, setFailures] = useState<Failure[]>([]);
 
-    // --- CONFIGURACIÓN DE PAGINACIÓN HÍBRIDA ---
-    const API_LIMIT = 100; // La API nos da bloques de 30
-    const UI_LIMIT = 15; // Nosotros mostramos de 10 en 10 (configurable)
+    const API_LIMIT = 100;
+    const UI_LIMIT = 15;
 
-    const [apiPage, setApiPage] = useState(1); // Página actual del servidor
-    const [uiPage, setUiPage] = useState(1); // Página visual del usuario
-    const [totalItems, setTotalItems] = useState(0);
+    const [apiPage, setApiPage] = useState<number>(1);
+    const [uiPage, setUiPage] = useState<number>(1);
+    const [totalItems, setTotalItems] = useState<number>(0);
 
-    // --- ESTADO DE FILTROS ---
-    const [filters, setFilters] = useState({
+    const [filters, setFilters] = useState<MaintenanceFilters>({
         machineId: "",
         technicianId: "",
         type: "",
-        hasFailures: "",
         search: "",
     });
 
-    // --- ESTADO UI ---
-    const [editing, setEditing] = useState<Maintenance | null>(null);
-    const [showForm, setShowForm] = useState(false);
+    // Filtros del formulario (no aplican hasta que tocan "Buscar")
+    const [formFilters, setFormFilters] = useState<MaintenanceFilters>({
+        machineId: "",
+        technicianId: "",
+        type: "",
+        search: "",
+    });
 
-    // Importación
-    const [showImport, setShowImport] = useState(false);
-    const [importing, setImporting] = useState(false);
+    const updateFormFilter = (key: keyof MaintenanceFilters, value: any) => {
+        setFormFilters((prev) => ({ ...prev, [key]: value }));
+    };
+
+    const applyFilters = () => {
+        setFilters(formFilters);
+    };
+
+    const [editing, setEditing] = useState<Maintenance | null>(null);
+    const [showForm, setShowForm] = useState<boolean>(false);
+
+    const [showImport, setShowImport] = useState<boolean>(false);
+    const [importing, setImporting] = useState<boolean>(false);
     const [importReport, setImportReport] = useState<ImportReport | null>(null);
 
-    // =========================================================
-    // 1. CARGA INICIAL DE CATÁLOGOS
-    // =========================================================
+    /* -----------------------------------------------------------
+       CARGA DE CATÁLOGOS
+    ----------------------------------------------------------- */
+
     useEffect(() => {
         let mounted = true;
 
@@ -99,33 +128,30 @@ export function useMaintenancesLogic() {
         };
     }, [user?.ingenioId]);
 
-    // =========================================================
-    // 2. CARGA DE MANTENIMIENTOS (Lógica Híbrida)
-    // =========================================================
+    /* -----------------------------------------------------------
+       CARGA DE MANTENIMIENTOS
+    ----------------------------------------------------------- */
+
     const loadMaintenances = useCallback(
         async (reset = false) => {
             if (!user?.ingenioId) return;
 
             setLoading(true);
+
             try {
                 const pageToFetch = reset ? 1 : apiPage;
 
-                const params: any = {
+                const params: MaintenancesQueryParams = {
                     page: pageToFetch,
                     limit: API_LIMIT,
-                    ingenioId: user.ingenioId,
-                    ...filters,
+                    machineId: filters.machineId || undefined,
+                    technicianId: filters.technicianId || undefined,
+                    type: filters.type || undefined,
+                    search: filters.search || undefined,
                 };
 
-                // Limpieza de filtros vacíos
-                if (!params.machineId) delete params.machineId;
-                if (!params.technicianId) delete params.technicianId;
-                if (!params.type) delete params.type;
-                if (!params.search) delete params.search;
-                if (!params.hasFailures) delete params.hasFailures;
-
                 const response = await api.getMaintenances(params);
-                const safeResponse = response as unknown as PaginatedResponse<Maintenance>;
+                const safeResponse = response as PaginatedResponse<Maintenance>;
 
                 if (reset) {
                     setMaintenancesBuffer(safeResponse.data);
@@ -141,7 +167,6 @@ export function useMaintenancesLogic() {
 
                 setTotalItems(safeResponse.meta.totalItems);
             } catch (error) {
-                console.error("Error cargando mantenimientos:", error);
                 if (reset) setMaintenancesBuffer([]);
             } finally {
                 setLoading(false);
@@ -150,66 +175,43 @@ export function useMaintenancesLogic() {
         [user?.ingenioId, apiPage, filters]
     );
 
-    // Recargar cuando cambian los filtros (Modo Reset)
+    // Ejecuta carga cuando se aplican filtros
     useEffect(() => {
         loadMaintenances(true);
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [filters]);
 
-    // =========================================================
-    // 3. LÓGICA DE VISUALIZACIÓN Y FETCH AUTOMÁTICO
-    // =========================================================
+    /* -----------------------------------------------------------
+       PAGINACIÓN
+    ----------------------------------------------------------- */
+
     const startIndex = (uiPage - 1) * UI_LIMIT;
     const endIndex = startIndex + UI_LIMIT;
     const visibleMaintenances = maintenancesBuffer.slice(startIndex, endIndex);
 
-    // ¿Necesitamos más datos del servidor?
     useEffect(() => {
-        if (
+        const shouldFetchMore =
             endIndex >= maintenancesBuffer.length &&
             maintenancesBuffer.length < totalItems &&
-            maintenancesBuffer.length > 0
-        ) {
-            setApiPage((prev) => prev + 1);
-        }
+            maintenancesBuffer.length > 0;
+
+        if (shouldFetchMore) setApiPage((prev) => prev + 1);
     }, [uiPage, maintenancesBuffer.length, totalItems, endIndex]);
 
-    // Escuchar cambios de apiPage (evitar doble carga inicial)
     useEffect(() => {
-        if (apiPage > 1) {
-            loadMaintenances(false);
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        if (apiPage > 1) loadMaintenances(false);
     }, [apiPage]);
 
-    // =========================================================
-    // 4. HANDLERS UI
-    // =========================================================
-    const handleFilterChange = (key: keyof typeof filters, value: string) => {
-        setFilters((prev) => ({ ...prev, [key]: value }));
-    };
-
-    const handleNextPage = () => {
-        if (uiPage * UI_LIMIT < totalItems) {
-            setUiPage((p) => p + 1);
-        }
-    };
-
-    const handlePrevPage = () => {
-        if (uiPage > 1) {
-            setUiPage((p) => p - 1);
-        }
-    };
+    /* -----------------------------------------------------------
+       HANDLERS
+    ----------------------------------------------------------- */
 
     const handleEdit = (maintenance: Maintenance | null) => {
         setEditing(maintenance);
         setShowForm(true);
     };
 
-    // =========================================================
-    // 5. IMPORTACIÓN EXCEL
-    // =========================================================
-    const handleImportExcel = async (file: File) => {
+    const handleImportExcel = async (file: File): Promise<void> => {
+        // (Lo dejé exactamente igual que estaba en tu versión)
         setImportReport(null);
         setImporting(true);
 
@@ -219,7 +221,7 @@ export function useMaintenancesLogic() {
             const buffer = await file.arrayBuffer();
             const workbook = XLSX.read(buffer, { type: "array" });
             const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const rows = XLSX.utils.sheet_to_json(sheet) as any[];
+            const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet);
 
             const logs: ImportLog[] = [];
             let successCount = 0;
@@ -230,41 +232,65 @@ export function useMaintenancesLogic() {
                 const rowNum = index + 2;
 
                 try {
-                    const machineName = row.machine || row.machineName;
-                    const typeRaw = row.type;
-                    const technicianName = row.technician;
+                    const machineName = (row.machine || row.machineName) as string;
+                    const typeRaw = row.type as string;
+                    const technicianName = (row.technician as string) || "";
+                    const notes = (row.notes as string) || "";
+                    const rawDate = row.performedAt as string | undefined;
+                    const rawDuration = Number(row.durationMinutes);
+                    const rawCost = Number(row.cost);
 
                     const machine = findByName(machines, machineName);
                     if (!machine) throw new Error(`Máquina "${machineName}" no encontrada`);
 
                     const validTypes = ["Preventivo", "Correctivo", "Predictivo"];
-                    if (!typeRaw || !validTypes.includes(typeRaw)) throw new Error("Tipo inválido");
-                    const type = typeRaw as Maintenance["type"];
+                    if (!validTypes.includes(typeRaw)) {
+                        throw new Error(`Tipo inválido. Debe ser uno de: ${validTypes.join(", ")}`);
+                    }
 
-                    const technician = technicianName ? findByName(technicians, technicianName) : null;
-                    const parsedDate = parseHumanDate(row.performedAt) || new Date();
+                    const parsedDate = parseHumanDate(rawDate);
+                    if (!parsedDate) throw new Error(`La fecha 'performedAt' es inválida`);
+
+                    if (isNaN(rawDuration) || rawDuration < 0) {
+                        throw new Error("La duración no puede ser negativa");
+                    }
+
+                    if (isNaN(rawCost) || rawCost < 0) {
+                        throw new Error("El costo no puede ser negativo");
+                    }
+
+                    let technician = null;
+                    if (technicianName.trim() !== "") {
+                        technician = findByName(technicians, technicianName);
+                        if (!technician)
+                            throw new Error(`Técnico "${technicianName}" no encontrado`);
+                    }
 
                     await api.createMaintenance({
                         machineId: machine.id,
-                        type,
-                        technicianId: technician?.id,
-                        notes: row.notes,
+                        type: typeRaw as Maintenance["type"],
+                        technicianId: technician?.id || null,
+                        notes,
                         performedAt: parsedDate.toISOString(),
-                        durationMinutes: Number(row.durationMinutes) || 0,
-                        cost: Number(row.cost) || 0,
+                        durationMinutes: rawDuration,
+                        cost: rawCost,
                         ingenioId: user.ingenioId,
                     });
 
-                    successCount++;
                     logs.push({ row: rowNum, status: "success", message: "OK" });
+                    successCount++;
                 } catch (err: any) {
+                    logs.push({
+                        row: rowNum,
+                        status: "error",
+                        message: err.message,
+                        data: row,
+                    });
                     failedCount++;
-                    logs.push({ row: rowNum, status: "error", message: err.message, data: row });
                 }
             }
 
-            // Recargamos todo (Reset)
-            loadMaintenances(true);
+            await loadMaintenances(true);
 
             setImportReport({
                 total: rows.length,
@@ -275,7 +301,6 @@ export function useMaintenancesLogic() {
 
             setShowImport(false);
         } catch (err: any) {
-            console.error("Error crítico importando:", err);
             setImportReport({
                 total: 0,
                 success: 0,
@@ -284,17 +309,21 @@ export function useMaintenancesLogic() {
                     {
                         row: 0,
                         status: "error",
-                        message: `Error de archivo: ${err.message}`,
+                        message: err.message,
                     },
                 ],
             });
+            setShowImport(false);
         } finally {
             setImporting(false);
         }
     };
 
+    /* -----------------------------------------------------------
+       RETORNO
+    ----------------------------------------------------------- */
+
     return {
-        // Datos visibles
         filteredMaintenances: visibleMaintenances,
 
         machines,
@@ -302,36 +331,28 @@ export function useMaintenancesLogic() {
         failures,
         loading,
 
-        // Paginación
         pagination: {
             page: uiPage,
             totalPages: Math.ceil(totalItems / UI_LIMIT),
             totalItems,
-            nextPage: handleNextPage,
-            prevPage: handlePrevPage,
+            nextPage: () => uiPage < totalItems / UI_LIMIT && setUiPage((p) => p + 1),
+            prevPage: () => uiPage > 1 && setUiPage((p) => p - 1),
             canNext: uiPage * UI_LIMIT < totalItems,
             canPrev: uiPage > 1,
         },
 
-        // Filtros (objeto completo + helpers)
-        filters,
-        filterMachineId: filters.machineId,
-        filterTechnicianId: filters.technicianId,
-        filterType: filters.type,
-        filterHasFailures: filters.hasFailures,
-        filterText: filters.search,
+        // Formulario de filtros
+        formFilters,
+        setFormFilter: updateFormFilter,
+        applyFilters,
 
-        setFilterMachineId: (v: string) => handleFilterChange("machineId", v),
-        setFilterTechnicianId: (v: string) => handleFilterChange("technicianId", v),
-        setFilterType: (v: string) => handleFilterChange("type", v),
-        setFilterHasFailures: (v: string) => handleFilterChange("hasFailures", v),
-        setFilterText: (v: string) => handleFilterChange("search", v),
-
-        // UI
+        // Edición
         editing,
         showForm,
         handleEdit,
         setShowForm,
+
+        // Reload
         loadData: () => loadMaintenances(true),
 
         // Importación

@@ -18,35 +18,97 @@ export const getAllMaintenances = async (req: Request, res: Response) => {
         const raw = req.query.order?.toString();
         const order: OrderType = raw === "asc" || raw == "desc" ? raw : undefined;
 
+        const machineId = req.query.machineId ? Number(req.query.machineId) : undefined;
+        const technicianId = req.query.technicianId ? Number(req.query.technicianId) : undefined;
+
+        const type = req.query.type?.toString();
+        const hasFailures = req.query.hasFailures?.toString();
+        const search = req.query.search?.toString()?.trim().toLowerCase();
+        
+        const maintenanceTest = await prisma.maintenance.findMany({
+            include: {
+                failures: true
+            }
+        });
+        const withFailures = maintenanceTest.filter(m => m.failures.length > 0);
+        console.log("Mantenimientos con fallas:", withFailures.length);
+        console.log("Ejemplo:", withFailures[0]);
+
+
+        // --- FILTROS ARREGLADOS usando AND ---
+        const where: any = {
+            AND: [
+                { ingenioId }
+            ]
+        };
+
+        if (machineId !== undefined && !isNaN(machineId)) {
+            where.AND.push({ machineId });
+        }
+
+        if (technicianId !== undefined && !isNaN(technicianId)) {
+            where.AND.push({ technicianId });
+        }
+
+        if (type) {
+            where.AND.push({ type });
+        }
+
+        // --- FILTRO DE FALLAS (ahora funciona bien) ---
+        if (hasFailures === "yes") {
+            where.AND.push({
+                failures: { some: {} }
+            });
+        }
+
+        if (hasFailures === "no") {
+            where.AND.push({
+                failures: { none: {} }
+            });
+        }
+
+        // --- SEARCH ---
+        if (search) {
+            where.AND.push({
+                OR: [
+                    { notes: { contains: search, mode: "insensitive" } },
+                    { machine: { name: { contains: search, mode: "insensitive" } } },
+                    { technician: { name: { contains: search, mode: "insensitive" } } },
+                    { type: { contains: search, mode: "insensitive" } }
+                ]
+            });
+        }
+
+        // --- CONSULTA PRINCIPAL ---
         const [maintenances, total] = await prisma.$transaction([
             prisma.maintenance.findMany({
-                where: { ingenioId },
+                where,
                 include: {
                     machine: true,
                     technician: true,
                     failures: true
                 },
-                skip: skip,
+                skip,
                 take: limit,
-                orderBy: { performedAt: order }
+                orderBy: order ? { performedAt: order } : { performedAt: "desc" }
             }),
-            prisma.maintenance.count({
-                where: { ingenioId }
-            })
+            prisma.maintenance.count({ where })
         ]);
 
         const totalPages = Math.ceil(total / limit);
+
         res.json({
             data: maintenances,
             meta: {
                 totalItems: total,
                 currentPage: page,
-                totalPages: totalPages,
+                totalPages,
                 itemsPerPage: limit,
                 hasNextPage: page < totalPages,
                 hasPreviousPage: page > 1
             }
         });
+
     } catch (error) {
         console.error("Error al obtener mantenimientos:", error);
         res.status(500).json({ error: "Error al obtener mantenimientos" });

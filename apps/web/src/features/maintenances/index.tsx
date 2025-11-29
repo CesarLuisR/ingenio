@@ -59,13 +59,10 @@ export default function Mantenimientos() {
     // Paginación
     pagination,
 
-    // Filtros
-    filters,
-    setFilterMachineId,
-    setFilterTechnicianId,
-    setFilterType,
-    setFilterHasFailures,
-    setFilterText,
+    // NUEVOS filtros controlados
+    formFilters,
+    setFormFilter,
+    applyFilters,
 
     // Acciones UI
     editing,
@@ -175,8 +172,8 @@ export default function Mantenimientos() {
       {/* --- BARRA DE FILTROS --- */}
       <FiltersBar>
         <SelectInput
-          value={filters.machineId}
-          onChange={(e) => setFilterMachineId(e.target.value)}
+          value={formFilters.machineId}
+          onChange={(e) => setFormFilter("machineId", e.target.value)}
         >
           <option value="">Todas las máquinas</option>
           {machines.map((m) => (
@@ -187,8 +184,8 @@ export default function Mantenimientos() {
         </SelectInput>
 
         <SelectInput
-          value={filters.technicianId}
-          onChange={(e) => setFilterTechnicianId(e.target.value)}
+          value={formFilters.technicianId}
+          onChange={(e) => setFormFilter("technicianId", e.target.value)}
         >
           <option value="">Todos los técnicos</option>
           {technicians.map((t) => (
@@ -199,8 +196,8 @@ export default function Mantenimientos() {
         </SelectInput>
 
         <SelectInput
-          value={filters.type}
-          onChange={(e) => setFilterType(e.target.value)}
+          value={formFilters.type}
+          onChange={(e) => setFormFilter("type", e.target.value)}
         >
           <option value="">Todos los tipos</option>
           <option value="Preventivo">Preventivo</option>
@@ -208,20 +205,13 @@ export default function Mantenimientos() {
           <option value="Predictivo">Predictivo</option>
         </SelectInput>
 
-        <SelectInput
-          value={filters.hasFailures}
-          onChange={(e) => setFilterHasFailures(e.target.value)}
-        >
-          <option value="">Estado de fallas</option>
-          <option value="yes">Con fallas asociadas</option>
-          <option value="no">Sin fallas</option>
-        </SelectInput>
-
         <TextInput
           placeholder="🔍 Buscar notas..."
-          value={filters.search}
-          onChange={(e) => setFilterText(e.target.value)}
+          value={formFilters.search}
+          onChange={(e) => setFormFilter("search", e.target.value)}
         />
+
+        <Button onClick={applyFilters}>🔍 Buscar</Button>
       </FiltersBar>
 
       {/* --- LISTADO DE MANTENIMIENTOS --- */}

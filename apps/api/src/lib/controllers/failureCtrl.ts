@@ -7,6 +7,8 @@ export const getAllFailures = async (req: Request, res: Response) => {
     try {
         const ingenioId = req.session.user?.ingenioId;
 
+        if (!ingenioId) return;
+
         const failures = await prisma.failure.findMany({
             where: { ingenioId },
             include: {
