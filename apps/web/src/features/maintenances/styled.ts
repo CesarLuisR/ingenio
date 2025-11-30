@@ -631,3 +631,33 @@ export const PaginationInfo = styled.span`
     font-size: 0.85em;
   }
 `;
+
+export const FailuresList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 150px;
+  overflow-y: auto;
+  border: 1px solid #ddd;
+  padding: 10px;
+  border-radius: 4px;
+  background: #f9f9f9;
+`;
+
+export const FailureItem = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  
+  input {
+    cursor: pointer;
+  }
+`;
+
+export const EmptyState = styled.div`
+  font-size: 0.85rem;
+  color: #888;
+  font-style: italic;
+`;

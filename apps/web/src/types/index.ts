@@ -127,6 +127,7 @@ export interface Ingenio {
     name: string;
     code: string;
     location?: string | null;
+    active: boolean;
     createdAt: string;
     updatedAt: string;
     machines?: Machine[];

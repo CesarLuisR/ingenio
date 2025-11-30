@@ -243,9 +243,17 @@ export default function Mantenimientos() {
                     m.technician ?? technicians.find((t) => t.id === m.technicianId);
                   const machine =
                     m.machine ?? machines.find((mc) => mc.id === m.machineId);
-                  const relatedFailures = failures.filter(
-                    (f) => f.maintenanceId === m.id
-                  );
+
+                  // -----------------------------------------------------------------------
+                  // CAMBIO PRINCIPAL AQUÍ:
+                  // Priorizamos m.failures (que viene del backend con 'include')
+                  // Si no existe, usamos el fallback de filtrar la lista global.
+                  // (Asumiendo que 'm' puede tener la propiedad failures aunque TS no lo sepa por defecto)
+                  // -----------------------------------------------------------------------
+                  const nestedFailures = (m as any).failures;
+                  const relatedFailures = Array.isArray(nestedFailures) 
+                    ? nestedFailures 
+                    : failures.filter((f) => f.maintenanceId === m.id);
 
                   return (
                     <MaintenanceCard key={m.id} $type={m.type}>
@@ -287,14 +295,17 @@ export default function Mantenimientos() {
 
                       {relatedFailures.length > 0 && (
                         <TagRow style={{ marginTop: 8 }}>
+                          {/* Agregué el atributo title para ver las descripciones al pasar el mouse */}
                           <SimpleTag
+                            title={relatedFailures.map((f: any) => `• ${f.description}`).join('\n')}
                             style={{
                               color: "#dc2626",
                               borderColor: "#fecaca",
                               background: "#fef2f2",
+                              cursor: "help" // Cursor de ayuda para indicar que hay tooltip
                             }}
                           >
-                            ⚠️ {relatedFailures.length} falla(s) asociada(s)
+                            ⚠️ {relatedFailures.length} falla(s) 
                           </SimpleTag>
                         </TagRow>
                       )}
@@ -339,6 +350,7 @@ export default function Mantenimientos() {
         <MaintenanceForm
           machines={machines}
           technicians={technicians}
+          failures={failures} // Pasamos la lista global para poder seleccionar en el form
           initialData={editing}
           onClose={() => setShowForm(false)}
           onSave={() => {

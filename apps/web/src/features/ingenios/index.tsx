@@ -46,17 +46,19 @@ const Grid = styled.div`
   gap: 24px;
 `;
 
-const Card = styled.div`
+const Card = styled.div<{ $inactive?: boolean }>`
   background: white;
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border: 1px solid #e2e8f0;
   transition: transform 0.2s;
+  opacity: ${(props) => (props.$inactive ? 0.75 : 1)}; /* Visualmente opaco si está inactivo */
 
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    opacity: 1;
   }
 `;
 
@@ -82,6 +84,20 @@ const IngenioCode = styled.span`
   font-weight: 600;
 `;
 
+// Nuevo componente para mostrar el estado
+const StatusBadge = styled.span<{ $active: boolean }>`
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-top: 4px;
+  background-color: ${(props) => (props.$active ? "#dcfce7" : "#f1f5f9")};
+  color: ${(props) => (props.$active ? "#15803d" : "#64748b")};
+  border: 1px solid ${(props) => (props.$active ? "#bbf7d0" : "#e2e8f0")};
+`;
+
 const InfoRow = styled.div`
   display: flex;
   align-items: center;
@@ -99,19 +115,44 @@ const Actions = styled.div`
   border-top: 1px solid #f1f5f9;
 `;
 
-const ActionButton = styled.button<{ $danger?: boolean }>`
+// Actualizado para soportar variantes de color
+const ActionButton = styled.button<{ 
+  $danger?: boolean; 
+  $success?: boolean; 
+  $warning?: boolean 
+}>`
   flex: 1;
   padding: 8px;
   border-radius: 6px;
-  border: 1px solid ${(props) => (props.$danger ? "#fecaca" : "#e2e8f0")};
-  background: ${(props) => (props.$danger ? "#fef2f2" : "white")};
-  color: ${(props) => (props.$danger ? "#dc2626" : "#475569")};
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+  
+  /* Lógica de colores */
+  border: 1px solid ${(props) => 
+    props.$danger ? "#fecaca" : 
+    props.$success ? "#bbf7d0" : 
+    props.$warning ? "#fed7aa" : 
+    "#e2e8f0"};
+    
+  background: ${(props) => 
+    props.$danger ? "#fef2f2" : 
+    props.$success ? "#f0fdf4" : 
+    props.$warning ? "#fff7ed" : 
+    "white"};
+    
+  color: ${(props) => 
+    props.$danger ? "#dc2626" : 
+    props.$success ? "#15803d" : 
+    props.$warning ? "#c2410c" : 
+    "#475569"};
 
   &:hover {
-    background: ${(props) => (props.$danger ? "#fee2e2" : "#f8fafc")};
+    background: ${(props) => 
+      props.$danger ? "#fee2e2" : 
+      props.$success ? "#dcfce7" : 
+      props.$warning ? "#ffedd5" : 
+      "#f8fafc"};
   }
 `;
 
@@ -131,6 +172,29 @@ export default function Ingenios() {
       console.error("Error loading ingenios:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Nueva función para manejar el toggle
+  const handleToggleActive = async (ingenio: Ingenio) => {
+    const action = ingenio.active ? "desactivar" : "activar";
+    const confirmMessage = ingenio.active 
+        ? `¿Seguro que deseas desactivar ${ingenio.name}? Esto detendrá la recolección de datos.` 
+        : `¿Deseas reactivar el ingenio ${ingenio.name}?`;
+
+    if (!confirm(confirmMessage)) return;
+
+    try {
+        if (ingenio.active) {
+            await api.deactivateIngenio(ingenio.id);
+        } else {
+            await api.activateIngenio(ingenio.id);
+        }
+        // Recargamos la lista para ver el cambio reflejado
+        await loadIngenios();
+    } catch (error) {
+        console.error(`Error al ${action} ingenio:`, error);
+        alert(`Ocurrió un error al intentar ${action} el ingenio.`);
     }
   };
 
@@ -170,9 +234,15 @@ export default function Ingenios() {
       ) : (
         <Grid>
           {ingenios.map((ingenio) => (
-            <Card key={ingenio.id}>
+            <Card key={ingenio.id} $inactive={!ingenio.active}>
               <CardHeader>
-                <IngenioName>{ingenio.name}</IngenioName>
+                <div>
+                    <IngenioName>{ingenio.name}</IngenioName>
+                    {/* Badge visual del estado */}
+                    <StatusBadge $active={ingenio.active}>
+                        {ingenio.active ? "Activo" : "Inactivo"}
+                    </StatusBadge>
+                </div>
                 <IngenioCode>{ingenio.code}</IngenioCode>
               </CardHeader>
 
@@ -194,12 +264,22 @@ export default function Ingenios() {
                 >
                   Editar
                 </ActionButton>
+
+                {/* Botón de Activar/Desactivar */}
+                <ActionButton
+                    $success={!ingenio.active}
+                    $warning={ingenio.active}
+                    onClick={() => handleToggleActive(ingenio)}
+                >
+                    {ingenio.active ? "Desactivar" : "Activar"}
+                </ActionButton>
+
                 <ActionButton
                   $danger
                   onClick={async () => {
                     if (
                       confirm(
-                        `¿Estás seguro de eliminar el ingenio ${ingenio.name}?`
+                        `¿Estás seguro de eliminar PERMANENTEMENTE el ingenio ${ingenio.name}?`
                       )
                     ) {
                       try {

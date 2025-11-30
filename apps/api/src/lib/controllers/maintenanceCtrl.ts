@@ -153,7 +153,8 @@ export const createMaintenance = async (req: Request, res: Response) => {
         return res.status(403).json({ message: "Forbidden access " });
 
     try {
-        const { machineId, type, technicianId, durationMinutes, notes, cost } = req.body;
+        // Recibimos failureIds (array de números)
+        const { machineId, type, technicianId, durationMinutes, notes, cost, failureIds } = req.body;
         const ingenioId = req.session.user?.ingenioId!;
 
         if (!machineId || !type) {
@@ -182,7 +183,17 @@ export const createMaintenance = async (req: Request, res: Response) => {
                 notes,
                 cost,
                 ingenioId,
+                // CONEXIÓN DE FALLAS:
+                // Si vienen failureIds, los conectamos.
+                failures: failureIds && failureIds.length > 0
+                    ? {
+                        connect: failureIds.map((id: number) => ({ id: Number(id) }))
+                      }
+                    : undefined
             },
+            include: {
+                failures: true // Retornamos las fallas para confirmar en el frontend
+            }
         });
 
         res.status(201).json(maintenance);
@@ -199,6 +210,7 @@ export const updateMaintenance = async (req: Request, res: Response) => {
     try {
         const id = Number(req.params.id);
         const ingenioId = req.session.user?.ingenioId!;
+        const { failureIds, ...restBody } = req.body; // Extraemos failureIds del body
 
         const maintenance = await prisma.maintenance.findUnique({ where: { id } });
 
@@ -211,11 +223,25 @@ export const updateMaintenance = async (req: Request, res: Response) => {
 
         const updated = await prisma.maintenance.update({
             where: { id },
-            data: req.body,
+            data: {
+                ...restBody,
+                // ACTUALIZACIÓN DE FALLAS:
+                // Usamos 'set' para reemplazar las relaciones existentes con la nueva lista.
+                // Si failureIds es vacío, 'set: []' desvinculará todas.
+                failures: failureIds 
+                    ? {
+                        set: failureIds.map((fid: number) => ({ id: Number(fid) }))
+                      }
+                    : undefined
+            },
+            include: {
+                failures: true
+            }
         });
 
         res.json(updated);
     } catch (error) {
+        console.error("Error actualizando mantenimiento:", error);
         res.status(500).json({ error: "Error al actualizar mantenimiento" });
     }
 };

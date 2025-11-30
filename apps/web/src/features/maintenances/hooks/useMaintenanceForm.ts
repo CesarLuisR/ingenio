@@ -1,112 +1,144 @@
 import { useState } from "react";
 import type React from "react";
-import type { Maintenance } from "../../../types";
+import type { Maintenance, Failure } from "../../../types"; // Asegúrate de tener Failure importado
 import { api } from "../../../lib/api";
 import { safeNumber } from "../utils";
 import { useSessionStore } from "../../../store/sessionStore";
 
-export function useMaintenanceForm(initialData: Maintenance | null, onSave: () => void) {
-	const user = useSessionStore((s) => s.user);
+// Extendemos el tipo Maintenance para el hook, por si el tipo base no incluye failures populados
+type MaintenanceWithFailures = Maintenance & { failures?: Failure[] };
 
-	const [formData, setFormData] = useState({
-		machineId: initialData?.machineId?.toString() || "",
-		type: initialData?.type || "Preventivo",
-		technicianId: initialData?.technicianId?.toString() || "",
-		performedAt: initialData
-			? new Date(initialData.performedAt).toISOString().slice(0, 16)
-			: "",
-		durationMinutes:
-			initialData?.durationMinutes != null
-				? initialData.durationMinutes.toString()
-				: "",
-		cost: initialData?.cost != null ? initialData.cost.toString() : "",
-		notes: initialData?.notes || "",
-	});
+export function useMaintenanceForm(initialData: MaintenanceWithFailures | null, onSave: () => void) {
+    const user = useSessionStore((s) => s.user);
 
-	const [errors, setErrors] = useState<Record<string, string>>({});
+    const [formData, setFormData] = useState({
+        machineId: initialData?.machineId?.toString() || "",
+        type: initialData?.type || "Preventivo",
+        technicianId: initialData?.technicianId?.toString() || "",
+        performedAt: initialData
+            ? new Date(initialData.performedAt).toISOString().slice(0, 16)
+            : "",
+        durationMinutes:
+            initialData?.durationMinutes != null
+                ? initialData.durationMinutes.toString()
+                : "",
+        cost: initialData?.cost != null ? initialData.cost.toString() : "",
+        notes: initialData?.notes || "",
+        // Inicializamos con los IDs de las fallas que ya tiene el mantenimiento (si es edición)
+        failureIds: initialData?.failures?.map(f => f.id.toString()) || [] as string[],
+    });
 
-	const validate = () => {
-		const newErrors: Record<string, string> = {};
+    const [errors, setErrors] = useState<Record<string, string>>({});
 
-		if (!formData.machineId) newErrors.machineId = "Selecciona una máquina.";
-		if (!formData.type) newErrors.type = "Selecciona un tipo de mantenimiento.";
+    const validate = () => {
+        const newErrors: Record<string, string> = {};
 
-		if (formData.durationMinutes) {
-			const n = safeNumber(formData.durationMinutes) ?? -1;
-			if (n < 0) newErrors.durationMinutes = "La duración no puede ser negativa.";
-		}
+        if (!formData.machineId) newErrors.machineId = "Selecciona una máquina.";
+        if (!formData.type) newErrors.type = "Selecciona un tipo de mantenimiento.";
 
-		if (formData.cost) {
-			const n = safeNumber(formData.cost) ?? -1;
-			if (n < 0) newErrors.cost = "El costo no puede ser negativo.";
-		}
+        if (formData.durationMinutes) {
+            const n = safeNumber(formData.durationMinutes) ?? -1;
+            if (n < 0) newErrors.durationMinutes = "La duración no puede ser negativa.";
+        }
 
-		if (formData.performedAt) {
-			const d = new Date(formData.performedAt);
-			if (Number.isNaN(d.getTime())) newErrors.performedAt = "Fecha/hora inválida.";
-		}
+        if (formData.cost) {
+            const n = safeNumber(formData.cost) ?? -1;
+            if (n < 0) newErrors.cost = "El costo no puede ser negativo.";
+        }
 
-		setErrors(newErrors);
-		return Object.keys(newErrors).length === 0;
-	};
+        if (formData.performedAt) {
+            const d = new Date(formData.performedAt);
+            if (Number.isNaN(d.getTime())) newErrors.performedAt = "Fecha/hora inválida.";
+        }
 
-	const handleFieldChange =
-		(field: keyof typeof formData) =>
-		(
-			e:
-				| React.ChangeEvent<HTMLInputElement>
-				| React.ChangeEvent<HTMLSelectElement>
-				| React.ChangeEvent<HTMLTextAreaElement>,
-		) => {
-			setFormData((prev) => ({ ...prev, [field]: e.target.value }));
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
 
-			if (errors[field]) {
-				setErrors((prev) => {
-					const clone = { ...prev };
-					delete clone[field];
-					return clone;
-				});
-			}
-		};
+    const handleFieldChange =
+        (field: keyof typeof formData) =>
+        (
+            e:
+                | React.ChangeEvent<HTMLInputElement>
+                | React.ChangeEvent<HTMLSelectElement>
+                | React.ChangeEvent<HTMLTextAreaElement>,
+        ) => {
+            const value = e.target.value;
+            
+            setFormData((prev) => {
+                const newData = { ...prev, [field]: value };
+                
+                // Lógica especial: Si cambia la máquina, limpiamos las fallas seleccionadas
+                // porque las fallas pertenecen a una máquina específica.
+                if (field === "machineId" && value !== prev.machineId) {
+                    newData.failureIds = [];
+                }
+                
+                return newData;
+            });
 
-	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
-		if (!validate()) return;
+            if (errors[field]) {
+                setErrors((prev) => {
+                    const clone = { ...prev };
+                    delete clone[field];
+                    return clone;
+                });
+            }
+        };
 
-		try {
-			const payload = {
-				machineId: Number(formData.machineId),
-				type: formData.type as Maintenance["type"],
-				technicianId: formData.technicianId
-					? Number(formData.technicianId)
-					: undefined,
-				notes: formData.notes || undefined,
-				cost: formData.cost ? Number(formData.cost) : undefined,
-				durationMinutes: formData.durationMinutes
-					? Number(formData.durationMinutes)
-					: undefined,
-				performedAt: formData.performedAt
-					? new Date(formData.performedAt).toISOString()
-					: new Date().toISOString(),
-				ingenioId: user?.ingenioId! ?? null,
-			};
+    // Nuevo manejador para los checkboxes de fallas
+    const handleFailureToggle = (failureId: string) => {
+        setFormData(prev => {
+            const currentIds = prev.failureIds;
+            if (currentIds.includes(failureId)) {
+                return { ...prev, failureIds: currentIds.filter(id => id !== failureId) };
+            } else {
+                return { ...prev, failureIds: [...currentIds, failureId] };
+            }
+        });
+    };
 
-			if (initialData) {
-				await api.updateMaintenance(initialData.id.toString(), payload);
-			} else {
-				await api.createMaintenance(payload);
-			}
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!validate()) return;
 
-			onSave();
-		} catch (error) {
-			console.error("Error guardando mantenimiento:", error);
-		}
-	};
+        try {
+            const payload = {
+                machineId: Number(formData.machineId),
+                type: formData.type as Maintenance["type"],
+                technicianId: formData.technicianId
+                    ? Number(formData.technicianId)
+                    : undefined,
+                notes: formData.notes || undefined,
+                cost: formData.cost ? Number(formData.cost) : undefined,
+                durationMinutes: formData.durationMinutes
+                    ? Number(formData.durationMinutes)
+                    : undefined,
+                performedAt: formData.performedAt
+                    ? new Date(formData.performedAt).toISOString()
+                    : new Date().toISOString(),
+                ingenioId: user?.ingenioId! ?? null,
+                // Enviamos el array de IDs numéricos
+                failureIds: formData.failureIds.map(Number),
+            };
 
-	return {
-		formData,
-		errors,
-		handleFieldChange,
-		handleSubmit,
-	};
+            if (initialData) {
+                await api.updateMaintenance(initialData.id.toString(), payload);
+            } else {
+                await api.createMaintenance(payload);
+            }
+
+            onSave();
+        } catch (error) {
+            console.error("Error guardando mantenimiento:", error);
+        }
+    };
+
+    return {
+        formData,
+        errors,
+        handleFieldChange,
+        handleFailureToggle, // Exportamos la nueva función
+        handleSubmit,
+    };
 }

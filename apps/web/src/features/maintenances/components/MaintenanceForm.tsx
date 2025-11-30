@@ -1,14 +1,17 @@
-import type { Maintenance, Machine, Technician } from "../../../types";
+import type { Maintenance, Machine, Technician, Failure } from "../../../types";
 import { useMaintenanceForm } from "../hooks/useMaintenanceForm";
 
 import {
     ButtonGroup,
     CancelButton,
     CloseIconButton,
+    EmptyState,
     ErrorText,
+    FailureItem,
+    FailuresList,
     Field,
     Form,
-    FormRow, // Nuevo componente para layout
+    FormRow,
     Label,
     Modal,
     ModalContent,
@@ -18,23 +21,39 @@ import {
     SubmitButton,
     TextArea,
     TextInput,
+    // Asumiendo que tienes un Checkbox o similar en styled, si no, usa input standard
+    // CheckboxInput 
 } from "../styled";
 
 export default function MaintenanceForm({
     machines,
     technicians,
+    failures, // RECIBIMOS TODAS LAS FALLAS (o al menos las activas)
     initialData,
     onClose,
     onSave,
 }: {
     machines: Machine[];
     technicians: Technician[];
-    initialData?: Maintenance | null;
+    failures: Failure[]; // Nueva prop
+    initialData?: (Maintenance & { failures?: Failure[] }) | null;
     onClose: () => void;
     onSave: () => void;
 }) {
-    const { formData, errors, handleFieldChange, handleSubmit } =
+    const { formData, errors, handleFieldChange, handleFailureToggle, handleSubmit } =
         useMaintenanceForm(initialData ?? null, onSave);
+
+    // Filtramos las fallas relevantes:
+    // 1. Deben pertenecer a la máquina seleccionada.
+    // 2. Deben estar pendientes O ser parte del mantenimiento que estamos editando.
+    const relevantFailures = failures.filter(f => {
+        const isForSelectedMachine = f.machineId.toString() === formData.machineId;
+        const isAlreadyLinked = initialData?.failures?.some(linked => linked.id === f.id);
+        
+        // Mostrar si es de la máquina Y (está pendiente O ya estaba vinculada)
+        // Asumiendo que 'status' !== 'resuelto' significa pendiente, ajusta según tu lógica
+        return isForSelectedMachine && (f.status !== 'resuelto' || isAlreadyLinked);
+    });
 
     return (
         <Modal onClick={onClose}>
@@ -64,6 +83,32 @@ export default function MaintenanceForm({
                         </SelectInput>
                         {errors.machineId && <ErrorText>{errors.machineId}</ErrorText>}
                     </Field>
+
+                    {/* SECCIÓN DE FALLAS */}
+                    {formData.machineId && (
+                        <Field>
+                            <Label>Fallas Asociadas (Seleccionar para vincular)</Label>
+                            <FailuresList>
+                                {relevantFailures.length === 0 ? (
+                                    <EmptyState>No hay fallas pendientes para esta máquina.</EmptyState>
+                                ) : (
+                                    relevantFailures.map((f) => (
+                                        <FailureItem key={f.id}>
+                                            <input
+                                                type="checkbox"
+                                                checked={formData.failureIds.includes(f.id.toString())}
+                                                onChange={() => handleFailureToggle(f.id.toString())}
+                                            />
+                                            <span>
+                                                <strong>{new Date(f.occurredAt).toLocaleDateString()}</strong>: {f.description} 
+                                                <span style={{fontSize: '0.8em', color: '#666'}}> ({f.severity})</span>
+                                            </span>
+                                        </FailureItem>
+                                    ))
+                                )}
+                            </FailuresList>
+                        </Field>
+                    )}
 
                     <FormRow>
                         <Field>
