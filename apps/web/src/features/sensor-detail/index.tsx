@@ -7,13 +7,13 @@ import { SensorMetrics } from "./components/SensorMetrics";
 
 export default function SensorDetail() {
     const { id } = useParams<{ id: string }>();
+
     const {
         sensorName,
         failures,
         latest,
         chartData,
-        sensorIntId,
-    } = useSensorDetail(id);
+    } = useSensorDetail(Number(id));
 
     const status = latest?.status || "unknown";
     
@@ -43,7 +43,7 @@ export default function SensorDetail() {
             </HeaderContainer>
 
             {/* Sección de Métricas KPIs (Health) */}
-            <SensorMetrics sensorId={sensorIntId} />
+            <SensorMetrics id={Number(id)} />
 
             {/* Gráficos Individuales por Grupo */}
             <div style={{ marginTop: '40px' }}>

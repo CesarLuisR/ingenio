@@ -1,14 +1,8 @@
 {
-  "type": "induction-motor",
-  "active": true,
-  "lastSeen": "2025-10-17T12:30:00.000Z",
-  "location": "Planta A - Línea 2",
   "sensorId": "motor-01",
-  "createdAt": "2025-10-17T12:00:00.000Z",
-  "ingenioId": 1,
-  "machineId": 1,
+  "type": "induction-motor",
+  "location": "Planta A - Línea 2",
   "intervalMs": 1000,
-  "configVersion": "v1",
   "metricsConfig": {
     "thermal": {
       "motorTemperature": {
@@ -43,6 +37,18 @@
         "max": 5.05,
         "min": 0.01
       }
+    },
+    "El loco mio": {
+      "aaaa": {
+        "min": 10,
+        "max": 100
+      }
     }
-  }
+  },
+  "active": true,
+  "configVersion": "v1",
+  "createdAt": "2025-10-17T12:00:00.000Z",
+  "lastSeen": "2025-10-17T12:30:00.000Z",
+  "ingenioId": 1,
+  "machineId": 1
 }

@@ -51,10 +51,10 @@ export const getAllSensors = async (req: Request, res: Response) => {
 ----------------------------------------------------------- */
 export const getSensorById = async (req: Request, res: Response) => {
 	try {
-		const { sensorId } = req.params;
+		const id = Number(req.params.id);
 
 		const sensor = await prisma.sensor.findUnique({
-			where: { sensorId },
+			where: { id },
 			include: {
 				failures: true,
 				machine: true,
@@ -110,12 +110,12 @@ export const createSensor = async (req: Request, res: Response) => {
 ----------------------------------------------------------- */
 export const updateSensor = async (req: Request, res: Response) => {
 	try {
-		const { sensorId } = req.params;
+		const id = Number(req.params.id);
 		const data = req.body;
 
 		// Primero buscamos el sensor para validar ingenio
 		const existing = await prisma.sensor.findUnique({
-			where: { sensorId },
+			where: { id },
 		});
 
 		if (!existing) {
@@ -137,7 +137,7 @@ export const updateSensor = async (req: Request, res: Response) => {
 		}
 
 		const updated = await prisma.sensor.update({
-			where: { sensorId },
+			where: { id },
 			data: {
 				name: data.name,
 				type: data.type,
@@ -152,7 +152,7 @@ export const updateSensor = async (req: Request, res: Response) => {
 		// todo: que tan malo es este codigo?
 		if (data.config) {
 			cacheRepository.set(
-				`sensor:${sensorId}-updated`,
+				`sensor:${updated.sensorId}-updated`,
 				JSON.stringify(data.config)
 			);
 		}
@@ -174,11 +174,11 @@ export const updateSensor = async (req: Request, res: Response) => {
 ----------------------------------------------------------- */
 export const deactivateSensor = async (req: Request, res: Response) => {
 	try {
-		const { sensorId } = req.params;
+		const id = Number(req.params.id);
 
 		// Primero validamos que exista y pertenezca al ingenio
 		const existing = await prisma.sensor.findUnique({
-			where: { sensorId },
+			where: { id },
 		});
 
 		if (!existing) {
@@ -202,17 +202,17 @@ export const deactivateSensor = async (req: Request, res: Response) => {
 		currentConfig.active = false;
 
 		await cacheRepository.set(
-			`sensor:${sensorId}-updated`,
+			`sensor:${existing.sensorId}-updated`,
 			JSON.stringify(currentConfig)
 		);
 
 		const sensor = await prisma.sensor.update({
-			where: { sensorId },
+			where: { id },
 			data: { active: false, config: currentConfig },
 		});
 
 		return res.json({
-			message: `Sensor ${sensorId} deactivated successfully.`,
+			message: `Sensor ${existing.sensorId} deactivated successfully.`,
 			sensor,
 		});
 	} catch (error: any) {
@@ -231,10 +231,10 @@ export const deactivateSensor = async (req: Request, res: Response) => {
 ----------------------------------------------------------- */
 export const activateSensor = async (req: Request, res: Response) => {
 	try {
-		const { sensorId } = req.params;
+		const id = Number(req.params.id);
 
 		const existing = await prisma.sensor.findUnique({
-			where: { sensorId },
+			where: { id },
 		});
 
 		if (!existing) {
@@ -252,17 +252,17 @@ export const activateSensor = async (req: Request, res: Response) => {
 		// todo
 		// codigo de mierda igual que el de arriba, hay que ver como lo arreglamos
 		await cacheRepository.set(
-			`sensor:${sensorId}-updated`,
+			`sensor:${existing.sensorId}-updated`,
 			JSON.stringify(currentConfig)
 		);
 
 		const sensor = await prisma.sensor.update({
-			where: { sensorId },
+			where: { id },
 			data: { active: true, config: currentConfig },
 		});
 
 		return res.json({
-			message: `Sensor ${sensorId} activated successfully.`,
+			message: `Sensor ${existing.sensorId} activated successfully.`,
 			sensor,
 		});
 	} catch (error: any) {

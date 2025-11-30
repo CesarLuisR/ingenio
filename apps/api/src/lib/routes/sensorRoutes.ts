@@ -11,10 +11,10 @@ import {
 const router = Router();
 
 router.get("/", getAllSensors);
-router.get("/:sensorId", getSensorById);
+router.get("/:id", getSensorById);
 router.post("/", createSensor);
-router.put("/:sensorId", updateSensor);
-router.patch("/:sensorId/deactivate", deactivateSensor);
-router.patch("/:sensorId/activate", activateSensor);
+router.put("/:id", updateSensor);
+router.patch("/:id/deactivate", deactivateSensor);
+router.patch("/:id/activate", activateSensor);
 
 export default router;

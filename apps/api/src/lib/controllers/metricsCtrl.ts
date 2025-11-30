@@ -38,6 +38,7 @@ export const getIngenioMetrics: RequestHandler = async (req, res) => {
     }
 };
 
+// Esto probablemente se vaya porque en realidad no sirve de nada pq los datos no son integros.
 export const getSensorHealth: RequestHandler = async (req, res) => {
     const id = Number(req.params.id);
     if (!id) return res.status(400).json({ error: "Bad request" });

@@ -42,6 +42,11 @@ export default function SensorForm({
 	const sensorId = sensor?.sensorId || initialConfig.sensorId || "";
 	const user = useSessionStore((s) => s.user);
 
+	if (!sensor) {
+		console.error("POR ALGUNA RAZON NO ESTA LLEGANDO EL ERROR");
+		throw new Error("POR ALGUNA RAZON NO ESTA LLEGANDO EL ERROR");
+	}
+
 	// Lista de máquinas disponibles
 	const [machines, setMachines] = useState<Machine[]>([]);
 
@@ -119,7 +124,7 @@ export default function SensorForm({
 				ingenioId: formData.ingenioId!,   // 👈 coherencia
 			};
 
-			await api.updateSensor(sensor!.sensorId, payload);
+			await api.updateSensor(sensor.id, payload);
 
 			onSave();
 			onClose();

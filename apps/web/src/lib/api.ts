@@ -178,8 +178,8 @@ class SensorService extends BaseApiClient {
 		return this.request<Sensor[]>(`/api/sensors${this.buildQuery(params)}`);
 	}
 
-	getOne(sensorId: string): Promise<Sensor> {
-		return this.request<Sensor>(`/api/sensors/${sensorId}`);
+	getOne(id: number): Promise<Sensor> {
+		return this.request<Sensor>(`/api/sensors/${id}`);
 	}
 
 	create(data: { sensorId: string; machineId: number; ingenioId: number }): Promise<Sensor> {
@@ -189,19 +189,19 @@ class SensorService extends BaseApiClient {
 		});
 	}
 
-	update(sensorId: string, data: Partial<Sensor>): Promise<Sensor> {
-		return this.request<Sensor>(`/api/sensors/${sensorId}`, {
+	update(id: number, data: Partial<Sensor>): Promise<Sensor> {
+		return this.request<Sensor>(`/api/sensors/${id}`, {
 			method: "PUT",
 			body: JSON.stringify(data),
 		});
 	}
 
-	activate(sensorId: string): Promise<Sensor> {
-		return this.request<Sensor>(`/api/sensors/${sensorId}/activate`, { method: "PATCH" });
+	activate(id: number): Promise<Sensor> {
+		return this.request<Sensor>(`/api/sensors/${id}/activate`, { method: "PATCH" });
 	}
 
-	deactivate(sensorId: string): Promise<Sensor> {
-		return this.request<Sensor>(`/api/sensors/${sensorId}/deactivate`, { method: "PATCH" });
+	deactivate(id: number): Promise<Sensor> {
+		return this.request<Sensor>(`/api/sensors/${id}/deactivate`, { method: "PATCH" });
 	}
 
 	getReadings(sensorId: string): Promise<Reading[]> {

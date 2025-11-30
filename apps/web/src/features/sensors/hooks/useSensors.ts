@@ -12,7 +12,7 @@ export function useSensors(ingenioId?: number) {
         setLoading(true);
         try {
             const [sensorData, machineData] = await Promise.all([
-                api.getSensors(ingenioId),
+                api.getSensors({ ingenioId }),
                 api.getMachines(),
             ]);
             setSensors(sensorData);
@@ -24,13 +24,13 @@ export function useSensors(ingenioId?: number) {
         }
     }, [ingenioId]);
 
-    const deactivateSensor = useCallback(async (sensorId: string) => {
+    const deactivateSensor = useCallback(async (id: number) => {
         try {
-            await api.deactivateSensor(sensorId);
+            await api.deactivateSensor(id);
             // Actualización optimista local
             setSensors((prev) =>
                 prev.map((s) =>
-                    (s.sensorId ?? String(s.id)) === sensorId ? { ...s, active: false } : s
+                    (s.id) === id ? { ...s, active: false } : s
                 )
             );
         } catch (error) {
@@ -39,13 +39,13 @@ export function useSensors(ingenioId?: number) {
     }, []);
 
     // --- NUEVA FUNCIÓN ---
-    const activateSensor = useCallback(async (sensorId: string) => {
+    const activateSensor = useCallback(async (id: number) => {
         try {
-            await api.activateSensor(sensorId);
+            await api.activateSensor(id);
             // Actualización optimista local
             setSensors((prev) =>
                 prev.map((s) =>
-                    (s.sensorId ?? String(s.id)) === sensorId ? { ...s, active: true } : s
+                    ((s.id)) === id ? { ...s, active: true } : s
                 )
             );
         } catch (error) {

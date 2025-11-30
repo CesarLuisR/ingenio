@@ -291,7 +291,7 @@ export default function Sensores() {
                                         return; 
                                     }
                                     if (sensor.isEnabled) {
-                                        navigate(`/sensor/${sensor.sensorId ?? sensor.id}`);
+                                        navigate(`/sensor/${sensor.id}`);
                                     }
                                 }}
                             >
@@ -350,10 +350,8 @@ export default function Sensores() {
                                             <DangerTextButton
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    if(confirm("¿Desactivar este sensor? Dejará de recibir datos.")) {
-                                                        const sid = sensor.sensorId ?? String(sensor.id);
-                                                        deactivateSensor(sid);
-                                                    }
+                                                    if(confirm("¿Desactivar este sensor? Dejará de recibir datos."))
+                                                        deactivateSensor(sensor.id);
                                                 }}>
                                                 Desactivar
                                             </DangerTextButton>
@@ -362,8 +360,7 @@ export default function Sensores() {
                                                 style={{ color: '#16a34a', fontWeight: 'bold' }}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    const sid = sensor.sensorId ?? String(sensor.id);
-                                                    activateSensor(sid);
+                                                    activateSensor(sensor.id);
                                                 }}>
                                                 Reactivar
                                             </GhostButton>

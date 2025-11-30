@@ -5,9 +5,9 @@ import { type Failure } from "../../../types";
 
 const MAX_POINTS = 30;
 
-export function useSensorDetail(id?: string) {
+export function useSensorDetail(id?: number) {
     const [sensorName, setSensorName] = useState<string>("");
-    const [sensorIntId, setSensorIntId] = useState<number | null>(null);
+    const [sensorStrId, setSensorStrId] = useState<string | null>(null);
     
     // Restauramos el estado para fallas
     const [failures, setFailures] = useState<Failure[]>([]);
@@ -25,11 +25,11 @@ export function useSensorDetail(id?: string) {
         const loadBaseData = async () => {
             try {
                 // 1. Obtenemos el sensor para saber su ID numérico interno
-                const sensor = await api.getSensor(String(id));
+                const sensor = await api.getSensor(id);
                 
                 if (mounted) {
                     setSensorName(sensor.name);
-                    setSensorIntId(sensor.id);
+                    setSensorStrId(sensor.sensorId);
 
                     // 2. Cargamos las fallas y filtramos por este sensor
                     // (Idealmente el backend debería tener getFailures({ sensorId: ... }), 
@@ -50,7 +50,7 @@ export function useSensorDetail(id?: string) {
     }, [id]);
 
     // 🔹 2. Historial reactivo (WebSockets/Store)
-    const history = sensorMap.get(String(id)) || [];
+    const history = sensorMap.get(sensorStrId || "") || [];
 
     // 🔹 3. Transformación para gráficas
     useEffect(() => {
@@ -91,7 +91,6 @@ export function useSensorDetail(id?: string) {
 
     return {
         sensorName,
-        sensorIntId,
         failures, // ✅ Aquí está de vuelta
         chartData,
         latest,
