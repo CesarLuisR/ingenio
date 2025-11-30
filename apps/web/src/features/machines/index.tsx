@@ -1,12 +1,18 @@
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import styled from "styled-components";
+
+// Hooks y Servicios
 import { useMachines, type MachineWithRelations } from "./hooks/useMachine";
-import { MachineFormModal } from "./components/MachineModal";
-import { MachineCard } from "./components/MachineCard";
 import { api } from "../../lib/api";
 import { useSessionStore } from "../../store/sessionStore";
-import { ROLES, type Ingenio } from "../../types";
 import { hasPermission } from "../../lib/hasPermission";
+import { ROLES, type Ingenio } from "../../types";
+
+// Componentes UI
+import { MachineFormModal } from "./components/MachineModal";
+import { MachineCard } from "./components/MachineCard";
+import SearchableSelect from "../shared/components/SearchableSelect";
 
 import {
   Container,
@@ -27,7 +33,62 @@ import {
   SortDirButton,
   TextInput,
 } from "./styled";
-import SearchableSelect from "../shared/components/SearchableSelect";
+
+// --- ESTILOS DE PAGINACIÓN ---
+const PaginationContainer = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+  padding: 16px 24px;
+  background-color: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  border-radius: 0 0 12px 12px;
+`;
+
+const PageInfo = styled.span`
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 500;
+`;
+
+const NavButton = styled.button`
+  padding: 6px 12px;
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  color: #334155;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: #f1f5f9;
+    color: #0f172a;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #f8fafc;
+  }
+`;
+
+const SearchButton = styled.button`
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+  &:hover {
+    background-color: #2563eb;
+  }
+`;
 
 type SortField = "name" | "code" | "createdAt";
 
@@ -38,7 +99,7 @@ export default function MachinesPage() {
   const isSuperAdmin = user?.role === ROLES.SUPERADMIN;
   const canManage = hasPermission(user?.role || "", ROLES.ADMIN) && !isSuperAdmin;
 
-  // --- Lógica de Ingenios (Solo Super Admin) ---
+  // --- LÓGICA DE INGENIOS (SuperAdmin) ---
   const [ingenios, setIngenios] = useState<Ingenio[]>([]);
   const [selectedIngenioId, setSelectedIngenioId] = useState<number | undefined>(undefined);
 
@@ -48,73 +109,81 @@ export default function MachinesPage() {
     }
   }, [isSuperAdmin]);
 
-  // Transformamos los ingenios para que encajen con SearchableSelect
-  // Usamos ID 0 para "Todos"
   const ingenioOptions = useMemo(() => {
     const allOption = { id: 0, name: "🏢 Todos los Ingenios", code: "" };
-    // Aseguramos que 'ingenios' tenga el formato correcto, aunque SearchableSelect 
-    // usa 'id' y 'name' que coinciden con la interfaz Ingenio.
     return [allOption, ...ingenios];
   }, [ingenios]);
 
-  // Hook principal de datos
-  const { machines, loading, error, setMachines } = useMachines(selectedIngenioId);
+  // --- ESTADOS DE FILTRO (UI TEMPORAL) ---
+  const [tempSearch, setTempSearch] = useState("");
+  const [tempOnlyActive, setTempOnlyActive] = useState(false);
+  const [tempSortField, setTempSortField] = useState<SortField>("name");
+  const [tempSortDir, setTempSortDir] = useState<"asc" | "desc">("asc");
 
-  const [search, setSearch] = useState("");
-  const [onlyActive, setOnlyActive] = useState(false);
-  const [sortField, setSortField] = useState<SortField>("name");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  // --- ESTADOS DE FILTRO APLICADOS (ENVIADOS AL HOOK) ---
+  const [appliedFilters, setAppliedFilters] = useState({
+    search: "",
+    active: false,
+    sortBy: "name",
+    sortDir: "asc" as "asc" | "desc"
+  });
 
+  // --- HOOK PRINCIPAL ---
+  const { 
+    visibleMachines, 
+    loading, 
+    error, 
+    setMachines, 
+    pagination, 
+    reload 
+  } = useMachines({
+    ingenioId: selectedIngenioId,
+    // Aquí pasamos los filtros APLICADOS, no los temporales
+    search: appliedFilters.search,
+    active: appliedFilters.active ? true : undefined,
+    sortBy: appliedFilters.sortBy,
+    sortDir: appliedFilters.sortDir
+  });
+
+  // --- MODALES ---
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [selectedMachine, setSelectedMachine] = useState<MachineWithRelations | null>(null);
 
-  // Filtrado y Ordenamiento Local
-  const filteredMachines = useMemo(() => {
-    let data = [...machines];
+  // --- HANDLERS ---
 
-    if (search.trim()) {
-      const term = search.toLowerCase();
-      data = data.filter(
-        (m) =>
-          m.name.toLowerCase().includes(term) ||
-          m.code.toLowerCase().includes(term) ||
-          (m.location ?? "").toLowerCase().includes(term)
-      );
-    }
-
-    if (onlyActive) {
-      data = data.filter((m) => m.active);
-    }
-
-    data.sort((a, b) => {
-      let av: string | number = "";
-      let bv: string | number = "";
-
-      if (sortField === "name") {
-        av = a.name.toLowerCase();
-        bv = b.name.toLowerCase();
-      } else if (sortField === "code") {
-        av = a.code.toLowerCase();
-        bv = b.code.toLowerCase();
-      } else {
-        av = new Date(a.createdAt).getTime();
-        bv = new Date(b.createdAt).getTime();
-      }
-
-      if (av < bv) return sortDir === "asc" ? -1 : 1;
-      if (av > bv) return sortDir === "asc" ? 1 : -1;
-      return 0;
+  // 1. Aplicar Filtros (Botón Buscar)
+  const handleApplyFilters = () => {
+    setAppliedFilters({
+      search: tempSearch,
+      active: tempOnlyActive,
+      sortBy: tempSortField,
+      sortDir: tempSortDir
     });
+    // El hook useMachines detectará el cambio en appliedFilters y recargará automáticamente
+  };
 
-    return data;
-  }, [machines, search, onlyActive, sortField, sortDir]);
+  // 2. Resetear Filtros
+  const handleResetFilters = () => {
+    // Reset UI
+    setTempSearch("");
+    setTempOnlyActive(false);
+    setTempSortField("name");
+    setTempSortDir("asc");
+    
+    // Reset Aplicados (Dispara recarga limpia)
+    setAppliedFilters({
+      search: "",
+      active: false,
+      sortBy: "name",
+      sortDir: "asc"
+    });
+  };
 
-  // Estadísticas
-  const total = machines.length;
-  const operativeCount = machines.filter(m => m.active && !m.failures?.some(f => !f.resolvedAt)).length;
-  const warningCount = machines.filter(m => m.active && m.failures?.some(f => !f.resolvedAt)).length;
-  const inactiveCount = machines.filter(m => !m.active).length;
+  // 3. Enter en input de búsqueda
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') handleApplyFilters();
+  };
 
   const openCreateModal = () => {
     setModalMode("create");
@@ -134,8 +203,9 @@ export default function MachinesPage() {
       if (exists) {
         return prev.map((m) => (m.id === saved.id ? { ...m, ...saved } : m));
       }
-      return [...prev, saved];
+      return [saved, ...prev];
     });
+    reload(); 
   };
 
   const handleDelete = async (machine: MachineWithRelations) => {
@@ -148,15 +218,8 @@ export default function MachinesPage() {
       await api.deleteMachine(machine.id);
       setMachines((prev) => prev.filter((m) => m.id !== machine.id));
     } catch (err: any) {
-      alert(err?.message || "Error al eliminar la máquina. Intenta nuevamente.");
+      alert(err?.message || "Error al eliminar la máquina.");
     }
-  };
-
-  const handleResetFilters = () => {
-    setSearch("");
-    setOnlyActive(false);
-    setSortField("name");
-    setSortDir("asc");
   };
 
   const handleView = (machine: MachineWithRelations) => {
@@ -171,12 +234,11 @@ export default function MachinesPage() {
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
             <Title>Máquinas</Title>
 
-            {/* USAMOS TU SEARCHABLE SELECT AQUÍ */}
             {isSuperAdmin && (
-              <div style={{ zIndex: 50 }}> {/* Z-index para que el dropdown flote sobre el contenido */}
+              <div style={{ zIndex: 50 }}> 
                 <SearchableSelect
                   options={ingenioOptions}
-                  value={selectedIngenioId ?? 0} // Si es undefined, pasamos 0 (Todos)
+                  value={selectedIngenioId ?? 0}
                   onChange={(val) => setSelectedIngenioId(val === 0 ? undefined : val)}
                   placeholder="🔍 Buscar ingenio..."
                 />
@@ -185,15 +247,13 @@ export default function MachinesPage() {
           </div>
 
           <SubTitle>
-            Inventario de equipos del ingenio. Inspecciona sensores, estado,
-            mantenimientos y fallas.
+            Inventario de equipos del ingenio. Inspecciona sensores, estado, mantenimientos y fallas.
           </SubTitle>
 
           <ListSummary>
-            <span>Total: {total}</span>
-            <span style={{ color: "#16a34a" }}>Operativas: {operativeCount}</span>
-            <span style={{ color: "#d97706" }}>Advertencia: {warningCount}</span>
-            <span style={{ color: "#94a3b8" }}>Inactivas: {inactiveCount}</span>
+            <span>Total Global: {pagination.totalItems}</span>
+            {/* Nota: Los contadores de estado (operativas/inactivas) requieren un endpoint de stats dedicado 
+                si se quiere el conteo real de toda la BD, aquí mostramos el total paginado */}
           </ListSummary>
         </div>
 
@@ -202,16 +262,20 @@ export default function MachinesPage() {
         </HeaderRight>
       </Header>
 
+      {/* --- BARRA DE FILTROS --- */}
       <FiltersBar>
+        {/* INPUT DE BÚSQUEDA */}
         <TextInput
           placeholder="Buscar por nombre, código o ubicación…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          value={tempSearch}
+          onChange={(e) => setTempSearch(e.target.value)}
+          onKeyDown={handleKeyDown}
         />
 
+        {/* SELECT DE ORDENAMIENTO */}
         <select
-          value={sortField}
-          onChange={(e) => setSortField(e.target.value as SortField)}
+          value={tempSortField}
+          onChange={(e) => setTempSortField(e.target.value as SortField)}
           style={{
             padding: "8px 12px",
             borderRadius: "10px",
@@ -226,32 +290,41 @@ export default function MachinesPage() {
         </select>
 
         <FiltersRight>
+          {/* BOTÓN DE DIRECCIÓN (ASC/DESC) */}
+          <SortDirButton
+            type="button"
+            onClick={() => setTempSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+          >
+            {tempSortDir === "asc" ? "Ascendente ↑" : "Descendente ↓"}
+          </SortDirButton>
+
+          {/* CHECKBOX ACTIVAS */}
           <CheckboxLabel>
             <input
               type="checkbox"
-              checked={onlyActive}
-              onChange={(e) => setOnlyActive(e.target.checked)}
+              checked={tempOnlyActive}
+              onChange={(e) => setTempOnlyActive(e.target.checked)}
             />
             Solo activas
           </CheckboxLabel>
 
-          <SortDirButton
-            type="button"
-            onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
-          >
-            {sortDir === "asc" ? "Ascendente ↑" : "Descendente ↓"}
-          </SortDirButton>
+          {/* BOTÓN DE ACCIÓN PRINCIPAL */}
+          <SearchButton onClick={handleApplyFilters}>
+            🔍 Buscar
+          </SearchButton>
 
+          {/* BOTÓN DE RESET */}
           <ResetFiltersButton type="button" onClick={handleResetFilters}>
             Reiniciar
           </ResetFiltersButton>
         </FiltersRight>
       </FiltersBar>
 
-      {loading && <LoadingText>Cargando máquinas…</LoadingText>}
+      {/* --- ESTADOS DE CARGA Y ERROR --- */}
+      {loading && pagination.page === 1 && <LoadingText>Cargando máquinas…</LoadingText>}
       {error && !loading && <ErrorBox>{error}</ErrorBox>}
 
-      {!loading && !error && filteredMachines.length === 0 && (
+      {!loading && !error && visibleMachines.length === 0 && (
         <EmptyState>
           <p>No se encontraron máquinas con los filtros actuales.</p>
           {canManage && (
@@ -262,18 +335,48 @@ export default function MachinesPage() {
         </EmptyState>
       )}
 
-      {!loading && !error && filteredMachines.length > 0 && (
-        <MachineList>
-          {filteredMachines.map((m) => (
-            <MachineCard
-              key={m.id}
-              machine={m}
-              onView={handleView}
-              onEdit={openEditModal}
-              onDelete={handleDelete}
-            />
-          ))}
-        </MachineList>
+      {/* --- LISTA DE MÁQUINAS --- */}
+      {!error && visibleMachines.length > 0 && (
+        <>
+            <MachineList>
+                {visibleMachines.map((m) => (
+                    <MachineCard
+                    key={m.id}
+                    machine={m}
+                    onView={handleView}
+                    onEdit={openEditModal}
+                    onDelete={handleDelete}
+                    />
+                ))}
+            </MachineList>
+
+            {/* --- CONTROLES DE PAGINACIÓN --- */}
+            {pagination.totalItems > 0 && (
+                <PaginationContainer>
+                    <PageInfo>
+                        Página {pagination.page} de {pagination.totalPages} 
+                        <span style={{fontSize: '0.9em', color: '#94a3b8', marginLeft: 8}}>
+                             ({pagination.totalItems} registros)
+                        </span>
+                    </PageInfo>
+
+                    <div style={{display: 'flex', gap: 8}}>
+                        <NavButton 
+                            onClick={pagination.prevPage} 
+                            disabled={!pagination.canPrev}
+                        >
+                            Anterior
+                        </NavButton>
+                        <NavButton 
+                            onClick={pagination.nextPage} 
+                            disabled={!pagination.canNext}
+                        >
+                            Siguiente
+                        </NavButton>
+                    </div>
+                </PaginationContainer>
+            )}
+        </>
       )}
 
       <MachineFormModal

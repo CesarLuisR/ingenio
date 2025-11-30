@@ -13,7 +13,7 @@ export function useSensors(ingenioId?: number) {
         try {
             const [sensorData, machineData] = await Promise.all([
                 api.getSensors({ ingenioId }),
-                api.getMachines(),
+                api.machines.getList(),
             ]);
             setSensors(sensorData);
             setMachines(machineData);

@@ -4,6 +4,9 @@ import hasPermission from "../utils/permissionUtils";
 import { UserRole } from "@prisma/client";
 
 export const getAllIngenios: RequestHandler = async (req, res) => {
+    if (!hasPermission(req.session.user?.role as UserRole, UserRole.SUPERADMIN))
+        return res.status(403).json({ message: "Forbidden access " });
+
     try {
         // 0. Simple mode
         if (req.query.simple) {

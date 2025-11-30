@@ -63,7 +63,7 @@ export default function SensorForm({
 
 	// Cargar máquinas para el select
 	useEffect(() => {
-		api.getMachines().then(setMachines).catch(console.error);
+		api.machines.getList().then(setMachines).catch(console.error);
 	}, []);
 
 	// Cuando cambia el sensor editado

@@ -1,34 +1,35 @@
 import type React from "react";
-import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom"; // Importamos useLocation
+import { useState, useEffect, useMemo } from "react";
+import { useLocation } from "react-router-dom"; 
 import { api } from "../../lib/api";
 import { type MachineAnalysisResponse, type Machine } from "../../types";
 import { useSessionStore } from "../../store/sessionStore";
 
-// Importamos el componente de tarjeta de sensor
+// Componentes
 import SensorAnalysisCard from "./components/SensorAnalysisCard";
 
 import {
     Container, Header, Title, Subtitle,
     SelectionPanel, PanelHeader, ActionButton,
     ResultsGrid,
-    SelectInput,
+    // SelectInput, // Ya no lo necesitamos
 } from "./styled";
+import SearchableSelect from "../shared/components/SearchableSelect";
 
 export default function Analisis() {
     const { user } = useSessionStore();
-    const location = useLocation(); // Hook para acceder al estado de navegación
+    const location = useLocation(); 
     
     const [machines, setMachines] = useState<Machine[]>([]);
     const [selectedMachineId, setSelectedMachineId] = useState<string>("");
     const [loading, setLoading] = useState(false);
     const [fullResult, setFullResult] = useState<MachineAnalysisResponse | null>(null);
 
-    // 1. Cargar lista de máquinas para el Select
+    // 1. Cargar lista de máquinas
     useEffect(() => {
         const loadMachines = async () => {
             try {
-                const data = await api.getMachines();
+                const data = await api.machines.getList();
                 setMachines(data.filter(m => m.active));
             } catch (error) {
                 console.error(error);
@@ -37,22 +38,25 @@ export default function Analisis() {
         loadMachines();
     }, []);
 
-    // 2. DETECTAR DATOS PRE-CARGADOS (Desde MachineDetailPage)
+    // Preparar opciones para el SearchableSelect
+    const machineOptions = useMemo(() => {
+        return machines
+            .map(m => ({
+                id: m.id,
+                name: m.name,
+                code: m.code
+            }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+    }, [machines]);
+
+    // 2. DETECTAR DATOS PRE-CARGADOS
     useEffect(() => {
-        // Verificamos si venimos con un estado "preloadedResult"
         if (location.state && location.state.preloadedResult) {
             const preloaded = location.state.preloadedResult as MachineAnalysisResponse;
-            
             console.log("Recuperando análisis guardado:", preloaded);
 
-            // 1. Seleccionamos la máquina en el dropdown visualmente
             setSelectedMachineId(String(preloaded.machine.id));
-            
-            // 2. Seteamos el resultado directamente sin llamar al backend
             setFullResult(preloaded);
-            
-            // Opcional: Limpiamos el estado del historial para que al recargar no se "reinstale"
-            // window.history.replaceState({}, document.title);
         }
     }, [location]);
 
@@ -94,18 +98,17 @@ export default function Analisis() {
                         <label style={{ display:'block', marginBottom: 8, fontWeight: 500, color: '#475569' }}>
                             Máquina a analizar:
                         </label>
-                        <SelectInput
-                            value={selectedMachineId}
-                            onChange={(e: any) => setSelectedMachineId(e.target.value)}
-                            disabled={loading}
-                        >
-                            <option value="">-- Selecciona una máquina --</option>
-                            {machines.map((m) => (
-                                <option key={m.id} value={m.id}>
-                                    {m.name} {m.code ? `(${m.code})` : ""}
-                                </option>
-                            ))}
-                        </SelectInput>
+                        
+                        {/* IMPLEMENTACIÓN DEL SEARCHABLE SELECT */}
+                        <div style={{ zIndex: 50 }}>
+                            <SearchableSelect
+                                options={machineOptions}
+                                value={selectedMachineId ? Number(selectedMachineId) : undefined}
+                                onChange={(val) => setSelectedMachineId(String(val))}
+                                placeholder="-- Buscar máquina --"
+                                disabled={loading}
+                            />
+                        </div>
                     </div>
                 </form>
             </SelectionPanel>
@@ -119,7 +122,6 @@ export default function Analisis() {
                         </p>
                     </div>
 
-                    {/* Renderizamos cada tarjeta de sensor del reporte */}
                     {fullResult.analysis.report.map((sensorReport) => (
                         <SensorAnalysisCard 
                             key={sensorReport.sensorId} 

@@ -31,7 +31,7 @@ export default function useFailures() {
         try {
             const [failuresData, machinesData, sensorsData] = await Promise.all([
                 api.getFailures(),
-                api.getMachines(),
+                api.machines.getList(),
                 api.getSensors(),
             ]);
 

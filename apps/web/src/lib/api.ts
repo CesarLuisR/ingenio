@@ -111,13 +111,13 @@ class DashboardService extends BaseApiClient {
 
 class IngenioService extends BaseApiClient {
 	getAll(params: Record<string, any> = {}): Promise<PaginatedResponse<Ingenio>> {
-        const query = this.buildQuery(params);
-        return this.request<PaginatedResponse<Ingenio>>(`/api/ingenios${query}`);
-    }
+		const query = this.buildQuery(params);
+		return this.request<PaginatedResponse<Ingenio>>(`/api/ingenios${query}`);
+	}
 
-    getList(): Promise<Ingenio[]> {
-        return this.request<Ingenio[]>('/api/ingenios?simple=true');
-    }
+	getList(): Promise<Ingenio[]> {
+		return this.request<Ingenio[]>('/api/ingenios?simple=true');
+	}
 
 	getOne(id: number): Promise<Ingenio> {
 		return this.request<Ingenio>(`/api/ingenios/${id}`);
@@ -151,8 +151,16 @@ class IngenioService extends BaseApiClient {
 }
 
 class MachineService extends BaseApiClient {
-	getAll(params?: { ingenioId?: number }): Promise<Machine[]> {
-		return this.request<Machine[]>(`/api/machines${this.buildQuery(params)}`);
+	getAll(params: Record<string, any> = {}): Promise<PaginatedResponse<Machine>> {
+		const query = this.buildQuery(params);
+		return this.request<PaginatedResponse<Machine>>(`/api/machines${query}`);
+	}
+
+	// 2. Para Dropdowns/Selects: Retorna solo ID, Nombre, Código.
+	getList(params: Record<string, any> = {}): Promise<Machine[]> {
+		const queryParams = { ...params, simple: true };
+		const query = this.buildQuery(queryParams);
+		return this.request<Machine[]>(`/api/machines${query}`);
 	}
 
 	getOne(id: number): Promise<Machine> {

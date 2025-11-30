@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { api } from "../../lib/api";
 import type { Ingenio } from "../../types";
 
