@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react";
 import { useReadingsStore } from "../../../store/readingState";
 import { api } from "../../../lib/api";
-import { type Failure } from "../../../types";
+import { type Machine, type Failure } from "../../../types";
+import type { NavigateFunction } from "react-router-dom";
 
 const MAX_POINTS = 30;
 
-export function useSensorDetail(id?: number) {
+export function useSensorDetail(id: number, navigate: NavigateFunction) {
     const [sensorName, setSensorName] = useState<string>("");
     const [sensorStrId, setSensorStrId] = useState<string | null>(null);
-    
+    const [machine, setMachine] = useState<Machine | null>(null);
+
     // Restauramos el estado para fallas
     const [failures, setFailures] = useState<Failure[]>([]);
-    
+
     const [chartData, setChartData] = useState<Record<string, any[]>>({});
 
     const sensorMap = useReadingsStore((s) => s.sensorMap);
@@ -26,7 +28,8 @@ export function useSensorDetail(id?: number) {
             try {
                 // 1. Obtenemos el sensor para saber su ID numérico interno
                 const sensor = await api.getSensor(id);
-                
+                const machine = await api.getMachine(sensor.machineId);
+
                 if (mounted) {
                     setSensorName(sensor.name);
                     setSensorStrId(sensor.sensorId);
@@ -36,7 +39,8 @@ export function useSensorDetail(id?: number) {
                     // pero mantenemos la lógica de filtrado que tenías)
                     const allFailures = await api.getFailures();
                     const sensorFailures = allFailures.filter(f => f.sensorId === sensor.id);
-                    
+
+                    setMachine(machine);
                     setFailures(sensorFailures);
                 }
             } catch (err) {
@@ -89,10 +93,30 @@ export function useSensorDetail(id?: number) {
 
     const latest = history.at(-1);
 
+    const handleViewReport = () => {
+        // Solo navegamos si hay datos guardados
+        if (!machine || !machine.lastAnalysis) return;
+
+        // Estructura compatible con MachineAnalysisResponse
+        const preloadedResult = {
+            machine: {
+                id: machine.id,
+                name: machine.name,
+                code: machine.code
+            },
+            analysis: machine.lastAnalysis
+        };
+
+        // Navegamos a /analisis pasando el objeto en el state
+        navigate("/analisis", { state: { preloadedResult } });
+    };
+
     return {
         sensorName,
         failures, // ✅ Aquí está de vuelta
         chartData,
         latest,
+        handleViewReport,
+        lastAnalysis: !!machine?.lastAnalysis
     };
 }

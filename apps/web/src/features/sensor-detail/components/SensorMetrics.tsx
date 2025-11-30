@@ -4,7 +4,15 @@ import { api } from "../../../lib/api";
 import { useReadingsStore } from "../../../store/readingState"; // 1. Importar store
 import type { Sensor } from "../../../types";
 
-export function SensorMetrics({ id }: { id?: number | null }) {
+export function SensorMetrics({ 
+    id, 
+    lastAnalysis,
+    handleViewReport 
+}: { 
+    id?: number | null, 
+    lastAnalysis: boolean,
+    handleViewReport: () => void 
+}) {
     const [sensor, setSensor] = useState<Sensor | null>(null);
     const [now, setNow] = useState(Date.now()); // 2. Estado para forzar re-render por tiempo
     
@@ -62,7 +70,7 @@ export function SensorMetrics({ id }: { id?: number | null }) {
             enabled: sensor.active, // Para diferenciar "Offline" de "Deshabilitado" si quisieras
             lastSeen: lastTime ? new Date(lastTime) : null,
             // todo: Esto hay que arreglarlo
-            hasAnalysis: false 
+            hasAnalysis: lastAnalysis 
         };
 
     }, [sensor, sensorMap, now]); // Se recalcula cuando cambia el sensor, llegan lecturas o pasa el tiempo
@@ -90,6 +98,7 @@ export function SensorMetrics({ id }: { id?: number | null }) {
                     dotColor="#0284c7"
                 />
                 <KpiCard 
+                    onClick={handleViewReport}
                     label="Diagnóstico IA" 
                     value={health.hasAnalysis ? "Procesado" : "Pendiente"} 
                     color="#7c3aed"
@@ -102,8 +111,8 @@ export function SensorMetrics({ id }: { id?: number | null }) {
 }
 
 // Componente visual
-const KpiCard = ({ label, value, color, bg, dotColor }: any) => (
-    <div style={{
+const KpiCard = ({ label, value, color, dotColor, onClick }: any) => (
+    <div onClick={onClick} style={{
         background: "white",
         padding: "20px",
         borderRadius: "12px",
@@ -111,7 +120,9 @@ const KpiCard = ({ label, value, color, bg, dotColor }: any) => (
         boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
         display: "flex",
         flexDirection: "column",
-        gap: "8px"
+        gap: "8px",
+        cursor: onClick ? "pointer" : "default", 
+        transition: "transform 0.1s ease-in-out"
     }}>
         <span style={{ fontSize: "12px", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>
             {label}

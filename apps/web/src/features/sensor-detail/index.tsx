@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Page, HeaderContainer, TitleBlock, Title, Sub, StatusBadge } from "./styled";
 import { useSensorDetail } from "./hooks/useSensorDetail";
 import { SensorCharts } from "./components/SensorChart";
@@ -7,13 +7,16 @@ import { SensorMetrics } from "./components/SensorMetrics";
 
 export default function SensorDetail() {
     const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
 
     const {
         sensorName,
         failures,
         latest,
         chartData,
-    } = useSensorDetail(Number(id));
+        lastAnalysis,
+        handleViewReport
+    } = useSensorDetail(Number(id), navigate);
 
     const status = latest?.status || "unknown";
     
@@ -43,7 +46,7 @@ export default function SensorDetail() {
             </HeaderContainer>
 
             {/* Sección de Métricas KPIs (Health) */}
-            <SensorMetrics id={Number(id)} />
+            <SensorMetrics id={Number(id)} lastAnalysis={lastAnalysis} handleViewReport={handleViewReport}/>
 
             {/* Gráficos Individuales por Grupo */}
             <div style={{ marginTop: '40px' }}>
