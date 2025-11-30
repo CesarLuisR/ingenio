@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
     Container,
     Header,
@@ -16,7 +16,7 @@ import {
     RoleBadge,
     Actions,
     ActionButton,
-    Select,
+    // Select ya no es necesario importarlo si usas SearchableSelect
 } from "./styled";
 
 import useUsers from "./hooks/useUsers";
@@ -25,6 +25,7 @@ import { ROLES, type Ingenio } from "../../types";
 import { useSessionStore } from "../../store/sessionStore";
 import { hasPermission } from "../../lib/hasPermission";
 import { api } from "../../lib/api";
+import SearchableSelect from "../shared/components/SearchableSelect";
 
 export default function Usuarios() {
     const { user } = useSessionStore();
@@ -37,9 +38,16 @@ export default function Usuarios() {
     // Cargar ingenios si es superadmin
     useEffect(() => {
         if (isSuperAdmin) {
-            api.getAllIngenios().then(setIngenios).catch(console.error);
+            api.ingenios.getList().then(setIngenios).catch(console.error);
         }
     }, [isSuperAdmin]);
+
+    // Preparamos las opciones para el SearchableSelect
+    const ingenioOptions = useMemo(() => {
+        // Opción 0 representa "Todos"
+        const allOption = { id: 0, name: "🏢 Todos los Ingenios", code: "" };
+        return [allOption, ...ingenios];
+    }, [ingenios]);
 
     const {
         users,
@@ -59,17 +67,17 @@ export default function Usuarios() {
             <Header>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
                     <Title>Gestión de Usuarios</Title>
+                    
+                    {/* IMPLEMENTACIÓN DEL SEARCHABLE SELECT */}
                     {isSuperAdmin && (
-                        <Select
-                            value={selectedIngenioId || ""}
-                            onChange={(e) => setSelectedIngenioId(e.target.value ? Number(e.target.value) : undefined)}
-                            style={{ width: '200px', margin: 0 }}
-                        >
-                            <option value="">Todos los Ingenios</option>
-                            {ingenios.map(ing => (
-                                <option key={ing.id} value={ing.id}>{ing.name}</option>
-                            ))}
-                        </Select>
+                        <div style={{ zIndex: 50, width: 220 }}> 
+                            <SearchableSelect
+                                options={ingenioOptions}
+                                value={selectedIngenioId || 0} // Si es undefined, mostramos 0 (Todos)
+                                onChange={(val) => setSelectedIngenioId(val === 0 ? undefined : val)}
+                                placeholder="🔍 Buscar ingenio..."
+                            />
+                        </div>
                     )}
                 </div>
                 

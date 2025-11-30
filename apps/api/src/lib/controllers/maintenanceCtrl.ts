@@ -25,16 +25,6 @@ export const getAllMaintenances = async (req: Request, res: Response) => {
         const hasFailures = req.query.hasFailures?.toString();
         const search = req.query.search?.toString()?.trim().toLowerCase();
         
-        const maintenanceTest = await prisma.maintenance.findMany({
-            include: {
-                failures: true
-            }
-        });
-        const withFailures = maintenanceTest.filter(m => m.failures.length > 0);
-        console.log("Mantenimientos con fallas:", withFailures.length);
-        console.log("Ejemplo:", withFailures[0]);
-
-
         // --- FILTROS ARREGLADOS usando AND ---
         const where: any = {
             AND: [
@@ -183,8 +173,6 @@ export const createMaintenance = async (req: Request, res: Response) => {
                 notes,
                 cost,
                 ingenioId,
-                // CONEXIÓN DE FALLAS:
-                // Si vienen failureIds, los conectamos.
                 failures: failureIds && failureIds.length > 0
                     ? {
                         connect: failureIds.map((id: number) => ({ id: Number(id) }))

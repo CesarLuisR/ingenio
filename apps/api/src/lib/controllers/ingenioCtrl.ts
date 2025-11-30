@@ -3,9 +3,91 @@ import prisma from "../../database/postgres.db";
 import hasPermission from "../utils/permissionUtils";
 import { UserRole } from "@prisma/client";
 
-export const getAllIngenios: RequestHandler = async (_, res) => {
-    const ingenios = await prisma.ingenio.findMany();
-    res.json(ingenios);
+export const getAllIngenios: RequestHandler = async (req, res) => {
+    try {
+        // 0. Simple mode
+        if (req.query.simple) {
+            const ingenios = await prisma.ingenio.findMany({
+                select: {
+                    id: true,
+                    name: true,
+                    code: true,
+                },
+                orderBy: {
+                    name: 'asc'
+                },
+                where: {
+                    active: true
+                }
+            });
+
+            return res.json(ingenios);
+        }
+
+        // 1. Paginación
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 30;
+        const skip = (page - 1) * limit;
+
+        // 2. Parámetros de filtro
+        const activeParam = req.query.active; // Recibimos el valor crudo
+        const search = req.query.search?.toString()?.trim().toLowerCase();
+
+        // 3. Construcción del Where
+        // Usamos 'Prisma.IngenioWhereInput' si quieres tipado estricto, o any si prefieres flexibilidad rápida
+        const where: any = {
+            AND: []
+        };
+
+        // CORRECCIÓN FILTRO ACTIVE:
+        // Solo filtramos si el parámetro viene definido.
+        if (activeParam !== undefined) {
+            const isActive = activeParam === 'true' || activeParam === 'yes';
+            where.AND.push({ active: isActive });
+        }
+
+        // FILTRO DE BÚSQUEDA
+        if (search) {
+            where.AND.push({
+                OR: [
+                    { name: { contains: search, mode: "insensitive" } },
+                    { code: { contains: search, mode: "insensitive" } },
+                    { location: { contains: search, mode: "insensitive" } }
+                ]
+            });
+        }
+
+        // 4. Ejecución de la consulta (Transacción para consistencia)
+        const [ingenios, total] = await prisma.$transaction([
+            prisma.ingenio.findMany({
+                where,
+                skip,
+                take: limit,
+                orderBy: {
+                    id: 'asc' // o createdAt: 'desc'
+                }
+            }),
+            prisma.ingenio.count({ where })
+        ]);
+
+        const totalPages = Math.ceil(total / limit);
+
+        res.json({
+            data: ingenios,
+            meta: {
+                totalItems: total,
+                currentPage: page,
+                totalPages,
+                itemsPerPage: limit,
+                hasNextPage: page < totalPages,
+                hasPreviousPage: page > 1
+            }
+        });
+
+    } catch (err) {
+        console.error("Error al obtener ingenios", err);
+        res.status(500).json({ error: "Error al obtener ingenios" });
+    }
 };
 
 export const getIngenioById: RequestHandler = async (req, res) => {

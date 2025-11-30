@@ -110,9 +110,14 @@ class DashboardService extends BaseApiClient {
 }
 
 class IngenioService extends BaseApiClient {
-	getAll(): Promise<Ingenio[]> {
-		return this.request<Ingenio[]>("/api/ingenios");
-	}
+	getAll(params: Record<string, any> = {}): Promise<PaginatedResponse<Ingenio>> {
+        const query = this.buildQuery(params);
+        return this.request<PaginatedResponse<Ingenio>>(`/api/ingenios${query}`);
+    }
+
+    getList(): Promise<Ingenio[]> {
+        return this.request<Ingenio[]>('/api/ingenios?simple=true');
+    }
 
 	getOne(id: number): Promise<Ingenio> {
 		return this.request<Ingenio>(`/api/ingenios/${id}`);
@@ -214,7 +219,6 @@ class MaintenanceService extends BaseApiClient {
 		const query = this.buildQuery(params);
 		return this.request<PaginatedResponse<Maintenance>>(`/api/maintenances${query}`);
 	}
-
 
 	getOne(id: string): Promise<Maintenance> {
 		return this.request<Maintenance>(`/api/maintenances/${id}`);

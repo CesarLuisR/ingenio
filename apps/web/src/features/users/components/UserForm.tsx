@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { api } from "../../../lib/api";
 import {
     ModalOverlay,
@@ -15,6 +15,7 @@ import {
 } from "../styled";
 import { ROLES, type User, type Ingenio } from "../../../types";
 import { useSessionStore } from "../../../store/sessionStore";
+import SearchableSelect from "../../shared/components/SearchableSelect";
 
 type Role = typeof ROLES[keyof typeof ROLES];
 
@@ -33,22 +34,28 @@ export default function UserForm({
     const [formData, setFormData] = useState<{
         name: string;
         email: string;
-        role: Role; // <--- Aquí usamos el tipo, no el objeto
+        role: Role; 
         password: string;
         ingenioId: number | null;
     }>({
         name: "",
         email: "",
-        role: ROLES.LECTOR, // Valor por defecto seguro
+        role: ROLES.LECTOR, 
         password: "",
         ingenioId: sessionUser?.ingenioId ?? 1,
     });
 
     useEffect(() => {
         if (sessionUser?.role === ROLES.SUPERADMIN) {
-            api.getAllIngenios().then(setIngenios).catch(console.error);
+            api.ingenios.getList().then(setIngenios).catch(console.error);
         }
     }, [sessionUser]);
+
+    // Opciones para el SearchableSelect
+    const ingenioOptions = useMemo(() => {
+        // En el formulario, "seleccionar ingenio" es obligatorio, así que no necesitamos opción "Todos"
+        return ingenios;
+    }, [ingenios]);
 
     useEffect(() => {
         if (initialData) {
@@ -60,7 +67,6 @@ export default function UserForm({
                 ingenioId: initialData.ingenioId ?? sessionUser?.ingenioId ?? 1,
             });
         } else {
-            // Reset para nuevo usuario
             setFormData({
                 name: "",
                 email: "",
@@ -140,12 +146,10 @@ export default function UserForm({
                             onChange={(e) =>
                                 setFormData({
                                     ...formData,
-                                    // 3. CASTEO CORRECTO: Convertimos string -> Role
                                     role: e.target.value as Role,
                                 })
                             }
                         >
-                            {/* 4. USAMOS LAS CONSTANTES: Para que los values coincidan con el tipo */}
                             <option value={ROLES.LECTOR}>Visualizador (Solo lectura)</option>
                             <option value={ROLES.TECNICO}>Técnico (Gestión básica)</option>
                             <option value={ROLES.ADMIN}>Administrador (Control total)</option>
@@ -167,18 +171,18 @@ export default function UserForm({
                         />
                     </FormGroup>
 
+                    {/* USAMOS EL SEARCHABLE SELECT PARA EL INGENIO */}
                     {sessionUser?.role === ROLES.SUPERADMIN && (
                          <FormGroup>
                             <Label>Ingenio</Label>
-                            <Select 
-                                value={formData.ingenioId || ''}
-                                onChange={(e) => setFormData({...formData, ingenioId: Number(e.target.value)})}
-                            >
-                                <option value="" disabled>Seleccionar Ingenio</option>
-                                {ingenios.map(ing => (
-                                    <option key={ing.id} value={ing.id}>{ing.name}</option>
-                                ))}
-                            </Select>
+                            <div style={{zIndex: 50}}>
+                                <SearchableSelect 
+                                    options={ingenioOptions}
+                                    value={formData.ingenioId || 0}
+                                    onChange={(val) => setFormData({...formData, ingenioId: val})}
+                                    placeholder="Seleccionar Ingenio..."
+                                />
+                            </div>
                          </FormGroup>
                     )}
 

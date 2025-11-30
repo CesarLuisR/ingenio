@@ -35,10 +35,11 @@ import {
     GhostButton,
     DangerTextButton,
     Loading,
-    BadgeCount // Nuevo componente importado
+    BadgeCount 
 } from "./styled";
 
 import SensorForm from "./components/SensorForm";
+import SearchableSelect from "../shared/components/SearchableSelect";
 
 export default function Sensores() {
     const navigate = useNavigate();
@@ -53,9 +54,17 @@ export default function Sensores() {
     // Cargar ingenios si es superadmin
     useEffect(() => {
         if (isSuperAdmin) {
-            api.getAllIngenios().then(setIngenios).catch(console.error);
+            api.ingenios.getList().then(setIngenios).catch(console.error);
         }
     }, [isSuperAdmin]);
+
+    // Opciones transformadas para el SearchableSelect
+    const ingenioOptions = useMemo(() => {
+        const allOption = { id: 0, name: "🏢 Todos los Ingenios", code: "" };
+        // Aseguramos que sea un array por si acaso
+        const list = Array.isArray(ingenios) ? ingenios : (ingenios as any)?.data || [];
+        return [allOption, ...list];
+    }, [ingenios]);
 
     const {
         sensors,
@@ -72,7 +81,7 @@ export default function Sensores() {
     const [showForm, setShowForm] = useState(false);
     const [editingSensor, setEditingSensor] = useState<Sensor | null>(null);
     
-    // Filtros: Agregamos 'unconfigured'
+    // Filtros
     const [filterMode, setFilterMode] =
         useState<"all" | "active" | "inactive" | "recent" | "disabled" | "unconfigured">("all");
 
@@ -116,7 +125,6 @@ export default function Sensores() {
                 metricsCount = Object.keys(lastReading.metrics || {}).length;
             }
 
-            // DETECCION: Si el nombre es exactamente "NOCONFIGURADO"
             const isUnconfigured = sensor.name === "NOCONFIGURADO";
 
             return {
@@ -129,34 +137,28 @@ export default function Sensores() {
                 metricsCount,
                 isActive: !!activeMap[key],
                 isEnabled: sensor.active, 
-                isUnconfigured, // Bandera para la UI
+                isUnconfigured,
             };
         });
     }, [filteredSensors, sensorMap, activeMap]);
 
-    // Contador para el badge rojo del botón de filtro
     const unconfiguredCount = useMemo(() => 
         enrichedSensors.filter(s => s.isUnconfigured && s.isEnabled).length, 
     [enrichedSensors]);
 
-    // --- LÓGICA DE FILTRADO ---
     const displayedSensors = useMemo(() => {
         let base = enrichedSensors;
 
-        // 1. Filtro por máquina
         if (machineFilterId !== "all") {
             base = base.filter((s) => s.machineId === machineFilterId);
         }
 
-        // 2. Si el modo es 'disabled', mostramos SOLO los desactivados
         if (filterMode === "disabled") {
             return base.filter((s) => !s.isEnabled);
         }
 
-        // 3. Para el resto de modos, ocultamos los desactivados por defecto
         base = base.filter((s) => s.isEnabled);
 
-        // 4. Filtros específicos de estado
         switch (filterMode) {
             case "unconfigured": return base.filter((s) => s.isUnconfigured);
             case "active": return base.filter((s) => s.isActive && !s.isUnconfigured);
@@ -165,7 +167,7 @@ export default function Sensores() {
                 return [...base]
                     .filter((s) => s.lastReadingTime)
                     .sort((a, b) => (b.lastReadingTime ?? 0) - (a.lastReadingTime ?? 0));
-            default: return base; // 'all'
+            default: return base; 
         }
     }, [enrichedSensors, machineFilterId, filterMode]);
 
@@ -180,16 +182,15 @@ export default function Sensores() {
                         </p>
                     </div>
                     {isSuperAdmin && (
-                        <Select
-                            value={selectedIngenioId || ""}
-                            onChange={(e) => setSelectedIngenioId(e.target.value ? Number(e.target.value) : undefined)}
-                            style={{ width: '200px', margin: 0 }}
-                        >
-                            <option value="">Todos los Ingenios</option>
-                            {ingenios.map(ing => (
-                                <option key={ing.id} value={ing.id}>{ing.name}</option>
-                            ))}
-                        </Select>
+                        // USAMOS EL SEARCHABLE SELECT AQUÍ
+                        <div style={{ zIndex: 50, width: 220 }}> 
+                            <SearchableSelect
+                                options={ingenioOptions}
+                                value={selectedIngenioId || 0} 
+                                onChange={(val) => setSelectedIngenioId(val === 0 ? undefined : val)}
+                                placeholder="🔍 Buscar ingenio..."
+                            />
+                        </div>
                     )}
                 </div>
                 {isSuperAdmin && (
@@ -226,7 +227,6 @@ export default function Sensores() {
                         Todos
                     </FilterButton>
 
-                    {/* BOTÓN "POR CONFIGURAR" */}
                     <FilterButton 
                         $active={filterMode === "unconfigured"} 
                         onClick={() => setFilterMode("unconfigured")}
@@ -269,7 +269,7 @@ export default function Sensores() {
                             badgeStatus = "unknown";
                             badgeText = "Deshabilitado";
                         } else if (sensor.isUnconfigured) {
-                            badgeStatus = "warning"; // ESTADO NUEVO
+                            badgeStatus = "warning"; 
                             badgeText = "Sin Configurar";
                         } else if (sensor.isActive) {
                             badgeStatus = "active";
@@ -283,10 +283,9 @@ export default function Sensores() {
                             <Card
                                 key={sensor.id}
                                 $isActive={sensor.isActive}
-                                $isUnconfigured={sensor.isUnconfigured} // Pasamos la prop de estilo
+                                $isUnconfigured={sensor.isUnconfigured} 
                                 style={{ opacity: sensor.isEnabled ? 1 : 0.7 }}
                                 onClick={() => {
-                                    // BLOQUEO DE NAVEGACIÓN
                                     if (sensor.isUnconfigured) {
                                         return; 
                                     }
@@ -337,7 +336,7 @@ export default function Sensores() {
                                     {canManage && (
                                         <GhostButton
                                             onClick={(e) => {
-                                                e.stopPropagation(); // Importante para que no intente navegar
+                                                e.stopPropagation(); 
                                                 setEditingSensor(sensor);
                                                 setShowForm(true);
                                             }}>
@@ -384,14 +383,12 @@ export default function Sensores() {
                 />
             )}
 
-            {/* Modal de Crear Sensor */}
             {showCreateModal && (
                 <CreateSensorModal
-                    machines={machines} // Pasamos las máquinas que ya tienes cargadas
+                    machines={machines} 
                     onClose={() => setShowCreateModal(false)}
                     onSuccess={() => {
-                    reload(); // Recarga la lista para ver el nuevo sensor
-                    // Opcional: Cambiar filtro a "Por Configurar" para verlo
+                    reload(); 
                     setFilterMode("unconfigured"); 
                 }}
             />
