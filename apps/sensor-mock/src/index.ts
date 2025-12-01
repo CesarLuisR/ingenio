@@ -2,38 +2,70 @@ import fs from "fs";
 import path from "path";
 import { ConfigData } from "./types";
 import { createRandomReading, sendReading, sendSensor } from "./logic";
+import { createPcReading } from "./pcMetrics";
 
-const configFileName = process.env.CONFIG_FILE_NAME || 'none';
-const configPath = path.join(__dirname, "../config", configFileName);
 const url = process.env.API || "klk";
 
-if (!fs.existsSync(configPath)) {
-    console.log(`Config file not found: ${configPath}`);
-    process.exit(1);
+// --- Carga de configuración de sensores ---
+function loadConfig(fileName: string): ConfigData {
+    const configPath = path.join(__dirname, "../config", fileName);
+    if (!fs.existsSync(configPath)) {
+        console.log(`Config not found: ${configPath}`);
+        process.exit(1);
+    }
+    const content = fs.readFileSync(configPath, "utf-8");
+    const cfg = JSON.parse(content) as ConfigData;
+    return cfg;
 }
 
-const fileContent = fs.readFileSync(configPath, 'utf-8');
-export const explicitConfig: ConfigData = JSON.parse(fileContent);
+const industrialConfig = loadConfig(process.env.CONFIG_FILE_NAME || "motor.json");
+const pcConfig = loadConfig("pc-sensor.json");
 
-async function run() {
+// --- Diccionario para referencia rápida ---
+const sensors = [
+    { name: "industrial", config: industrialConfig, savePath: path.join(__dirname, "../config", process.env.CONFIG_FILE_NAME || "motor.json") },
+    { name: "pc", config: pcConfig, savePath: null } // PC sensor no guarda archivo
+];
+
+// --- Loop generador para cada sensor ---
+async function runSensorLoop(sensor: { name: string; config: ConfigData; savePath: string | null }) {
+    console.log(`Inicializando sensor: ${sensor.name}`);
+
     while (true) {
-        const success = await sendSensor(url, explicitConfig);
-        if (success) break;
-
-        // delay
-        await new Promise(_ => setTimeout(_, 1000));
+        const ok = await sendSensor(url, sensor.config);
+        if (ok) break;
+        await new Promise(r => setTimeout(r, 1000));
     }
 
     while (true) {
-        const reading = createRandomReading(explicitConfig);
-        const newConfig = await sendReading(url, reading, configPath, explicitConfig.intervalMs);
+        let reading;
 
-        if (newConfig) {
-            Object.assign(explicitConfig, newConfig);
-            console.log("Configuración del sensor actualizada en memoria.");
+        if (sensor.name === "industrial") {
+            reading = createRandomReading(sensor.config);
+        } else if (sensor.name === "pc") {
+            reading = await createPcReading(sensor.config);
         }
 
-        await new Promise(_ => setTimeout(_, explicitConfig.intervalMs));
+        const newConfig = await sendReading(
+            url,
+            reading!,
+            sensor.savePath,         // ruta del archivo o null
+            sensor.config.intervalMs,
+            sensor.config            // <<–––– ESTE era el parámetro faltante
+        );
+
+        if (newConfig) {
+            Object.assign(sensor.config, newConfig);
+            console.log(`[${sensor.name}] Config actualizada`);
+        }
+
+        await new Promise(r => setTimeout(r, sensor.config.intervalMs));
+    }
+}
+
+async function run() {
+    for (const s of sensors) {
+        runSensorLoop(s);
     }
 }
 

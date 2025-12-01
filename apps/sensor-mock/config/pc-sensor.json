@@ -1,0 +1,40 @@
+{
+  "sensorId": "pc-local1",
+  "type": "computer",
+  "location": "localhost",
+  "intervalMs": 1500,
+  "metricsConfig": {
+    "system": {
+      "cpuLoad": {
+        "min": 0,
+        "max": 100
+        },
+        "freeRamMB": {
+        "min": 0,
+        "max": 32768
+        },
+        "usedRamMB": {
+        "min": 0,
+        "max": 32768
+        },
+        "cpuTemp": {
+        "min": 0,
+        "max": 100
+        },
+        "diskUsedGB": {
+        "min": 0,
+        "max": 2000
+        },
+        "diskTotalGB": {
+        "min": 0,
+        "max": 2000
+        }
+     }
+  },
+  "active": true,
+  "configVersion": "v1",
+  "createdAt": "2025-10-17T12:00:00.000Z",
+  "lastSeen": "2025-10-17T12:30:00.000Z",
+  "ingenioId": 1,
+  "machineId": 1
+}
