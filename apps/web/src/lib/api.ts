@@ -296,8 +296,16 @@ class FailureService extends BaseApiClient {
 }
 
 class TechnicianService extends BaseApiClient {
-    getAll(params?: { ingenioId?: number }): Promise<Technician[]> {
-        return this.request<Technician[]>(`/api/technicians${this.buildQuery(params)}`);
+    getAll(params: Record<string, any> = {}): Promise<PaginatedResponse<Technician>> {
+        const query = this.buildQuery(params);
+        return this.request<PaginatedResponse<Technician>>(`/api/technicians${query}`);
+    }
+
+    // Simple list (sin paginación, lightweight)
+    getList(params: Record<string, any> = {}): Promise<Technician[]> {
+        const queryParams = { ...params, simple: true };
+        const query = this.buildQuery(queryParams);
+        return this.request<Technician[]>(`/api/failure${query}`);
     }
 
     getOne(id: string): Promise<Technician> {

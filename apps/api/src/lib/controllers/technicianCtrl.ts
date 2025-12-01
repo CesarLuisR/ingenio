@@ -1,17 +1,131 @@
 import prisma from "../../database/postgres.db";
-import { Request, Response } from "express";
+import { Request, RequestHandler, Response } from "express";
 import hasPermission from "../utils/permissionUtils";
-import { UserRole } from "@prisma/client";
+import { Prisma, UserRole } from "@prisma/client";
 
-export const getAllTechnicians = async (req: Request, res: Response) => {
+export const getAllTechnicians: RequestHandler = async (req, res) => {
     try {
-        const technicians = await prisma.technician.findMany({
-            include: { maintenances: true },
-            where: { ingenioId: req.session.user?.ingenioId! },
+        const user = req.session.user;
+
+        // 1. VALIDACIÓN DE SEGURIDAD
+        if (!user || (user.role !== UserRole.SUPERADMIN && !user.ingenioId)) {
+            return res.json({ 
+                data: [], 
+                meta: { totalItems: 0, totalPages: 0, currentPage: 1 } 
+            });
+        }
+
+        // 2. BASE WHERE (Seguridad por Ingenio)
+        const where: Prisma.TechnicianWhereInput = {
+            AND: []
+        };
+
+        if (user.role !== UserRole.SUPERADMIN) {
+            (where.AND as any[]).push({ ingenioId: user.ingenioId });
+        } else {
+            const { ingenioId } = req.query;
+            if (ingenioId) {
+                (where.AND as any[]).push({ ingenioId: Number(ingenioId) });
+            }
+        }
+
+        // 3. MODO SIMPLE (Para Selects/Dropdowns)
+        // Retorna solo ID y Nombre, solo activos.
+        if (req.query.simple) {
+            const technicians = await prisma.technician.findMany({
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                },
+                where: {
+                    ...where,
+                    active: true // Para asignar tareas, usualmente solo queremos los activos
+                },
+                orderBy: { name: 'asc' }
+            });
+            return res.json(technicians);
+        }
+
+        // --- FILTROS ESPECÍFICOS ---
+
+        // A. Filtro por Estado (active)
+        // ?active=true o ?active=false
+        if (req.query.active !== undefined) {
+            const isActive = req.query.active === 'true';
+            (where.AND as any[]).push({ active: isActive });
+        }
+
+        // B. Filtro de Búsqueda (Search)
+        // Busca en Nombre, Email y Teléfono
+        const search = req.query.search?.toString()?.trim().toLowerCase();
+        if (search) {
+            (where.AND as any[]).push({
+                OR: [
+                    { name: { contains: search, mode: "insensitive" } },
+                    { email: { contains: search, mode: "insensitive" } },
+                    { phone: { contains: search, mode: "insensitive" } }
+                ]
+            });
+        }
+
+        // --- PAGINACIÓN ---
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // --- ORDENAMIENTO ---
+        const sortField = req.query.sortBy?.toString() || 'name';
+        const sortDir: Prisma.SortOrder = req.query.sortDir?.toString() === 'desc' ? 'desc' : 'asc';
+        
+        // Mapeo seguro de campos de ordenamiento
+        const orderBy: Prisma.TechnicianOrderByWithRelationInput = 
+            ['name', 'email', 'createdAt'].includes(sortField)
+                ? { [sortField]: sortDir }
+                : { name: 'asc' };
+
+        // --- EJECUCIÓN ---
+        const [technicians, total] = await prisma.$transaction([
+            prisma.technician.findMany({
+                where,
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    phone: true,
+                    active: true,
+                    // todo: quitar el comentario de abajo cuando se cree en la db
+                    // createdAt: true,
+                    // Optimización: No traemos el array 'maintenances' completo.
+                    // Traemos solo el conteo para mostrar "Total trabajos: 15" en la tabla.
+                    _count: {
+                        select: { maintenances: true }
+                    }
+                },
+                skip,
+                take: limit,
+                orderBy,
+            }),
+            prisma.technician.count({ where })
+        ]);
+
+        const totalPages = Math.ceil(total / limit);
+
+        res.json({
+            data: technicians,
+            meta: {
+                totalItems: total,
+                currentPage: page,
+                totalPages,
+                itemsPerPage: limit,
+                hasNextPage: page < totalPages,
+                hasPreviousPage: page > 1
+            }
         });
-        res.json(technicians);
+
     } catch (error) {
-        res.status(500).json({ error: "Error al obtener técnicos" });
+        console.error("Error al obtener técnicos:", error);
+        res.status(500).json({ error: "Error al procesar técnicos" });
     }
 };
 

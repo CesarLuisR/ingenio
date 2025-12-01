@@ -37,7 +37,7 @@ export function useSensorDetail(id: number, navigate: NavigateFunction) {
                     // 2. Cargamos las fallas y filtramos por este sensor
                     // (Idealmente el backend debería tener getFailures({ sensorId: ... }), 
                     // pero mantenemos la lógica de filtrado que tenías)
-                    const allFailures = await api.getFailures();
+                    const allFailures = await api.failures.getList();
                     const sensorFailures = allFailures.filter(f => f.sensorId === sensor.id);
 
                     setMachine(machine);

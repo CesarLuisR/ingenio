@@ -107,8 +107,8 @@ export function useMaintenancesLogic() {
             try {
                 const [machinesData, techData, failuresData] = await Promise.all([
                     api.machines.getList(),
-                    api.getTechnicians(),
-                    api.getFailures().catch(() => []),
+                    api.technicians.getList(),
+                    api.failures.getList().catch(() => []),
                 ]);
 
                 if (mounted) {

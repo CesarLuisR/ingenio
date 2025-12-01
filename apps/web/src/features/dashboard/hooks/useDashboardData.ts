@@ -29,7 +29,7 @@ export function useDashboardData() {
                 // Solo llamamos a la API si es la carga inicial
                 // (Para evitar llamadas infinitas, idealmente esto se cachea)
                 if (sensors.length === 0) {
-                    const data = await api.getSensors();
+                    const data = await api.sensors.getList();
                     if (!isMounted) return;
                     
                     // Inicializamos la estructura básica
