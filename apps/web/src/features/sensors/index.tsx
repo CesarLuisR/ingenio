@@ -13,7 +13,8 @@ import { api } from "../../lib/api";
 
 import CreateSensorModal from "./components/CreateSensorModal";
 import SensorForm from "./components/SensorForm";
-import SearchableSelect from "../shared/components/SearchableSelect";
+// Asegúrate de que la ruta de importación sea correcta para tu proyecto
+import SearchableSelect from "../shared/components/SearchableSelect"; 
 
 import {
     Container,
@@ -21,7 +22,6 @@ import {
     Title,
     ActionButton,
     SearchInput,
-    Select,
     FilterContainer,
     ButtonGroup,
     FilterButton,
@@ -48,7 +48,17 @@ export default function Sensores() {
     const isSuperAdmin = user?.role === ROLES.SUPERADMIN;
     const canManage = hasPermission(user?.role || "", ROLES.ADMIN);
 
-    // Ingenios
+    // -----------------------
+    // ESTADOS DE FILTRO
+    // -----------------------
+    const [search, setSearch] = useState("");
+    // Estado debounced para pasar al hook y evitar llamadas excesivas a la API
+    const [debouncedSearch, setDebouncedSearch] = useState("");
+    
+    const [selectedMachine, setSelectedMachine] = useState<"all" | number>("all");
+    const [filterMode, setFilterMode] = useState<FilterMode>("all");
+
+    // Ingenios (Solo SuperAdmin)
     const [ingenios, setIngenios] = useState<Ingenio[]>([]);
     const [selectedIngenioId, setSelectedIngenioId] = useState<number | undefined>(undefined);
 
@@ -58,26 +68,27 @@ export default function Sensores() {
         }
     }, [isSuperAdmin]);
 
+    // Opciones para SearchableSelect de Ingenios
     const ingenioOptions = useMemo(() => {
-        const all = { id: 0, name: "🏢 Todos los Ingenios", code: "" };
-        return [all, ...ingenios];
+        return ingenios.map(i => ({ id: i.id, name: i.name, code: i.code || "" }));
     }, [ingenios]);
 
     // -----------------------
-    // TEMPORARY FILTER STATES (UI)
+    // DEBOUNCE EFFECT
     // -----------------------
-    const [tempSearch, setTempSearch] = useState("");
-    const [tempMachine, setTempMachine] = useState<"all" | number>("all");
-    const [tempMode, setTempMode] = useState<FilterMode>("all");
+    useEffect(() => {
+        const handler = setTimeout(() => {
+            setDebouncedSearch(search);
+        }, 500); // Espera 500ms después de que el usuario deje de escribir
+
+        return () => {
+            clearTimeout(handler);
+        };
+    }, [search]);
 
     // -----------------------
-    // APPLIED FILTER STATES (backend)
+    // HOOK PRINCIPAL (API)
     // -----------------------
-    const [appliedSearch, setAppliedSearch] = useState("");
-    const [appliedMachine, setAppliedMachine] = useState<"all" | number>("all");
-    const [appliedMode, setAppliedMode] = useState<FilterMode>("all");
-
-    // Hook principal de sensores
     const {
         sensors,
         filteredSensors,
@@ -94,25 +105,31 @@ export default function Sensores() {
         canPrev,
         reload
     } = useSensors(selectedIngenioId, {
-        search: appliedSearch,
-        machineId: appliedMachine === "all" ? undefined : appliedMachine,
-        filterMode: appliedMode,
+        search: debouncedSearch, // Usamos la versión con retraso
+        machineId: selectedMachine === "all" ? undefined : selectedMachine,
+        filterMode: filterMode,
     });
 
     const sensorMap = useReadingsStore((s) => s.sensorMap);
     const activeMap = useActiveSensors(sensors as any);
 
+    // Opciones para SearchableSelect de Máquinas (Filtro)
     const machineOptions = useMemo(() => {
-        return machines
+        // Agregamos la opción "Todas" con ID 0 (asumimos que 0 no es un ID válido en DB)
+        const allOption = { id: 0, name: "Todas las máquinas", code: "" };
+        
+        const mappedMachines = machines
             .map((m) => ({
                 id: m.id,
                 name: m.name,
-                code: (m as any).code ?? null
+                code: (m as any).code ?? ""
             }))
             .sort((a, b) => a.name.localeCompare(b.name));
+
+        return [allOption, ...mappedMachines];
     }, [machines]);
 
-    // Enriquecer los sensores
+    // Enriquecer los sensores (Lógica existente)
     const enrichedSensors = useMemo(() => {
         return filteredSensors.map((sensor: any) => {
             const key = sensor.sensorId ?? sensor.id;
@@ -150,17 +167,18 @@ export default function Sensores() {
         [enrichedSensors]
     );
 
-    // Filtro final según modo (frontend)
+    // Filtro final según modo (frontend visual)
     const displayedSensors = useMemo(() => {
         let base = enrichedSensors;
 
-        if (appliedMachine !== "all") base = base.filter((s) => s.machineId === appliedMachine);
+        // El filtro de máquina ya se hace en backend (useSensors), pero si quisieras doble check:
+        if (selectedMachine !== "all") base = base.filter((s) => s.machineId === selectedMachine);
 
-        if (appliedMode === "disabled") return base.filter((s) => !s.isEnabled);
+        if (filterMode === "disabled") return base.filter((s) => !s.isEnabled);
 
         base = base.filter((s) => s.isEnabled);
 
-        switch (appliedMode) {
+        switch (filterMode) {
             case "unconfigured": return base.filter((s) => s.isUnconfigured);
             case "active": return base.filter((s) => s.isActive && !s.isUnconfigured);
             case "inactive": return base.filter((s) => !s.isActive && !s.isUnconfigured);
@@ -170,7 +188,7 @@ export default function Sensores() {
                     .sort((a, b) => b.lastReadingTime - a.lastReadingTime);
             default: return base;
         }
-    }, [enrichedSensors, appliedMachine, appliedMode]);
+    }, [enrichedSensors, selectedMachine, filterMode]);
 
     // ----------------------------
     // MODALES
@@ -178,15 +196,6 @@ export default function Sensores() {
     const [showForm, setShowForm] = useState(false);
     const [editingSensor, setEditingSensor] = useState<Sensor | null>(null);
     const [showCreateModal, setShowCreateModal] = useState(false);
-
-    // ----------------------------
-    // ACCIÓN BOTÓN FILTRAR
-    // ----------------------------
-    const applyFilters = () => {
-        setAppliedSearch(tempSearch);
-        setAppliedMachine(tempMachine);
-        setAppliedMode(tempMode);
-    };
 
     // ----------------------------
     // RENDER
@@ -203,18 +212,18 @@ export default function Sensores() {
                     </div>
 
                     {isSuperAdmin && (
-                        <div style={{ width: 220 }}>
+                        <div style={{ width: 250 }}>
                             <SearchableSelect
                                 options={ingenioOptions}
                                 value={selectedIngenioId || 0}
-                                onChange={(val) => setSelectedIngenioId(val || undefined)}
-                                placeholder="Ingenio..."
+                                onChange={(val) => setSelectedIngenioId(val === 0 ? undefined : val)}
+                                placeholder="Filtrar por Ingenio..."
                             />
                         </div>
                     )}
                 </div>
 
-                {isSuperAdmin && (
+                {canManage && (
                     <ActionButton onClick={() => setShowCreateModal(true)}>
                         + Nuevo Sensor
                     </ActionButton>
@@ -225,74 +234,62 @@ export default function Sensores() {
             <FilterContainer>
                 <SearchInput
                     placeholder="Buscar nombre/tipo/ubicación…"
-                    value={tempSearch}
-                    onChange={(e) => setTempSearch(e.target.value)}
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
                 />
 
-                <Select
-                    value={tempMachine === "all" ? "all" : String(tempMachine)}
-                    onChange={(e) =>
-                        setTempMachine(
-                            e.target.value === "all" ? "all" : Number(e.target.value)
-                        )
-                    }
-                >
-                    <option value="all">Todas las máquinas</option>
-                    {machineOptions.map((m) => (
-                        <option key={m.id} value={m.id}>
-                            {m.name} {m.code ? `(${m.code})` : ""}
-                        </option>
-                    ))}
-                </Select>
+                {/* Reemplazo del Select nativo de máquinas */}
+                <div style={{ width: 250, zIndex: 20 }}>
+                    <SearchableSelect
+                        options={machineOptions}
+                        value={selectedMachine === "all" ? 0 : selectedMachine}
+                        onChange={(val) => setSelectedMachine(val === 0 ? "all" : val)}
+                        placeholder="Todas las máquinas"
+                    />
+                </div>
 
                 <ButtonGroup>
                     <FilterButton
-                        $active={tempMode === "all"}
-                        onClick={() => setTempMode("all")}
+                        $active={filterMode === "all"}
+                        onClick={() => setFilterMode("all")}
                     >
                         Todos
                     </FilterButton>
 
                     <FilterButton
-                        $active={tempMode === "unconfigured"}
-                        onClick={() => setTempMode("unconfigured")}
+                        $active={filterMode === "unconfigured"}
+                        onClick={() => setFilterMode("unconfigured")}
                         style={{ position: "relative" }}
                     >
                         Por Configurar
                         {unconfiguredCount > 0 && <BadgeCount>{unconfiguredCount}</BadgeCount>}
                     </FilterButton>
 
-                    <FilterButton $active={tempMode === "active"} onClick={() => setTempMode("active")}>
+                    <FilterButton $active={filterMode === "active"} onClick={() => setFilterMode("active")}>
                         Online
                     </FilterButton>
 
-                    <FilterButton $active={tempMode === "inactive"} onClick={() => setTempMode("inactive")}>
+                    <FilterButton $active={filterMode === "inactive"} onClick={() => setFilterMode("inactive")}>
                         Offline
                     </FilterButton>
 
-                    <FilterButton $active={tempMode === "recent"} onClick={() => setTempMode("recent")}>
+                    <FilterButton $active={filterMode === "recent"} onClick={() => setFilterMode("recent")}>
                         Recientes
                     </FilterButton>
 
                     <FilterButton
-                        $active={tempMode === "disabled"}
-                        onClick={() => setTempMode("disabled")}
+                        $active={filterMode === "disabled"}
+                        onClick={() => setFilterMode("disabled")}
                         style={{
                             borderLeft: "1px solid #e2e8f0",
-                            color: tempMode === "disabled" ? "#dc2626" : "#94a3b8",
+                            color: filterMode === "disabled" ? "#dc2626" : "#94a3b8",
                         }}
                     >
                         Deshabilitados
                     </FilterButton>
                 </ButtonGroup>
 
-                {/* BOTÓN FILTRAR */}
-                <ActionButton
-                    style={{ marginLeft: 12, background: "#2563eb", color: "white" }}
-                    onClick={applyFilters}
-                >
-                    Filtrar
-                </ActionButton>
+                {/* BOTÓN FILTRAR ELIMINADO - Ahora es automático */}
             </FilterContainer>
 
             {/* ---------------- SENSOR GRID ---------------- */}
@@ -302,13 +299,13 @@ export default function Sensores() {
                 <>
                     <Grid>
                         {displayedSensors.map((sensor: any) => {
-                            const status = !sensor.isEnabled
-                                ? "Deshabilitado"
-                                : sensor.isUnconfigured
-                                ? "Sin Configurar"
-                                : sensor.isActive
-                                ? "Online"
-                                : "Offline";
+                             const status = !sensor.isEnabled
+                             ? "Deshabilitado"
+                             : sensor.isUnconfigured
+                             ? "Sin Configurar"
+                             : sensor.isActive
+                             ? "Online"
+                             : "Offline";
 
                             return (
                                 <Card
@@ -357,12 +354,10 @@ export default function Sensores() {
                                                 {sensor.severity}
                                             </span>
                                         </StatBox>
-
                                         <StatBox>
                                             <span>Issues</span>
                                             <span>{sensor.totalIssues}</span>
                                         </StatBox>
-
                                         <StatBox>
                                             <span>Métricas</span>
                                             <span>{sensor.metricsCount}</span>
@@ -419,7 +414,7 @@ export default function Sensores() {
                         })}
                     </Grid>
 
-                    {/* ---------------- PAGINACIÓN NUEVA ---------------- */}
+                    {/* ---------------- PAGINACIÓN ---------------- */}
                     {totalItems > 0 && (
                         <div
                             style={{
@@ -494,7 +489,7 @@ export default function Sensores() {
                     onClose={() => setShowCreateModal(false)}
                     onSuccess={() => {
                         reload();
-                        setAppliedMode("unconfigured");
+                        setFilterMode("unconfigured"); // Reset filter para ver el nuevo
                     }}
                 />
             )}

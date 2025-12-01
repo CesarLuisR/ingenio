@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import MaintenanceForm from "./components/MaintenanceForm";
 import { useMaintenancesLogic } from "./hooks/useMaintenanceLogic";
 
@@ -46,6 +47,8 @@ import { formatMoney } from "./utils";
 import { useSessionStore } from "../../store/sessionStore";
 import { hasPermission } from "../../lib/hasPermission";
 import { ROLES } from "../../types";
+// Asegúrate de que esta ruta apunte a donde tienes tu SearchableSelect
+import SearchableSelect from "../shared/components/SearchableSelect"; 
 
 export default function Mantenimientos() {
   const {
@@ -59,10 +62,9 @@ export default function Mantenimientos() {
     // Paginación
     pagination,
 
-    // NUEVOS filtros controlados
-    formFilters,
-    setFormFilter,
-    applyFilters,
+    // Filtros directos y su setter
+    filters,
+    setFilters,
 
     // Acciones UI
     editing,
@@ -95,6 +97,19 @@ export default function Mantenimientos() {
     a.download = "reporte-importacion.txt";
     a.click();
   };
+
+  // Memoizar opciones para los SearchableSelect
+  const machineOptions = useMemo(() => {
+    const all = { id: 0, name: "Todas las máquinas", code: "" };
+    const mapped = machines.map((m) => ({ id: m.id, name: m.name, code: m.code || "" }));
+    return [all, ...mapped];
+  }, [machines]);
+
+  const technicianOptions = useMemo(() => {
+    const all = { id: 0, name: "Todos los técnicos" };
+    const mapped = technicians.map((t) => ({ id: t.id, name: t.name }));
+    return [all, ...mapped];
+  }, [technicians]);
 
   return (
     <Container>
@@ -171,33 +186,34 @@ export default function Mantenimientos() {
 
       {/* --- BARRA DE FILTROS --- */}
       <FiltersBar>
-        <SelectInput
-          value={formFilters.machineId}
-          onChange={(e) => setFormFilter("machineId", e.target.value)}
-        >
-          <option value="">Todas las máquinas</option>
-          {machines.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.name} {m.code ? `(${m.code})` : ""}
-            </option>
-          ))}
-        </SelectInput>
+        {/* Filtro Máquinas con SearchableSelect */}
+        <div style={{ width: 250, zIndex: 30 }}>
+          <SearchableSelect
+            options={machineOptions}
+            value={Number(filters.machineId) || 0}
+            onChange={(val) =>
+              setFilters((prev) => ({ ...prev, machineId: val === 0 ? "" : val }))
+            }
+            placeholder="Todas las máquinas"
+          />
+        </div>
+
+        {/* Filtro Técnicos con SearchableSelect */}
+        <div style={{ width: 250, zIndex: 30 }}>
+          <SearchableSelect
+            options={technicianOptions}
+            value={Number(filters.technicianId) || 0}
+            onChange={(val) =>
+              setFilters((prev) => ({ ...prev, technicianId: val === 0 ? "" : val }))
+            }
+            placeholder="Todos los técnicos"
+          />
+        </div>
 
         <SelectInput
-          value={formFilters.technicianId}
-          onChange={(e) => setFormFilter("technicianId", e.target.value)}
-        >
-          <option value="">Todos los técnicos</option>
-          {technicians.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </SelectInput>
-
-        <SelectInput
-          value={formFilters.type}
-          onChange={(e) => setFormFilter("type", e.target.value)}
+          value={filters.type}
+          onChange={(e) => setFilters((prev) => ({ ...prev, type: e.target.value as any }))}
+          style={{ width: 180 }}
         >
           <option value="">Todos los tipos</option>
           <option value="Preventivo">Preventivo</option>
@@ -207,11 +223,12 @@ export default function Mantenimientos() {
 
         <TextInput
           placeholder="🔍 Buscar notas..."
-          value={formFilters.search}
-          onChange={(e) => setFormFilter("search", e.target.value)}
+          value={filters.search}
+          onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
+          style={{ flex: 1 }}
         />
 
-        <Button onClick={applyFilters}>🔍 Buscar</Button>
+        {/* El botón de Buscar ha sido eliminado, la búsqueda es automática */}
       </FiltersBar>
 
       {/* --- LISTADO DE MANTENIMIENTOS --- */}
@@ -244,15 +261,9 @@ export default function Mantenimientos() {
                   const machine =
                     m.machine ?? machines.find((mc) => mc.id === m.machineId);
 
-                  // -----------------------------------------------------------------------
-                  // CAMBIO PRINCIPAL AQUÍ:
-                  // Priorizamos m.failures (que viene del backend con 'include')
-                  // Si no existe, usamos el fallback de filtrar la lista global.
-                  // (Asumiendo que 'm' puede tener la propiedad failures aunque TS no lo sepa por defecto)
-                  // -----------------------------------------------------------------------
                   const nestedFailures = (m as any).failures;
-                  const relatedFailures = Array.isArray(nestedFailures) 
-                    ? nestedFailures 
+                  const relatedFailures = Array.isArray(nestedFailures)
+                    ? nestedFailures
                     : failures.filter((f) => f.maintenanceId === m.id);
 
                   return (
@@ -295,17 +306,16 @@ export default function Mantenimientos() {
 
                       {relatedFailures.length > 0 && (
                         <TagRow style={{ marginTop: 8 }}>
-                          {/* Agregué el atributo title para ver las descripciones al pasar el mouse */}
                           <SimpleTag
-                            title={relatedFailures.map((f: any) => `• ${f.description}`).join('\n')}
+                            title={relatedFailures.map((f: any) => `• ${f.description}`).join("\n")}
                             style={{
                               color: "#dc2626",
                               borderColor: "#fecaca",
                               background: "#fef2f2",
-                              cursor: "help" // Cursor de ayuda para indicar que hay tooltip
+                              cursor: "help",
                             }}
                           >
-                            ⚠️ {relatedFailures.length} falla(s) 
+                            ⚠️ {relatedFailures.length} falla(s)
                           </SimpleTag>
                         </TagRow>
                       )}
@@ -350,7 +360,7 @@ export default function Mantenimientos() {
         <MaintenanceForm
           machines={machines}
           technicians={technicians}
-          failures={failures} // Pasamos la lista global para poder seleccionar en el form
+          failures={failures}
           initialData={editing}
           onClose={() => setShowForm(false)}
           onSave={() => {

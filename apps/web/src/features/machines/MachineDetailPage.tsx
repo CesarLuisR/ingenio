@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, useNavigate } from "react-router-dom"; // Importamos useNavigate
+import { useParams, useNavigate } from "react-router-dom";
 import { useMachineDetail } from "./hooks/useMachineDetail";
 import {
     Container,
@@ -35,7 +35,7 @@ const formatMetric = (value: number | undefined | null, suffix: string = "") => 
 
 export default function MachineDetailPage() {
     const { id } = useParams();
-    const navigate = useNavigate(); // Hook para navegar
+    const navigate = useNavigate();
     const machineId = Number(id);
 
     const {
@@ -51,12 +51,14 @@ export default function MachineDetailPage() {
 
     const [tab, setTab] = useState<"mantenimientos" | "fallas" | "sensores">("mantenimientos");
 
+    /* LÓGICA DE DATOS LIMITADOS (TOP 10) */
+    // Ordenamos (asumiendo que vienen ordenados, si no, habría que hacer .sort) y cortamos
+    const displayedMaintenances = maintenances.slice(0, 10);
+    const displayedFailures = failures.slice(0, 10);
+
     /* LÓGICA DE NAVEGACIÓN AL REPORTE */
     const handleViewReport = () => {
-        // Solo navegamos si hay datos guardados
         if (!machine || !machine.lastAnalysis) return;
-
-        // Estructura compatible con MachineAnalysisResponse
         const preloadedResult = {
             machine: {
                 id: machine.id,
@@ -65,8 +67,6 @@ export default function MachineDetailPage() {
             },
             analysis: machine.lastAnalysis
         };
-
-        // Navegamos a /analisis pasando el objeto en el state
         navigate("/analisis", { state: { preloadedResult } });
     };
 
@@ -165,7 +165,7 @@ export default function MachineDetailPage() {
                     {tab === "mantenimientos" && (
                         <Section>
                             <SectionTitle>
-                                Registro de intervenciones
+                                Últimos registros de intervención
                                 <button 
                                     onClick={() => reload()} 
                                     style={{ marginLeft: 'auto', fontSize: 12, cursor: 'pointer', padding: '4px 8px' }}
@@ -176,54 +176,98 @@ export default function MachineDetailPage() {
                             {maintenances.length === 0 ? (
                                 <EmptyMessage>No hay mantenimientos registrados.</EmptyMessage>
                             ) : (
-                                <CardList>
-                                    {maintenances.map((mt) => (
-                                        <InfoCard key={mt.id}>
-                                            <div className="header">
-                                                <span className="title">{mt.type}</span>
-                                                <span className="date">{new Date(mt.performedAt).toLocaleDateString()}</span>
-                                            </div>
-                                            <div className="meta">
-                                                <span>Técnico: <strong>{mt.technician?.name ? mt.technician.name : "Sin asignar"}</strong></span>
-                                                <span>Duración: <strong>{mt.durationMinutes ?? 0} min</strong></span>
-                                            </div>
-                                            {mt.notes && <div className="notes">{mt.notes}</div>}
-                                        </InfoCard>
-                                    ))}
-                                </CardList>
+                                <>
+                                    <CardList>
+                                        {displayedMaintenances.map((mt) => (
+                                            <InfoCard key={mt.id}>
+                                                <div className="header">
+                                                    <span className="title">{mt.type}</span>
+                                                    <span className="date">{new Date(mt.performedAt).toLocaleDateString()}</span>
+                                                </div>
+                                                <div className="meta">
+                                                    <span>Técnico: <strong>{mt.technician?.name ? mt.technician.name : "Sin asignar"}</strong></span>
+                                                    <span>Duración: <strong>{mt.durationMinutes ?? 0} min</strong></span>
+                                                </div>
+                                                {mt.notes && <div className="notes">{mt.notes}</div>}
+                                            </InfoCard>
+                                        ))}
+                                    </CardList>
+
+                                    {/* Link "Ver todos" */}
+                                    {maintenances.length > 10 && (
+                                        <div style={{ marginTop: 16, textAlign: 'center' }}>
+                                            <button
+                                                onClick={() => navigate('/mantenimientos', { state: { machineId: machine.id } })}
+                                                style={{
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    color: '#2563eb',
+                                                    cursor: 'pointer',
+                                                    fontSize: '14px',
+                                                    fontWeight: 600,
+                                                    textDecoration: 'underline'
+                                                }}
+                                            >
+                                                Ver todos los mantenimientos ({maintenances.length}) →
+                                            </button>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </Section>
                     )}
 
                     {tab === "fallas" && (
                         <Section>
-                            <SectionTitle>Incidencias reportadas</SectionTitle>
+                            <SectionTitle>Últimas incidencias reportadas</SectionTitle>
                             {failures.length === 0 ? (
                                 <EmptyMessage>Excelente, no hay fallas registradas.</EmptyMessage>
                             ) : (
-                                <CardList>
-                                    {failures.map((f) => (
-                                        <InfoCard key={f.id} $error>
-                                            <div className="header">
-                                                <span className="title">{f.description}</span>
-                                                <span className="date">{new Date(f.occurredAt).toLocaleString()}</span>
-                                            </div>
-                                            <div className="meta">
-                                                <span>Severidad: <strong>{f.severity ?? "Media"}</strong></span>
-                                                <span>Estado: <strong>{f.status ?? "Abierto"}</strong></span>
-                                            </div>
-                                            {f.resolvedAt ? (
-                                                <div className="notes" style={{ background: '#f0fdf4', color: '#166534' }}>
-                                                    ✅ Resuelto el {new Date(f.resolvedAt).toLocaleString()}
+                                <>
+                                    <CardList>
+                                        {displayedFailures.map((f) => (
+                                            <InfoCard key={f.id} $error>
+                                                <div className="header">
+                                                    <span className="title">{f.description}</span>
+                                                    <span className="date">{new Date(f.occurredAt).toLocaleString()}</span>
                                                 </div>
-                                            ) : (
-                                                <div className="notes" style={{ background: '#fffbeb', color: '#b45309' }}>
-                                                    ⚠️ Pendiente de resolución
+                                                <div className="meta">
+                                                    <span>Severidad: <strong>{f.severity ?? "Media"}</strong></span>
+                                                    <span>Estado: <strong>{f.status ?? "Abierto"}</strong></span>
                                                 </div>
-                                            )}
-                                        </InfoCard>
-                                    ))}
-                                </CardList>
+                                                {f.resolvedAt ? (
+                                                    <div className="notes" style={{ background: '#f0fdf4', color: '#166534' }}>
+                                                        ✅ Resuelto el {new Date(f.resolvedAt).toLocaleString()}
+                                                    </div>
+                                                ) : (
+                                                    <div className="notes" style={{ background: '#fffbeb', color: '#b45309' }}>
+                                                        ⚠️ Pendiente de resolución
+                                                    </div>
+                                                )}
+                                            </InfoCard>
+                                        ))}
+                                    </CardList>
+
+                                    {/* Link "Ver todos" */}
+                                    {failures.length > 10 && (
+                                        <div style={{ marginTop: 16, textAlign: 'center' }}>
+                                            <button
+                                                onClick={() => navigate('/fallas', { state: { machineId: machine.id } })}
+                                                style={{
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    color: '#2563eb',
+                                                    cursor: 'pointer',
+                                                    fontSize: '14px',
+                                                    fontWeight: 600,
+                                                    textDecoration: 'underline'
+                                                }}
+                                            >
+                                                Ver historial completo de fallas ({failures.length}) →
+                                            </button>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </Section>
                     )}
@@ -323,7 +367,6 @@ export default function MachineDetailPage() {
                     <SidebarCard>
                         <SectionTitle style={{ marginBottom: 12 }}>Último Reporte</SectionTitle>
                         
-                        {/* Mostramos la fecha del último análisis si existe */}
                         {machine.lastAnalyzedAt && (
                             <div style={{ fontSize: 11, color: '#64748b', marginBottom: 8, textAlign: 'right' }}>
                                 {new Date(machine.lastAnalyzedAt).toLocaleString()}

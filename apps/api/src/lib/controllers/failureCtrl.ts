@@ -41,11 +41,13 @@ export const getAllFailures: RequestHandler = async (req, res) => {
                 select: {
                     id: true,
                     description: true,
+                    machineId: true,
+                    occurredAt: true
                 },
                 where: {
                     ...where, // Mantiene la seguridad del rol
                     // Opcional: Si el dropdown es para "asignar", quizás solo quieras las pendientes
-                    // status: { not: 'resuelto' } 
+                    status: { not: 'resuelto' } 
                 },
                 orderBy: {
                     occurredAt: 'desc' // Las más recientes primero

@@ -1,5 +1,7 @@
+import { useMemo } from "react";
 import type { Failure, Machine, Sensor } from "../../../types";
 import useFailureForm from "../hooks/useFailureForm";
+import SearchableSelect from "../../shared/components/SearchableSelect"; // Ajusta la ruta
 
 import {
     ButtonGroup,
@@ -34,10 +36,22 @@ export default function FailureForm({
         onSave
     );
 
-    // Sensores filtrados por la máquina seleccionada
-    const filteredSensors = sensors.filter(
-        (s) => Number(formData.machineId) === s.machineId
-    );
+    // Filtramos los sensores por la máquina seleccionada
+    const filteredSensors = useMemo(() => {
+        return sensors.filter(
+            (s) => Number(formData.machineId) === s.machineId
+        );
+    }, [sensors, formData.machineId]);
+
+    // Mapeo para SearchableSelect - Máquinas
+    const machineOptions = useMemo(() => {
+        return machines.map(m => ({ id: m.id, name: m.name, code: m.code || "" }));
+    }, [machines]);
+
+    // Mapeo para SearchableSelect - Sensores
+    const sensorOptions = useMemo(() => {
+        return filteredSensors.map(s => ({ id: s.id, name: s.name }));
+    }, [filteredSensors]);
 
     return (
         <Modal onClick={onClose}>
@@ -49,40 +63,35 @@ export default function FailureForm({
                 </ModalTitle>
 
                 <Form onSubmit={handleSubmit}>
-                    {/* 🔷 Máquina */}
+                    {/* 🔷 Máquina con SearchableSelect */}
                     <Field>
                         <Label>Máquina Afectada</Label>
-                        <SelectInput
-                            required
-                            value={formData.machineId}
-                            onChange={(e) => updateField("machineId", e.target.value)}
-                        >
-                            <option value="">Seleccionar máquina...</option>
-                            {machines.map((m) => (
-                                <option key={m.id} value={m.id}>
-                                    {m.name} {m.code ? `(${m.code})` : ""}
-                                </option>
-                            ))}
-                        </SelectInput>
+                        <div style={{ width: '100%' }}>
+                            <SearchableSelect
+                                options={machineOptions}
+                                value={Number(formData.machineId) || 0}
+                                onChange={(val) => updateField("machineId", val === 0 ? "" : val.toString())}
+                                placeholder="Seleccionar máquina..."
+                            />
+                        </div>
                     </Field>
 
-                    {/* 🔶 Sensor (opcional pero filtrado por máquina) */}
+                    {/* 🔶 Sensor con SearchableSelect */}
                     <Field>
                         <Label>Sensor Relacionado (Opcional)</Label>
-                        <SelectInput
-                            value={formData.sensorId}
-                            onChange={(e) => updateField("sensorId", e.target.value)}
-                            disabled={!formData.machineId}
-                        >
-                            <option value="">Sin sensor específico</option>
-                            {filteredSensors.map((s) => (
-                                <option key={s.id} value={s.id}>
-                                    {s.name}
-                                </option>
-                            ))}
-                        </SelectInput>
+                        <div style={{ width: '100%' }}>
+                            <SearchableSelect
+                                options={sensorOptions}
+                                value={Number(formData.sensorId) || 0}
+                                onChange={(val) => updateField("sensorId", val === 0 ? "" : val.toString())}
+                                placeholder={!formData.machineId ? "Selecciona una máquina primero" : "Sin sensor específico"}
+                                disabled={!formData.machineId}
+                            />
+                        </div>
                         {!formData.machineId && (
-                            <span style={{ fontSize: 11, color: '#94a3b8' }}>Selecciona una máquina primero</span>
+                            <span style={{ fontSize: 11, color: '#94a3b8', marginTop: 4, display: 'block' }}>
+                                Selecciona una máquina primero
+                            </span>
                         )}
                     </Field>
 

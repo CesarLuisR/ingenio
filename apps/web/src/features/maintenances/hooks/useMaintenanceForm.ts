@@ -1,11 +1,11 @@
 import { useState } from "react";
 import type React from "react";
-import type { Maintenance, Failure } from "../../../types"; // Asegúrate de tener Failure importado
+import type { Maintenance, Failure } from "../../../types";
 import { api } from "../../../lib/api";
 import { safeNumber } from "../utils";
 import { useSessionStore } from "../../../store/sessionStore";
 
-// Extendemos el tipo Maintenance para el hook, por si el tipo base no incluye failures populados
+// Extendemos el tipo Maintenance para el hook
 type MaintenanceWithFailures = Maintenance & { failures?: Failure[] };
 
 export function useMaintenanceForm(initialData: MaintenanceWithFailures | null, onSave: () => void) {
@@ -24,7 +24,7 @@ export function useMaintenanceForm(initialData: MaintenanceWithFailures | null, 
                 : "",
         cost: initialData?.cost != null ? initialData.cost.toString() : "",
         notes: initialData?.notes || "",
-        // Inicializamos con los IDs de las fallas que ya tiene el mantenimiento (si es edición)
+        // Inicializamos con los IDs de las fallas que ya tiene el mantenimiento
         failureIds: initialData?.failures?.map(f => f.id.toString()) || [] as string[],
     });
 
@@ -68,8 +68,9 @@ export function useMaintenanceForm(initialData: MaintenanceWithFailures | null, 
             setFormData((prev) => {
                 const newData = { ...prev, [field]: value };
                 
-                // Lógica especial: Si cambia la máquina, limpiamos las fallas seleccionadas
-                // porque las fallas pertenecen a una máquina específica.
+                // Si cambia la máquina, limpiamos las fallas seleccionadas
+                // (Nota: si usas setFormData directamente desde SearchableSelect, 
+                // deberás manejar esta lógica en el componente visual o aquí manualmente)
                 if (field === "machineId" && value !== prev.machineId) {
                     newData.failureIds = [];
                 }
@@ -86,7 +87,6 @@ export function useMaintenanceForm(initialData: MaintenanceWithFailures | null, 
             }
         };
 
-    // Nuevo manejador para los checkboxes de fallas
     const handleFailureToggle = (failureId: string) => {
         setFormData(prev => {
             const currentIds = prev.failureIds;
@@ -118,7 +118,6 @@ export function useMaintenanceForm(initialData: MaintenanceWithFailures | null, 
                     ? new Date(formData.performedAt).toISOString()
                     : new Date().toISOString(),
                 ingenioId: user?.ingenioId! ?? null,
-                // Enviamos el array de IDs numéricos
                 failureIds: formData.failureIds.map(Number),
             };
 
@@ -136,9 +135,10 @@ export function useMaintenanceForm(initialData: MaintenanceWithFailures | null, 
 
     return {
         formData,
+        setFormData, // <--- IMPORTANTE: Exportamos esto para usarlo con SearchableSelect
         errors,
         handleFieldChange,
-        handleFailureToggle, // Exportamos la nueva función
+        handleFailureToggle,
         handleSubmit,
     };
 }

@@ -269,7 +269,7 @@ class FailureService extends BaseApiClient {
     getList(params: Record<string, any> = {}): Promise<Failure[]> {
         const queryParams = { ...params, simple: true };
         const query = this.buildQuery(queryParams);
-        return this.request<Failure[]>(`/api/failure${query}`);
+        return this.request<Failure[]>(`/api/failures${query}`);
     }
 
     getOne(id: string): Promise<Failure> {
@@ -305,7 +305,7 @@ class TechnicianService extends BaseApiClient {
     getList(params: Record<string, any> = {}): Promise<Technician[]> {
         const queryParams = { ...params, simple: true };
         const query = this.buildQuery(queryParams);
-        return this.request<Technician[]>(`/api/failure${query}`);
+        return this.request<Technician[]>(`/api/technicians${query}`);
     }
 
     getOne(id: string): Promise<Technician> {

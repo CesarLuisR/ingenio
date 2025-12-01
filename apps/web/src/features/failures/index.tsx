@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import FailureForm from "./components/FailureForm";
 import {
     Button,
@@ -19,8 +20,10 @@ import {
     TextInput,
     Title,
 } from "./styled";
-// Estilos simples para la paginación (puedes moverlos a styled.ts)
 import styled from "styled-components";
+
+// Componente SearchableSelect (Ajusta la ruta si es necesario)
+import SearchableSelect from "../shared/components/SearchableSelect";
 
 const PaginationFooter = styled.div`
   display: flex;
@@ -59,11 +62,11 @@ import useFailures from "./hooks/useFailures";
 
 export default function Fallos() {
     const {
-        failures, // Ahora usamos failures directo, no "filteredFailures"
+        failures,
         machines,
         sensors,
         loading,
-        meta, // Meta data de paginación
+        meta,
         setPage,
         
         editing,
@@ -84,6 +87,20 @@ export default function Fallos() {
     const canReport = hasPermission(user?.role || "", ROLES.TECNICO);
     const canEdit = hasPermission(user?.role || "", ROLES.ADMIN);
 
+    // Opciones para SearchableSelect - Máquinas
+    const machineOptions = useMemo(() => {
+        const all = { id: 0, name: "Todas las máquinas", code: "" };
+        const mapped = machines.map(m => ({ id: m.id, name: m.name, code: m.code || "" }));
+        return [all, ...mapped];
+    }, [machines]);
+
+    // Opciones para SearchableSelect - Sensores
+    const sensorOptions = useMemo(() => {
+        const all = { id: 0, name: "Todos los sensores", code: "" };
+        const mapped = sensors.map(s => ({ id: s.id, name: s.name, code: "" }));
+        return [all, ...mapped];
+    }, [sensors]);
+
     return (
         <Container>
             <Header>
@@ -102,33 +119,34 @@ export default function Fallos() {
                 )}
             </Header>
 
-            {/* FILTROS (Igual que antes, pero ahora activan fetch server-side) */}
+            {/* BARRA DE FILTROS */}
             <FiltersBar>
-                <SelectInput
-                    value={filterMachineId}
-                    onChange={(e) => setFilterMachineId(e.target.value)}>
-                    <option value="">Todas las máquinas</option>
-                    {machines.map((m) => (
-                        <option key={m.id} value={m.id}>
-                            {m.name} {m.code ? `(${m.code})` : ""}
-                        </option>
-                    ))}
-                </SelectInput>
+                {/* Reemplazo: Máquinas */}
+                <div style={{ width: 250, zIndex: 30 }}>
+                    <SearchableSelect
+                        options={machineOptions}
+                        value={Number(filterMachineId) || 0}
+                        onChange={(val) => setFilterMachineId(val === 0 ? "" : val.toString())}
+                        placeholder="Todas las máquinas"
+                    />
+                </div>
 
-                <SelectInput
-                    value={filterSensorId}
-                    onChange={(e) => setFilterSensorId(e.target.value)}>
-                    <option value="">Todos los sensores</option>
-                    {sensors.map((s) => (
-                        <option key={s.id} value={s.id}>
-                            {s.name}
-                        </option>
-                    ))}
-                </SelectInput>
+                {/* Reemplazo: Sensores */}
+                <div style={{ width: 250, zIndex: 30 }}>
+                    <SearchableSelect
+                        options={sensorOptions}
+                        value={Number(filterSensorId) || 0}
+                        onChange={(val) => setFilterSensorId(val === 0 ? "" : val.toString())}
+                        placeholder="Todos los sensores"
+                    />
+                </div>
 
+                {/* Selects estáticos (Severidad y Estado) se mantienen con SelectInput */}
                 <SelectInput
                     value={filterSeverity}
-                    onChange={(e) => setFilterSeverity(e.target.value)}>
+                    onChange={(e) => setFilterSeverity(e.target.value)}
+                    style={{ width: 180 }}
+                >
                     <option value="">Todas las severidades</option>
                     <option value="Baja">Baja</option>
                     <option value="Media">Media</option>
@@ -138,10 +156,12 @@ export default function Fallos() {
 
                 <SelectInput
                     value={filterStatus}
-                    onChange={(e) => setFilterStatus(e.target.value)}>
+                    onChange={(e) => setFilterStatus(e.target.value)}
+                    style={{ width: 180 }}
+                >
                     <option value="">Todos los estados</option>
                     <option value="pendiente">Pendiente</option>
-                    <option value="en_progreso">En Progreso</option> {/* Asegúrate que coincida con backend */}
+                    <option value="en_progreso">En Progreso</option>
                     <option value="resuelto">Resuelto</option>
                 </SelectInput>
 
@@ -149,6 +169,7 @@ export default function Fallos() {
                     placeholder="🔍 Buscar..."
                     value={filterText}
                     onChange={(e) => setFilterText(e.target.value)}
+                    style={{ flex: 1 }}
                 />
             </FiltersBar>
 
@@ -164,8 +185,6 @@ export default function Fallos() {
                             </p>
                         )}
                         {failures.map((f) => {
-                            // Backend ya debería mandar la data básica de machine/sensor en el objeto f
-                            // pero mantenemos el fallback por si acaso
                             const machine = f.machine || machines.find((m) => m.id === f.machineId);
                             const sensor = f.sensor || sensors.find((s) => s.id === f.sensorId);
 
@@ -254,7 +273,7 @@ export default function Fallos() {
                         setEditing(null);
                     }}
                     onSave={() => {
-                        refresh(); // Recargamos la tabla después de guardar
+                        refresh();
                         setShowForm(false);
                         setEditing(null);
                     }}
