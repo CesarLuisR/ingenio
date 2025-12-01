@@ -1,17 +1,29 @@
 // src/modules/failures/hooks/useFailures.ts
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { api } from "../../../lib/api";
 import type { Failure, Machine, Sensor } from "../../../types";
 
-// Helper para normalizar texto (fuera del hook para no recrearlo)
-const normalize = (s: string) =>
-    s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+// Definimos la estructura de la meta-data que viene del backend
+interface PaginationMeta {
+    totalItems: number;
+    totalPages: number;
+    currentPage: number;
+    itemsPerPage: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+}
 
 export default function useFailures() {
     // --- ESTADOS DE DATOS ---
     const [failures, setFailures] = useState<Failure[]>([]);
-    const [machines, setMachines] = useState<Machine[]>([]);
-    const [sensors, setSensors] = useState<Sensor[]>([]);
+    const [machines, setMachines] = useState<Machine[]>([]); // Para los dropdowns
+    const [sensors, setSensors] = useState<Sensor[]>([]);   // Para los dropdowns
+    
+    // --- ESTADO DE PAGINACIÓN ---
+    const [page, setPage] = useState(1);
+    const [meta, setMeta] = useState<PaginationMeta>({
+        totalItems: 0, totalPages: 0, currentPage: 1, itemsPerPage: 10, hasNextPage: false, hasPreviousPage: false
+    });
     const [loading, setLoading] = useState(true);
 
     // --- ESTADOS DE UI ---
@@ -25,81 +37,87 @@ export default function useFailures() {
     const [filterStatus, setFilterStatus] = useState("");
     const [filterText, setFilterText] = useState("");
 
-    // --- CARGA DE DATOS ---
-    const loadData = useCallback(async () => {
+    // --- 1. CARGA DE AUXILIARES (Máquinas/Sensores para Selects) ---
+    // Se ejecuta una sola vez al montar
+    useEffect(() => {
+        const loadAuxData = async () => {
+            try {
+                // Usamos getList() para traer versiones ligeras sin paginación para los dropdowns
+                const [machinesData, sensorsData] = await Promise.all([
+                    api.machines.getList({ simple: true }),
+                    api.sensors.getList({ simple: true }),
+                ]);
+                setMachines(machinesData);
+                setSensors(sensorsData);
+            } catch (err) {
+                console.error("Error cargando auxiliares:", err);
+            }
+        };
+        loadAuxData();
+    }, []);
+
+    // --- 2. CARGA DE FALLAS (Paginadas y Filtradas) ---
+    const fetchFailures = useCallback(async () => {
         setLoading(true);
         try {
-            const [failuresData, machinesData, sensorsData] = await Promise.all([
-                api.getFailures(),
-                api.machines.getList(),
-                api.sensors.getList(),
-            ]);
+            // Construimos los params para el backend
+            const params: Record<string, any> = {
+                page,
+                limit: 10, // Puedes hacerlo dinámico si quieres
+                search: filterText,
+            };
 
-            setFailures(failuresData);
-            setMachines(machinesData);
-            setSensors(sensorsData);
+            if (filterMachineId) params.machineId = filterMachineId;
+            if (filterSensorId) params.sensorId = filterSensorId;
+            if (filterSeverity) params.severity = filterSeverity;
+            if (filterStatus) params.status = filterStatus;
+
+            // Llamada al backend
+            const response = await api.failures.getAll(params);
+            
+            setFailures(response.data);
+            setMeta(response.meta);
         } catch (err) {
-            console.error("Error cargando datos:", err);
+            console.error("Error cargando fallas:", err);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [page, filterMachineId, filterSensorId, filterSeverity, filterStatus, filterText]);
 
-    // Cargar al montar
+    // --- DEBOUNCE PARA TEXTO ---
+    // Evita llamar a la API por cada letra escrita. Espera 500ms.
     useEffect(() => {
-        loadData();
-    }, [loadData]);
+        const timer = setTimeout(() => {
+            fetchFailures();
+        }, 500); // 500ms de delay
 
-    // --- LÓGICA DE FILTRADO (MEMOIZADA) ---
-    const filteredFailures = useMemo(() => {
-        return failures.filter((f) => {
-            // 1. Filtros exactos
-            if (filterMachineId && f.machineId.toString() !== filterMachineId) return false;
-            if (filterSensorId && f.sensorId?.toString() !== filterSensorId) return false;
-            if (filterSeverity && (f.severity || "") !== filterSeverity) return false;
-            if (filterStatus && (f.status || "") !== filterStatus) return false;
+        return () => clearTimeout(timer);
+    }, [fetchFailures]);
 
-            // 2. Filtro de texto (Búsqueda profunda)
-            if (filterText) {
-                const term = normalize(filterText);
-                
-                // Buscamos nombres relacionados en memoria para no hacer querys complejos
-                const machineName = machines.find((m) => m.id === f.machineId)?.name || "";
-                const sensorName = sensors.find((s) => s.id === f.sensorId)?.name || "";
-                const description = f.description || "";
+    // Resetear a página 1 si cambian los filtros (excepto si cambia solo la página)
+    useEffect(() => {
+        setPage(1);
+    }, [filterMachineId, filterSensorId, filterSeverity, filterStatus, filterText]);
 
-                // Creamos un string gigante con todo lo buscable
-                const haystack = normalize(`${description} ${machineName} ${sensorName}`);
-
-                if (!haystack.includes(term)) return false;
-            }
-
-            return true;
-        });
-    }, [
-        failures, 
-        machines, 
-        sensors, 
-        filterMachineId, 
-        filterSensorId, 
-        filterSeverity, 
-        filterStatus, 
-        filterText
-    ]);
 
     return {
-        // Datos crudos y procesados
+        // Datos
+        failures, // OJO: Ya son las filtradas del server
         machines,
         sensors,
         loading,
-        filteredFailures,
+        meta,      // Exportamos la meta para usarla en la UI
+
+        // Paginación
+        page,
+        setPage,
 
         // Acciones UI
         editing,
         setEditing,
         showForm,
         setShowForm,
-        loadData,
+        refresh: fetchFailures,
 
         // Controladores de Filtros
         filterMachineId, setFilterMachineId,

@@ -260,8 +260,16 @@ class MaintenanceService extends BaseApiClient {
 }
 
 class FailureService extends BaseApiClient {
-    getAll(params?: { ingenioId?: number }): Promise<Failure[]> {
-        return this.request<Failure[]>(`/api/failures${this.buildQuery(params)}`);
+    getAll(params: Record<string, any> = {}): Promise<PaginatedResponse<Failure>> {
+        const query = this.buildQuery(params);
+        return this.request<PaginatedResponse<Failure>>(`/api/failures${query}`);
+    }
+
+    // Simple list (sin paginación, lightweight)
+    getList(params: Record<string, any> = {}): Promise<Failure[]> {
+        const queryParams = { ...params, simple: true };
+        const query = this.buildQuery(queryParams);
+        return this.request<Failure[]>(`/api/failure${query}`);
     }
 
     getOne(id: string): Promise<Failure> {
