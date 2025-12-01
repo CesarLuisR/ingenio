@@ -1,30 +1,138 @@
 import prisma from "../../database/postgres.db";
-import { Request, Response } from "express";
+import { Request, RequestHandler, Response } from "express";
 import { hashPassword } from "../utils/bcrypt";
 import hasPermission from "../utils/permissionUtils";
-import { UserRole } from "@prisma/client";
+import { Prisma, UserRole } from "@prisma/client";
 
-export const getAllUsers = async (req: Request, res: Response) => {
-    const currentUser = req.session.user;
-    const whereClause: any = {};
+export const getAllUsers: RequestHandler = async (req, res) => {
+    try {
+        const currentUser = req.session.user;
 
-    // Si NO es superadmin, filtrar por su ingenio
-    if (currentUser?.role !== UserRole.SUPERADMIN) {
-        whereClause.ingenioId = currentUser?.ingenioId;
-    } else {
-        // Si es SUPERADMIN, permitir filtrar por query param
-        const { ingenioId } = req.query;
-        if (ingenioId) {
-            whereClause.ingenioId = Number(ingenioId);
+        // 1. SEGURIDAD BASE
+        // Si no hay usuario logueado, rechazamos.
+        // Si no es SuperAdmin, debe tener un ingenioId.
+        if (!currentUser || (currentUser.role !== UserRole.SUPERADMIN && !currentUser.ingenioId)) {
+            return res.json({ 
+                data: [], 
+                meta: { totalItems: 0, totalPages: 0, currentPage: 1 } 
+            });
         }
-    }
 
-    const users = await prisma.user.findMany({
-        where: whereClause,
-        orderBy: { createdAt: 'desc' },
-        include: { ingenio: true } // Incluir info del ingenio para que el superadmin sepa de dónde son
-    });
-    res.json(users);
+        // 2. CONSTRUCCIÓN DEL WHERE (Contexto de Ingenio)
+        const where: Prisma.UserWhereInput = {
+            AND: []
+        };
+
+        // Regla: Si no es SuperAdmin, se limita a su ingenio.
+        if (currentUser.role !== UserRole.SUPERADMIN) {
+            (where.AND as any[]).push({ ingenioId: currentUser.ingenioId });
+        } else {
+            // SuperAdmin: Puede filtrar por ingenio si lo desea
+            const { ingenioId } = req.query;
+            if (ingenioId) {
+                (where.AND as any[]).push({ ingenioId: Number(ingenioId) });
+            }
+        }
+
+        // 3. MODO SIMPLE (Para Dropdowns/Selects)
+        // Retorna lista ligera: ID, Nombre y Rol. Útil para asignar tareas.
+        if (req.query.simple) {
+            const users = await prisma.user.findMany({
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    role: true
+                },
+                where,
+                orderBy: { name: 'asc' },
+                take: 100 // Límite de seguridad
+            });
+            return res.json(users);
+        }
+
+        // --- FILTROS AVANZADOS ---
+
+        // A. Filtro por Rol (SUPERADMIN, ADMIN, TECNICO, LECTOR)
+        if (req.query.role) {
+            // Validamos que el rol exista en el Enum para evitar errores de Prisma
+            const roleParam = req.query.role.toString() as UserRole;
+            if (Object.values(UserRole).includes(roleParam)) {
+                (where.AND as any[]).push({ role: roleParam });
+            }
+        }
+
+        // B. Búsqueda (Nombre o Email)
+        const search = req.query.search?.toString()?.trim().toLowerCase();
+        if (search) {
+            (where.AND as any[]).push({
+                OR: [
+                    { name: { contains: search, mode: "insensitive" } },
+                    { email: { contains: search, mode: "insensitive" } }
+                ]
+            });
+        }
+
+        // --- PAGINACIÓN ---
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+        // --- ORDENAMIENTO ---
+        const sortField = req.query.sortBy?.toString() || 'createdAt';
+        const sortDir: Prisma.SortOrder = req.query.sortDir?.toString() === 'asc' ? 'asc' : 'desc';
+
+        const orderBy: Prisma.UserOrderByWithRelationInput = {};
+        
+        if (['name', 'email', 'role', 'createdAt'].includes(sortField)) {
+            orderBy[sortField as keyof Prisma.UserOrderByWithRelationInput] = sortDir;
+        } else {
+            orderBy.createdAt = 'desc';
+        }
+
+        // --- EJECUCIÓN ---
+        const [users, total] = await prisma.$transaction([
+            prisma.user.findMany({
+                where,
+                // IMPORTANTE: Usamos 'select' para EXCLUIR passwordHash
+                select: {
+                    id: true,
+                    name: true,
+                    email: true,
+                    role: true,
+                    createdAt: true,
+                    ingenioId: true,
+                    // Incluimos datos básicos del ingenio para contexto visual
+                    ingenio: {
+                        select: { id: true, name: true, code: true }
+                    }
+                },
+                skip,
+                take: limit,
+                orderBy,
+            }),
+            prisma.user.count({ where })
+        ]);
+
+        const totalPages = Math.ceil(total / limit);
+
+        // --- RESPUESTA ---
+        res.json({
+            data: users,
+            meta: {
+                totalItems: total,
+                currentPage: page,
+                totalPages,
+                itemsPerPage: limit,
+                hasNextPage: page < totalPages,
+                hasPreviousPage: page > 1
+            }
+        });
+
+    } catch (error) {
+        console.error("Error al obtener usuarios:", error);
+        res.status(500).json({ error: "Error interno al procesar usuarios" });
+    }
 };
 
 export const createUser = async (req: Request, res: Response) => {

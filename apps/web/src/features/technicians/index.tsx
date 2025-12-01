@@ -65,7 +65,6 @@ export default function Technicians() {
         technicians, // Ahora es la lista paginada del servidor
         loading,
         meta,       // Info de paginación
-        page,
         setPage,
 
         editing,

@@ -332,8 +332,16 @@ class TechnicianService extends BaseApiClient {
 }
 
 class UserService extends BaseApiClient {
-    getAll(params?: { ingenioId?: number }): Promise<User[]> {
-        return this.request<User[]>(`/api/users${this.buildQuery(params)}`);
+    getAll(params: Record<string, any> = {}): Promise<PaginatedResponse<User>> {
+        const query = this.buildQuery(params);
+        return this.request<PaginatedResponse<User>>(`/api/users${query}`);
+    }
+
+    // Simple list (sin paginación, lightweight)
+    getList(params: Record<string, any> = {}): Promise<User[]> {
+        const queryParams = { ...params, simple: true };
+        const query = this.buildQuery(queryParams);
+        return this.request<User[]>(`/api/failure${query}`);
     }
 
     create(data: Partial<User>): Promise<User> {

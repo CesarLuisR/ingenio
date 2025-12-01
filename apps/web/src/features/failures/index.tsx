@@ -64,7 +64,6 @@ export default function Fallos() {
         sensors,
         loading,
         meta, // Meta data de paginación
-        page,
         setPage,
         
         editing,
