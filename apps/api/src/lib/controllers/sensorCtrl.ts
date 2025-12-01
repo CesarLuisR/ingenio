@@ -11,40 +11,193 @@ const cacheRepository = new RedisRepository();
 /* ----------------------------------------------------------
    GET /sensors
 ----------------------------------------------------------- */
+
 export const getAllSensors = async (req: Request, res: Response) => {
-	try {
-		const user = req.session.user;
-		const where: any = {};
+    try {
+        const user = req.session.user;
 
-		// Si no es superadmin, debe filtrar por ingenio
-		if (user?.role !== UserRole.SUPERADMIN) {
-			if (!user?.ingenioId) {
-				// Si no tiene ingenio asignado y no es superadmin, no ve nada
-				return res.json([]);
-			}
-			where.ingenioId = user.ingenioId;
-		} else {
-			// Si es SUPERADMIN, permitir filtrar por query param
-			const { ingenioId } = req.query;
-			if (ingenioId) {
-				where.ingenioId = Number(ingenioId);
-			}
-		}
+        // 1. Seguridad básica
+        if (!user || (user.role !== UserRole.SUPERADMIN && !user.ingenioId)) {
+            return res.json({
+                data: [],
+                meta: {
+                    totalItems: 0,
+                    currentPage: 1,
+                    totalPages: 0,
+                    itemsPerPage: Number(req.query.limit) || 10,
+                    hasNextPage: false,
+                    hasPreviousPage: false,
+                },
+            });
+        }
 
-		const sensors = await prisma.sensor.findMany({
-			where,
-			include: {
-				failures: true,
-				machine: true,      // Ahora que sensor pertenece a machine
-			},
-		});
+        // 2. WHERE base por rol / ingenio
+        const where: any = {
+            AND: [],
+        };
 
-		res.json(sensors);
-	} catch (error) {
-		console.error("Error fetching sensors:", error);
-		res.status(500).json({ error: "Internal server error" });
-	}
+        if (user.role !== UserRole.SUPERADMIN) {
+            // ADMIN, TECNICO, LECTOR: se fuerza ingenioId
+            where.AND.push({ ingenioId: user.ingenioId });
+        } else {
+            // SUPERADMIN: puede filtrar por ingenioId
+            const { ingenioId } = req.query;
+            if (ingenioId) {
+                where.AND.push({ ingenioId: Number(ingenioId) });
+            }
+        }
+
+        // 3. MODO SIMPLE (para selects, cálculos ligeros, etc.)
+        if (req.query.simple) {
+            const sensors = await prisma.sensor.findMany({
+                select: {
+                    id: true,
+                    sensorId: true,
+                    name: true,
+                    type: true,
+                    location: true,
+                    active: true,
+                    config: true,
+                    lastSeen: true,
+                    machineId: true,
+                    ingenioId: true,
+                    createdAt: true,
+                },
+                where,
+                orderBy: {
+                    name: "asc",
+                },
+            });
+
+            return res.json(sensors);
+        }
+
+        // 4. Paginación
+        const page = Number(req.query.page) || 1;
+        const limit = Number(req.query.limit) || 12;
+        const skip = (page - 1) * limit;
+
+        // 5. Ordenamiento
+        const sortField = req.query.sortBy?.toString() || "createdAt";
+        const sortDir = req.query.sortDir?.toString() === "asc" ? "asc" : "desc";
+
+        const validSortFields = ["name", "sensorId", "type", "createdAt", "updatedAt"];
+
+        const orderBy: any = validSortFields.includes(sortField)
+            ? { [sortField]: sortDir }
+            : { createdAt: "desc" };
+
+        // 6. Filtros
+
+        // 6.1 Filtro por activo (columna active = habilitado/deshabilitado)
+        const activeParam = req.query.active;
+        if (activeParam !== undefined) {
+            const isActive = activeParam === "true" || activeParam === "yes";
+            where.AND.push({ active: isActive });
+        }
+
+        // 6.2 Filtro por máquina
+        const machineId = req.query.machineId;
+        if (machineId) {
+            where.AND.push({ machineId: Number(machineId) });
+        }
+
+        // 6.3 Filtro por sensores "sin configurar"
+        const unconfiguredParam = req.query.unconfigured;
+        if (unconfiguredParam === "true") {
+            where.AND.push({ name: "NOCONFIGURADO" });
+        }
+
+        // 6.4 Filtro por búsqueda
+        const rawSearch = req.query.search?.toString()?.trim();
+        if (rawSearch) {
+            const search = rawSearch.toLowerCase();
+            where.AND.push({
+                OR: [
+                    { name: { contains: search, mode: "insensitive" } },
+                    { sensorId: { contains: search, mode: "insensitive" } },
+                    { type: { contains: search, mode: "insensitive" } },
+                    { location: { contains: search, mode: "insensitive" } },
+                    {
+                        machine: {
+                            name: { contains: search, mode: "insensitive" },
+                        },
+                    },
+                    {
+                        machine: {
+                            code: { contains: search, mode: "insensitive" },
+                        },
+                    },
+                ],
+            });
+        }
+
+        // 6.5 Filtro por lista de IDs (para filtros avanzados calculados en frontend)
+        const idsParam = req.query.ids;
+        if (idsParam) {
+            const rawList = Array.isArray(idsParam) ? idsParam : [idsParam];
+            const ids = rawList
+                .map((v) => Number(v))
+                .filter((n) => !Number.isNaN(n));
+
+            if (ids.length === 0) {
+                // Si la lista de IDs está vacía ⇒ devolvemos inmediatamente vacío
+                return res.json({
+                    data: [],
+                    meta: {
+                        totalItems: 0,
+                        currentPage: page,
+                        totalPages: 0,
+                        itemsPerPage: limit,
+                        hasNextPage: false,
+                        hasPreviousPage: page > 1,
+                    },
+                });
+            }
+
+            where.AND.push({ id: { in: ids } });
+        }
+
+        // Limpieza: si no hay filtros en AND, Prisma prefiere undefined
+        if (!where.AND.length) {
+            delete where.AND;
+        }
+
+        // 7. Ejecución en transacción
+        const [sensors, total] = await prisma.$transaction([
+            prisma.sensor.findMany({
+                where,
+                include: {
+                    failures: true,
+                    machine: true,
+                },
+                skip,
+                take: limit,
+                orderBy,
+            }),
+            prisma.sensor.count({ where }),
+        ]);
+
+        const totalPages = Math.ceil(total / limit);
+
+        // 8. Respuesta
+        return res.json({
+            data: sensors,
+            meta: {
+                totalItems: total,
+                currentPage: page,
+                totalPages,
+                itemsPerPage: limit,
+                hasNextPage: page < totalPages,
+                hasPreviousPage: page > 1,
+            },
+        });
+    } catch (error) {
+        console.error("Error fetching sensors:", error);
+        return res.status(500).json({ error: "Internal server error" });
+    }
 };
+
 
 /* ----------------------------------------------------------
    GET /sensors/:sensorId

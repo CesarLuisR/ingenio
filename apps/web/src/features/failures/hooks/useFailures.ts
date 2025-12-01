@@ -32,7 +32,7 @@ export default function useFailures() {
             const [failuresData, machinesData, sensorsData] = await Promise.all([
                 api.getFailures(),
                 api.machines.getList(),
-                api.getSensors(),
+                api.sensors.getList(),
             ]);
 
             setFailures(failuresData);

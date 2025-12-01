@@ -2,14 +2,18 @@ import { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useReadingsStore } from "../../store/readingState";
-import { useSensors } from "./hooks/useSensors";
+import { useSensors, type FilterMode } from "./hooks/useSensors";
 import { useActiveSensors } from "./hooks/useActiveSensors";
+
 import type { Sensor, Ingenio } from "../../types";
 import { useSessionStore } from "../../store/sessionStore";
 import { hasPermission } from "../../lib/hasPermission";
 import { ROLES } from "../../types";
 import { api } from "../../lib/api";
+
 import CreateSensorModal from "./components/CreateSensorModal";
+import SensorForm from "./components/SensorForm";
+import SearchableSelect from "../shared/components/SearchableSelect";
 
 import {
     Container,
@@ -35,11 +39,8 @@ import {
     GhostButton,
     DangerTextButton,
     Loading,
-    BadgeCount 
+    BadgeCount
 } from "./styled";
-
-import SensorForm from "./components/SensorForm";
-import SearchableSelect from "../shared/components/SearchableSelect";
 
 export default function Sensores() {
     const navigate = useNavigate();
@@ -47,152 +48,172 @@ export default function Sensores() {
     const isSuperAdmin = user?.role === ROLES.SUPERADMIN;
     const canManage = hasPermission(user?.role || "", ROLES.ADMIN);
 
+    // Ingenios
     const [ingenios, setIngenios] = useState<Ingenio[]>([]);
     const [selectedIngenioId, setSelectedIngenioId] = useState<number | undefined>(undefined);
-    const [showCreateModal, setShowCreateModal] = useState(false);
 
-    // Cargar ingenios si es superadmin
     useEffect(() => {
         if (isSuperAdmin) {
             api.ingenios.getList().then(setIngenios).catch(console.error);
         }
     }, [isSuperAdmin]);
 
-    // Opciones transformadas para el SearchableSelect
     const ingenioOptions = useMemo(() => {
-        const allOption = { id: 0, name: "🏢 Todos los Ingenios", code: "" };
-        // Aseguramos que sea un array por si acaso
-        const list = Array.isArray(ingenios) ? ingenios : (ingenios as any)?.data || [];
-        return [allOption, ...list];
+        const all = { id: 0, name: "🏢 Todos los Ingenios", code: "" };
+        return [all, ...ingenios];
     }, [ingenios]);
 
+    // -----------------------
+    // TEMPORARY FILTER STATES (UI)
+    // -----------------------
+    const [tempSearch, setTempSearch] = useState("");
+    const [tempMachine, setTempMachine] = useState<"all" | number>("all");
+    const [tempMode, setTempMode] = useState<FilterMode>("all");
+
+    // -----------------------
+    // APPLIED FILTER STATES (backend)
+    // -----------------------
+    const [appliedSearch, setAppliedSearch] = useState("");
+    const [appliedMachine, setAppliedMachine] = useState<"all" | number>("all");
+    const [appliedMode, setAppliedMode] = useState<FilterMode>("all");
+
+    // Hook principal de sensores
     const {
         sensors,
-        machines,
         filteredSensors,
+        machines,
         loading,
-        searchTerm,
-        setSearchTerm,
-        reload,
         deactivateSensor,
         activateSensor,
-    } = useSensors(selectedIngenioId);
-
-    const [showForm, setShowForm] = useState(false);
-    const [editingSensor, setEditingSensor] = useState<Sensor | null>(null);
-    
-    // Filtros
-    const [filterMode, setFilterMode] =
-        useState<"all" | "active" | "inactive" | "recent" | "disabled" | "unconfigured">("all");
-
-    const [machineFilterId, setMachineFilterId] =
-        useState<"all" | number>("all");
+        page,
+        totalItems,
+        totalPages,
+        nextPage,
+        prevPage,
+        canNext,
+        canPrev,
+        reload
+    } = useSensors(selectedIngenioId, {
+        search: appliedSearch,
+        machineId: appliedMachine === "all" ? undefined : appliedMachine,
+        filterMode: appliedMode,
+    });
 
     const sensorMap = useReadingsStore((s) => s.sensorMap);
-    const activeMap = useActiveSensors(sensors);
+    const activeMap = useActiveSensors(sensors as any);
 
     const machineOptions = useMemo(() => {
         return machines
             .map((m) => ({
                 id: m.id,
                 name: m.name,
-                code: m.code ?? null,
+                code: (m as any).code ?? null
             }))
             .sort((a, b) => a.name.localeCompare(b.name));
     }, [machines]);
 
+    // Enriquecer los sensores
     const enrichedSensors = useMemo(() => {
-        return filteredSensors.map((sensor) => {
-            const key = sensor.sensorId ?? String(sensor.id);
+        return filteredSensors.map((sensor: any) => {
+            const key = sensor.sensorId ?? sensor.id;
             const readings = sensorMap.get(key) || [];
             const lastReading = readings.at(-1);
 
-            let lastReadingTime: number | null = null;
-            let lastStatus = "unknown";
+            let lastReadingTime = null;
             let severity = "-";
             let totalIssues = 0;
             let metricsCount = 0;
 
             if (lastReading) {
-                lastReadingTime =
-                    typeof lastReading.timestamp === "string"
-                        ? Date.parse(lastReading.timestamp)
-                        : Number(lastReading.timestamp);
-
-                lastStatus = lastReading.status ?? "unknown";
-                severity = lastReading.severityLevel?.toString() ?? "-";
+                lastReadingTime = new Date(lastReading.timestamp).getTime();
+                severity = lastReading.severityLevel.toString() ?? "-";
                 totalIssues = lastReading.totalIssues ?? 0;
                 metricsCount = Object.keys(lastReading.metrics || {}).length;
             }
-
-            const isUnconfigured = sensor.name === "NOCONFIGURADO";
 
             return {
                 ...sensor,
                 lastReading,
                 lastReadingTime,
-                lastStatus,
+                isActive: activeMap[key] || false,
+                isEnabled: sensor.active,
                 severity,
                 totalIssues,
                 metricsCount,
-                isActive: !!activeMap[key],
-                isEnabled: sensor.active, 
-                isUnconfigured,
+                isUnconfigured: sensor.name === "NOCONFIGURADO",
             };
         });
     }, [filteredSensors, sensorMap, activeMap]);
 
-    const unconfiguredCount = useMemo(() => 
-        enrichedSensors.filter(s => s.isUnconfigured && s.isEnabled).length, 
-    [enrichedSensors]);
+    const unconfiguredCount = useMemo(
+        () => enrichedSensors.filter((s) => s.isUnconfigured && s.isEnabled).length,
+        [enrichedSensors]
+    );
 
+    // Filtro final según modo (frontend)
     const displayedSensors = useMemo(() => {
         let base = enrichedSensors;
 
-        if (machineFilterId !== "all") {
-            base = base.filter((s) => s.machineId === machineFilterId);
-        }
+        if (appliedMachine !== "all") base = base.filter((s) => s.machineId === appliedMachine);
 
-        if (filterMode === "disabled") {
-            return base.filter((s) => !s.isEnabled);
-        }
+        if (appliedMode === "disabled") return base.filter((s) => !s.isEnabled);
 
         base = base.filter((s) => s.isEnabled);
 
-        switch (filterMode) {
+        switch (appliedMode) {
             case "unconfigured": return base.filter((s) => s.isUnconfigured);
             case "active": return base.filter((s) => s.isActive && !s.isUnconfigured);
             case "inactive": return base.filter((s) => !s.isActive && !s.isUnconfigured);
             case "recent":
                 return [...base]
                     .filter((s) => s.lastReadingTime)
-                    .sort((a, b) => (b.lastReadingTime ?? 0) - (a.lastReadingTime ?? 0));
-            default: return base; 
+                    .sort((a, b) => b.lastReadingTime - a.lastReadingTime);
+            default: return base;
         }
-    }, [enrichedSensors, machineFilterId, filterMode]);
+    }, [enrichedSensors, appliedMachine, appliedMode]);
 
+    // ----------------------------
+    // MODALES
+    // ----------------------------
+    const [showForm, setShowForm] = useState(false);
+    const [editingSensor, setEditingSensor] = useState<Sensor | null>(null);
+    const [showCreateModal, setShowCreateModal] = useState(false);
+
+    // ----------------------------
+    // ACCIÓN BOTÓN FILTRAR
+    // ----------------------------
+    const applyFilters = () => {
+        setAppliedSearch(tempSearch);
+        setAppliedMachine(tempMachine);
+        setAppliedMode(tempMode);
+    };
+
+    // ----------------------------
+    // RENDER
+    // ----------------------------
     return (
         <Container>
             <Header>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+                <div style={{ display: "flex", gap: 20, alignItems: "center" }}>
                     <div>
                         <Title>Sensores</Title>
-                        <p style={{color: '#64748b', margin: '8px 0 0 0'}}>
-                            Monitoreo en tiempo real del estado y configuración de dispositivos.
+                        <p style={{ color: "#64748b", marginTop: 4 }}>
+                            Monitoreo en tiempo real del estado y configuración.
                         </p>
                     </div>
+
                     {isSuperAdmin && (
-                        // USAMOS EL SEARCHABLE SELECT AQUÍ
-                        <div style={{ zIndex: 50, width: 220 }}> 
+                        <div style={{ width: 220 }}>
                             <SearchableSelect
                                 options={ingenioOptions}
-                                value={selectedIngenioId || 0} 
-                                onChange={(val) => setSelectedIngenioId(val === 0 ? undefined : val)}
-                                placeholder="🔍 Buscar ingenio..."
+                                value={selectedIngenioId || 0}
+                                onChange={(val) => setSelectedIngenioId(val || undefined)}
+                                placeholder="Ingenio..."
                             />
                         </div>
                     )}
                 </div>
+
                 {isSuperAdmin && (
                     <ActionButton onClick={() => setShowCreateModal(true)}>
                         + Nuevo Sensor
@@ -200,20 +221,22 @@ export default function Sensores() {
                 )}
             </Header>
 
+            {/* ---------------- FILTER BAR ---------------- */}
             <FilterContainer>
                 <SearchInput
-                    placeholder="Buscar por nombre, tipo o ubicación..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Buscar nombre/tipo/ubicación…"
+                    value={tempSearch}
+                    onChange={(e) => setTempSearch(e.target.value)}
                 />
 
                 <Select
-                    value={machineFilterId === "all" ? "all" : String(machineFilterId)}
+                    value={tempMachine === "all" ? "all" : String(tempMachine)}
                     onChange={(e) =>
-                        setMachineFilterId(
+                        setTempMachine(
                             e.target.value === "all" ? "all" : Number(e.target.value)
                         )
-                    }>
+                    }
+                >
                     <option value="all">Todas las máquinas</option>
                     {machineOptions.map((m) => (
                         <option key={m.id} value={m.id}>
@@ -223,155 +246,237 @@ export default function Sensores() {
                 </Select>
 
                 <ButtonGroup>
-                    <FilterButton $active={filterMode === "all"} onClick={() => setFilterMode("all")}>
+                    <FilterButton
+                        $active={tempMode === "all"}
+                        onClick={() => setTempMode("all")}
+                    >
                         Todos
                     </FilterButton>
 
-                    <FilterButton 
-                        $active={filterMode === "unconfigured"} 
-                        onClick={() => setFilterMode("unconfigured")}
-                        style={{ position: 'relative' }}
+                    <FilterButton
+                        $active={tempMode === "unconfigured"}
+                        onClick={() => setTempMode("unconfigured")}
+                        style={{ position: "relative" }}
                     >
                         Por Configurar
-                        {unconfiguredCount > 0 && (
-                            <BadgeCount>{unconfiguredCount}</BadgeCount>
-                        )}
+                        {unconfiguredCount > 0 && <BadgeCount>{unconfiguredCount}</BadgeCount>}
                     </FilterButton>
 
-                    <FilterButton $active={filterMode === "active"} onClick={() => setFilterMode("active")}>
+                    <FilterButton $active={tempMode === "active"} onClick={() => setTempMode("active")}>
                         Online
                     </FilterButton>
-                    <FilterButton $active={filterMode === "inactive"} onClick={() => setFilterMode("inactive")}>
+
+                    <FilterButton $active={tempMode === "inactive"} onClick={() => setTempMode("inactive")}>
                         Offline
                     </FilterButton>
-                    <FilterButton $active={filterMode === "recent"} onClick={() => setFilterMode("recent")}>
+
+                    <FilterButton $active={tempMode === "recent"} onClick={() => setTempMode("recent")}>
                         Recientes
                     </FilterButton>
-                    <FilterButton 
-                        $active={filterMode === "disabled"} 
-                        onClick={() => setFilterMode("disabled")}
-                        style={{ borderLeft: '1px solid #e2e8f0', color: filterMode === 'disabled' ? '#dc2626' : '#94a3b8' }}
+
+                    <FilterButton
+                        $active={tempMode === "disabled"}
+                        onClick={() => setTempMode("disabled")}
+                        style={{
+                            borderLeft: "1px solid #e2e8f0",
+                            color: tempMode === "disabled" ? "#dc2626" : "#94a3b8",
+                        }}
                     >
                         Deshabilitados
                     </FilterButton>
                 </ButtonGroup>
+
+                {/* BOTÓN FILTRAR */}
+                <ActionButton
+                    style={{ marginLeft: 12, background: "#2563eb", color: "white" }}
+                    onClick={applyFilters}
+                >
+                    Filtrar
+                </ActionButton>
             </FilterContainer>
 
+            {/* ---------------- SENSOR GRID ---------------- */}
             {loading ? (
                 <Loading>Cargando sensores...</Loading>
             ) : (
-                <Grid>
-                    {displayedSensors.map((sensor) => {
-                        let badgeStatus = "unknown";
-                        let badgeText = "Desconocido";
+                <>
+                    <Grid>
+                        {displayedSensors.map((sensor: any) => {
+                            const status = !sensor.isEnabled
+                                ? "Deshabilitado"
+                                : sensor.isUnconfigured
+                                ? "Sin Configurar"
+                                : sensor.isActive
+                                ? "Online"
+                                : "Offline";
 
-                        if (!sensor.isEnabled) {
-                            badgeStatus = "unknown";
-                            badgeText = "Deshabilitado";
-                        } else if (sensor.isUnconfigured) {
-                            badgeStatus = "warning"; 
-                            badgeText = "Sin Configurar";
-                        } else if (sensor.isActive) {
-                            badgeStatus = "active";
-                            badgeText = "Online";
-                        } else {
-                            badgeStatus = "inactive";
-                            badgeText = "Offline";
-                        }
-
-                        return (
-                            <Card
-                                key={sensor.id}
-                                $isActive={sensor.isActive}
-                                $isUnconfigured={sensor.isUnconfigured} 
-                                style={{ opacity: sensor.isEnabled ? 1 : 0.7 }}
-                                onClick={() => {
-                                    if (sensor.isUnconfigured) {
-                                        return; 
-                                    }
-                                    if (sensor.isEnabled) {
+                            return (
+                                <Card
+                                    key={sensor.id}
+                                    $isActive={sensor.isActive}
+                                    $isUnconfigured={sensor.isUnconfigured}
+                                    style={{ opacity: sensor.isEnabled ? 1 : 0.6 }}
+                                    onClick={() => {
+                                        if (!sensor.isEnabled || sensor.isUnconfigured) return;
                                         navigate(`/sensor/${sensor.id}`);
-                                    }
-                                }}
-                            >
-                                <CardHeader>
-                                    <CardTitleBlock>
-                                        <CardTitle>{sensor.name}</CardTitle>
-                                        <CardSubtitle>
-                                            {sensor.type}
-                                            {sensor.location !== "NOCONFIGURADO" && 
-                                                <span>• 📍 {sensor.location}</span>
+                                    }}
+                                >
+                                    <CardHeader>
+                                        <CardTitleBlock>
+                                            <CardTitle>{sensor.name}</CardTitle>
+                                            <CardSubtitle>
+                                                {sensor.type}
+                                                {sensor.location !== "NOCONFIGURADO" &&
+                                                    <span> • 📍 {sensor.location}</span>}
+                                            </CardSubtitle>
+                                        </CardTitleBlock>
+                                        <Badge
+                                            $status={
+                                                !sensor.isEnabled
+                                                    ? "unknown"
+                                                    : sensor.isUnconfigured
+                                                    ? "warning"
+                                                    : sensor.isActive
+                                                    ? "active"
+                                                    : "inactive"
                                             }
-                                        </CardSubtitle>
-                                    </CardTitleBlock>
-                                    <Badge $status={badgeStatus}>
-                                        {badgeText}
-                                    </Badge>
-                                </CardHeader>
+                                        >
+                                            {status}
+                                        </Badge>
+                                    </CardHeader>
 
-                                <CardStatsGrid>
-                                    <StatBox>
-                                        <span>Severidad</span>
-                                        <span style={{ color: sensor.severity !== '-' && Number(sensor.severity) > 1 ? '#ef4444' : 'inherit'}}>
-                                            {sensor.severity}
-                                        </span>
-                                    </StatBox>
-                                    <StatBox>
-                                        <span>Issues</span>
-                                        <span>{sensor.totalIssues}</span>
-                                    </StatBox>
-                                    <StatBox>
-                                        <span>Métricas</span>
-                                        <span>{sensor.metricsCount}</span>
-                                    </StatBox>
-                                </CardStatsGrid>
-                                
-                                {sensor.isEnabled && sensor.lastReadingTime && (
-                                    <LastReadingText>
-                                        Actualizado: {new Date(sensor.lastReadingTime).toLocaleTimeString()}
-                                    </LastReadingText>
-                                )}
-
-                                <CardActions>
-                                    {canManage && (
-                                        <GhostButton
-                                            onClick={(e) => {
-                                                e.stopPropagation(); 
-                                                setEditingSensor(sensor);
-                                                setShowForm(true);
+                                    <CardStatsGrid>
+                                        <StatBox>
+                                            <span>Severidad</span>
+                                            <span style={{
+                                                color: sensor.severity !== "-" &&
+                                                    Number(sensor.severity) > 1
+                                                    ? "#ef4444"
+                                                    : "inherit"
                                             }}>
-                                            {sensor.isUnconfigured ? "Configurar Ahora" : "Editar"}
-                                        </GhostButton>
+                                                {sensor.severity}
+                                            </span>
+                                        </StatBox>
+
+                                        <StatBox>
+                                            <span>Issues</span>
+                                            <span>{sensor.totalIssues}</span>
+                                        </StatBox>
+
+                                        <StatBox>
+                                            <span>Métricas</span>
+                                            <span>{sensor.metricsCount}</span>
+                                        </StatBox>
+                                    </CardStatsGrid>
+
+                                    {sensor.lastReadingTime && (
+                                        <LastReadingText>
+                                            Actualizado:{" "}
+                                            {new Date(sensor.lastReadingTime).toLocaleTimeString()}
+                                        </LastReadingText>
                                     )}
 
-                                    {canManage && (
-                                        sensor.isEnabled ? (
-                                            <DangerTextButton
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    if(confirm("¿Desactivar este sensor? Dejará de recibir datos."))
-                                                        deactivateSensor(sensor.id);
-                                                }}>
-                                                Desactivar
-                                            </DangerTextButton>
-                                        ) : (
+                                    <CardActions>
+                                        {canManage && (
                                             <GhostButton
-                                                style={{ color: '#16a34a', fontWeight: 'bold' }}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
-                                                    activateSensor(sensor.id);
-                                                }}>
-                                                Reactivar
+                                                    setEditingSensor(sensor);
+                                                    setShowForm(true);
+                                                }}
+                                            >
+                                                {sensor.isUnconfigured ? "Configurar" : "Editar"}
                                             </GhostButton>
-                                        )
-                                    )}
-                                </CardActions>
-                            </Card>
-                        );
-                    })}
-                </Grid>
+                                        )}
+
+                                        {canManage && (
+                                            sensor.isEnabled ? (
+                                                <DangerTextButton
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (confirm("¿Desactivar sensor?")) {
+                                                            deactivateSensor(sensor.id);
+                                                        }
+                                                    }}
+                                                >
+                                                    Desactivar
+                                                </DangerTextButton>
+                                            ) : (
+                                                <GhostButton
+                                                    style={{ color: "#16a34a", fontWeight: 700 }}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        activateSensor(sensor.id);
+                                                    }}
+                                                >
+                                                    Reactivar
+                                                </GhostButton>
+                                            )
+                                        )}
+                                    </CardActions>
+                                </Card>
+                            );
+                        })}
+                    </Grid>
+
+                    {/* ---------------- PAGINACIÓN NUEVA ---------------- */}
+                    {totalItems > 0 && (
+                        <div
+                            style={{
+                                marginTop: 24,
+                                display: "flex",
+                                justifyContent: "space-between",
+                                alignItems: "center",
+                                padding: "16px 20px",
+                                background: "#f1f5f9",
+                                borderRadius: 12,
+                                border: "1px solid #e2e8f0",
+                            }}
+                        >
+                            <span style={{ fontSize: 14, color: "#475569" }}>
+                                Página {page} de {totalPages} — {totalItems} sensores
+                            </span>
+
+                            <div style={{ display: "flex", gap: 12 }}>
+                                <button
+                                    onClick={prevPage}
+                                    disabled={!canPrev}
+                                    style={{
+                                        padding: "8px 14px",
+                                        background: canPrev ? "#e2e8f0" : "#cbd5e1",
+                                        border: "none",
+                                        borderRadius: 8,
+                                        fontWeight: 600,
+                                        cursor: canPrev ? "pointer" : "not-allowed",
+                                        transition: "0.2s",
+                                    }}
+                                >
+                                    ⬅ Anterior
+                                </button>
+
+                                <button
+                                    onClick={nextPage}
+                                    disabled={!canNext}
+                                    style={{
+                                        padding: "8px 14px",
+                                        background: canNext ? "#3b82f6" : "#93c5fd",
+                                        color: "white",
+                                        border: "none",
+                                        borderRadius: 8,
+                                        fontWeight: 600,
+                                        cursor: canNext ? "pointer" : "not-allowed",
+                                        transition: "0.2s",
+                                    }}
+                                >
+                                    Siguiente ➡
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </>
             )}
 
+            {/* ------ Modales ------ */}
             {showForm && editingSensor && (
                 <SensorForm
                     sensor={editingSensor}
@@ -385,14 +490,14 @@ export default function Sensores() {
 
             {showCreateModal && (
                 <CreateSensorModal
-                    machines={machines} 
+                    machines={machines}
                     onClose={() => setShowCreateModal(false)}
                     onSuccess={() => {
-                    reload(); 
-                    setFilterMode("unconfigured"); 
-                }}
-            />
-        )}
-    </Container>
-);
+                        reload();
+                        setAppliedMode("unconfigured");
+                    }}
+                />
+            )}
+        </Container>
+    );
 }

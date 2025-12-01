@@ -37,12 +37,6 @@
         "max": 5.05,
         "min": 0.01
       }
-    },
-    "El loco mio": {
-      "aaaa": {
-        "min": 10,
-        "max": 100
-      }
     }
   },
   "active": true,

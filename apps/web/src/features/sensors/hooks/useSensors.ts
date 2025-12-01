@@ -2,55 +2,85 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import { api } from "../../../lib/api";
 import type { Sensor, Machine } from "../../../types";
 
-export function useSensors(ingenioId?: number) {
+export type FilterMode =
+    | "all"
+    | "active"
+    | "inactive"
+    | "recent"
+    | "disabled"
+    | "unconfigured";
+
+interface UseSensorsParams {
+    search?: string;
+    machineId?: number;
+    filterMode?: FilterMode;
+}
+
+export function useSensors(ingenioId?: number, params?: UseSensorsParams) {
+    const { search, machineId, filterMode } = params || {};
+
     const [sensors, setSensors] = useState<Sensor[]>([]);
     const [machines, setMachines] = useState<Machine[]>([]);
     const [loading, setLoading] = useState(true);
-    const [searchTerm, setSearchTerm] = useState("");
+
+    // Paginate
+    const [page, setPage] = useState(1);
+    const [limit] = useState(12);
+    const [totalItems, setTotalItems] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
 
     const loadSensors = useCallback(async () => {
         setLoading(true);
         try {
-            const [sensorData, machineData] = await Promise.all([
-                api.getSensors({ ingenioId }),
+            const query: Record<string, any> = { page, limit };
+
+            if (ingenioId !== undefined) query.ingenioId = ingenioId;
+            if (search?.trim()) query.search = search.trim();
+            if (typeof machineId === "number") query.machineId = machineId;
+
+            // disabled
+            if (filterMode === "disabled") query.active = false;
+            else query.active = true;
+
+            if (filterMode === "unconfigured") query.unconfigured = true;
+
+            const [sensorResp, machineData] = await Promise.all([
+                api.sensors.getAll(query),
                 api.machines.getList(),
             ]);
-            setSensors(sensorData);
+
+            setSensors(sensorResp.data);
+            setTotalItems(sensorResp.meta.totalItems);
+            setTotalPages(sensorResp.meta.totalPages || 1);
+
             setMachines(machineData);
-        } catch (error) {
-            console.error("Error cargando sensores:", error);
+        } catch (e) {
+            console.error("Error loading sensors:", e);
         } finally {
             setLoading(false);
         }
-    }, [ingenioId]);
+    }, [ingenioId, page, limit, search, machineId, filterMode]);
+
+    useEffect(() => {
+        setPage(1);
+    }, [ingenioId, search, machineId, filterMode]);
+
+    useEffect(() => {
+        loadSensors();
+    }, [loadSensors]);
 
     const deactivateSensor = useCallback(async (id: number) => {
-        try {
-            await api.deactivateSensor(id);
-            // Actualización optimista local
-            setSensors((prev) =>
-                prev.map((s) =>
-                    (s.id) === id ? { ...s, active: false } : s
-                )
-            );
-        } catch (error) {
-            console.error("Error desactivando sensor:", error);
-        }
+        await api.deactivateSensor(id);
+        setSensors((prev) =>
+            prev.map((s) => (s.id === id ? { ...s, active: false } : s))
+        );
     }, []);
 
-    // --- NUEVA FUNCIÓN ---
     const activateSensor = useCallback(async (id: number) => {
-        try {
-            await api.activateSensor(id);
-            // Actualización optimista local
-            setSensors((prev) =>
-                prev.map((s) =>
-                    ((s.id)) === id ? { ...s, active: true } : s
-                )
-            );
-        } catch (error) {
-            console.error("Error activando sensor:", error);
-        }
+        await api.activateSensor(id);
+        setSensors((prev) =>
+            prev.map((s) => (s.id === id ? { ...s, active: true } : s))
+        );
     }, []);
 
     const sensorsWithMachine = useMemo(() => {
@@ -60,30 +90,26 @@ export function useSensors(ingenioId?: number) {
         });
     }, [sensors, machines]);
 
-    const filteredSensors = useMemo(() => {
-        const term = searchTerm.toLowerCase().trim();
-        if (!term) return sensorsWithMachine;
-        return sensorsWithMachine.filter((s) => {
-            const nameMatch = s.name.toLowerCase().includes(term);
-            const machineMatch = s.machine?.name.toLowerCase().includes(term) || s.machine?.code?.toLowerCase().includes(term);
-            const locationMatch = s.location?.toLowerCase().includes(term);
-            return nameMatch || machineMatch || locationMatch;
-        });
-    }, [sensorsWithMachine, searchTerm]);
-
-    useEffect(() => {
-        loadSensors();
-    }, [loadSensors]);
+    const filteredSensors = useMemo(() => sensorsWithMachine, [sensorsWithMachine]);
 
     return {
         sensors: sensorsWithMachine,
-        machines,
         filteredSensors,
+        machines,
         loading,
-        searchTerm,
-        setSearchTerm,
         reload: loadSensors,
+
         deactivateSensor,
-        activateSensor, // Exportamos la nueva función
+        activateSensor,
+
+        page,
+        setPage,
+        totalItems,
+        totalPages,
+
+        nextPage: () => setPage((p) => (p < totalPages ? p + 1 : p)),
+        prevPage: () => setPage((p) => (p > 1 ? p - 1 : p)),
+        canNext: page < totalPages,
+        canPrev: page > 1,
     };
 }
