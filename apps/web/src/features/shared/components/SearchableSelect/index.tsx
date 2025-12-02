@@ -10,16 +10,16 @@ const Wrapper = styled.div`
 const Input = styled.input`
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 6px;
   font-size: 14px;
   outline: none;
-  background: white;
-  color: #0f172a;
+  background: ${({ theme }) => theme.colors.card};
+  color: ${({ theme }) => theme.colors.text.primary};
 
   &:focus {
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    border-color: ${({ theme }) => theme.colors.accent.primary};
+    box-shadow: 0 0 0 2px ${({ theme }) => theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.1)'};
   }
 `;
 
@@ -31,8 +31,8 @@ const Dropdown = styled.ul`
   margin-top: 4px;
   padding: 0;
   list-style: none;
-  background: white;
-  border: 1px solid #e2e8f0;
+  background: ${({ theme }) => theme.colors.card};
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 6px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   max-height: 250px;
@@ -43,20 +43,20 @@ const Dropdown = styled.ul`
 const Option = styled.li<{ $active?: boolean }>`
   padding: 8px 12px;
   font-size: 14px;
-  color: ${props => props.$active ? '#2563eb' : '#334155'};
-  background: ${props => props.$active ? '#eff6ff' : 'white'};
+  color: ${props => props.$active ? props.theme.colors.accent.primary : props.theme.colors.text.primary};
+  background: ${props => props.$active ? (props.theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.15)' : '#eff6ff') : props.theme.colors.card};
   cursor: pointer;
   transition: background 0.1s;
 
   &:hover {
-    background: #f1f5f9;
+    background: ${({ theme }) => theme.colors.background};
   }
 `;
 
 const EmptyState = styled.li`
   padding: 12px;
   font-size: 13px;
-  color: #94a3b8;
+  color: ${({ theme }) => theme.colors.text.tertiary};
   text-align: center;
 `;
 

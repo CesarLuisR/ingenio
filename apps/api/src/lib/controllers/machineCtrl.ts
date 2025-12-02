@@ -38,6 +38,7 @@ export const getAllMachines: RequestHandler = async (req, res) => {
                     name: true,
                     code: true,
                     active: true, // Útil saber si está activa en el dropdown
+                    ingenioId: true
                 },
                 where: {
                     ...where, // Mantenemos restricción de rol/ingenio

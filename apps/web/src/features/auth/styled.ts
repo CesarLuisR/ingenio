@@ -10,7 +10,7 @@ export const PageContainer = styled.div`
   min-height: 100vh;
   width: 100%;
   font-family: 'Inter', sans-serif;
-  background-color: white;
+  background-color: ${({ theme }) => theme.colors.background};
 `;
 
 // --- SECCIÓN IZQUIERDA (HERO) ---
@@ -77,7 +77,7 @@ export const FormSection = styled.div`
   align-items: center;
   justify-content: center;
   padding: 40px;
-  background-color: #ffffff;
+  background-color: ${({ theme }) => theme.colors.card};
   animation: ${fadeIn} 0.6s ease-out;
 `;
 
@@ -92,13 +92,13 @@ export const FormHeader = styled.div`
   h2 {
     font-size: 28px;
     font-weight: 800;
-    color: #0f172a;
+    color: ${({ theme }) => theme.colors.text.primary};
     margin: 0 0 8px 0;
     letter-spacing: -0.5px;
   }
   
   p {
-    color: #64748b;
+    color: ${({ theme }) => theme.colors.text.secondary};
     font-size: 15px;
   }
 `;
@@ -118,35 +118,35 @@ export const InputGroup = styled.div`
 export const Label = styled.label`
   font-size: 14px;
   font-weight: 600;
-  color: #334155;
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 export const Input = styled.input`
   width: 100%;
   padding: 14px 16px;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  background-color: #f8fafc;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background-color: ${({ theme }) => theme.colors.background};
   font-size: 15px;
-  color: #0f172a;
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: all 0.2s ease;
 
   &:focus {
     outline: none;
-    border-color: #2563eb;
-    background-color: white;
-    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+    border-color: ${({ theme }) => theme.colors.accent.primary};
+    background-color: ${({ theme }) => theme.colors.card};
+    box-shadow: 0 0 0 4px ${({ theme }) => theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.25)' : 'rgba(37, 99, 235, 0.1)'};
   }
 
   &::placeholder {
-    color: #94a3b8;
+    color: ${({ theme }) => theme.colors.text.tertiary};
   }
 `;
 
 export const Button = styled.button`
   width: 100%;
   padding: 16px;
-  background: #0f172a;
+  background: ${({ theme }) => theme.colors.accent.primary};
   color: white;
   font-size: 16px;
   font-weight: 600;
@@ -158,7 +158,7 @@ export const Button = styled.button`
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 
   &:hover {
-    background: #1e293b;
+    background: ${({ theme }) => theme.colors.accent.hover};
     transform: translateY(-1px);
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
   }
@@ -194,10 +194,10 @@ export const FooterText = styled.p`
   text-align: center;
   margin-top: 32px;
   font-size: 14px;
-  color: #64748b;
+  color: ${({ theme }) => theme.colors.text.secondary};
   
   a {
-    color: #2563eb;
+    color: ${({ theme }) => theme.colors.accent.primary};
     text-decoration: none;
     font-weight: 600;
     &:hover { text-decoration: underline; }

@@ -1,179 +1,29 @@
-import styled from "styled-components";
 import { useEffect, useState, useCallback } from "react";
 import { api } from "../../lib/api";
 import type { Ingenio } from "../../types";
 
-// --- ESTILOS ---
-const Container = styled.div`
-  padding: 32px;
-`;
-
-const Header = styled.div`
-  margin-bottom: 32px;
-`;
-
-const Title = styled.h1`
-  font-size: 24px;
-  font-weight: 800;
-  color: #0f172a;
-  margin: 0;
-`;
-
-const Subtitle = styled.p`
-  color: #64748b;
-  margin: 8px 0 0 0;
-`;
-
-const FilterBar = styled.div`
-  display: flex;
-  gap: 12px;
-  margin-bottom: 24px;
-  background: white;
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  align-items: center;
-  flex-wrap: wrap;
-`;
-
-const InputGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-`;
-
-const Label = styled.label`
-  font-size: 12px;
-  font-weight: 600;
-  color: #64748b;
-  text-transform: uppercase;
-`;
-
-const TextInput = styled.input`
-  padding: 8px 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 14px;
-  min-width: 200px;
-  &:focus { outline: 2px solid #3b82f6; border-color: transparent; }
-`;
-
-const SelectInput = styled.select`
-  padding: 8px 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 14px;
-  min-width: 150px;
-  background-color: white;
-  &:focus { outline: 2px solid #3b82f6; border-color: transparent; }
-`;
-
-const PrimaryButton = styled.button`
-  background: #3b82f6;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  align-self: flex-end; /* Alinear con los inputs */
-  &:hover { background: #2563eb; }
-`;
-
-const StatsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 24px;
-  margin-bottom: 24px;
-`;
-
-const StatCard = styled.div`
-  background: white;
-  padding: 24px;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-`;
-
-const StatLabel = styled.div`
-  color: #64748b;
-  font-size: 14px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 8px;
-`;
-
-const StatValue = styled.div`
-  font-size: 32px;
-  font-weight: 800;
-  color: #0f172a;
-`;
-
-const IngeniosList = styled.div`
-  background: white;
-  border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  overflow: hidden;
-`;
-
-const ListHeader = styled.div`
-  padding: 20px 24px;
-  border-bottom: 1px solid #e2e8f0;
-  font-weight: 600;
-  color: #0f172a;
-`;
-
-const ListItem = styled.div`
-  padding: 16px 24px;
-  border-bottom: 1px solid #f1f5f9;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-
-  &:last-child {
-    border-bottom: none;
-  }
-`;
-
-const PaginationContainer = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between; /* Espaciado para el botón "Primera" */
-  padding: 16px 24px;
-  border-top: 1px solid #e2e8f0;
-  background-color: #f8fafc;
-`;
-
-const PageInfo = styled.span`
-  font-size: 14px;
-  color: #64748b;
-  font-weight: 500;
-`;
-
-const PaginationButton = styled.button`
-  padding: 6px 12px;
-  background: white;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  color: #334155;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-left: 8px;
-
-  &:hover:not(:disabled) {
-    background: #f1f5f9;
-    color: #0f172a;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    background: #f8fafc;
-  }
-`;
+import {
+  Container,
+  Header,
+  Title,
+  Subtitle,
+  FilterBar,
+  InputGroup,
+  Label,
+  TextInput,
+  SelectInput,
+  PrimaryButton,
+  StatsGrid,
+  StatCard,
+  StatLabel,
+  StatValue,
+  IngeniosList,
+  ListHeader,
+  ListItem,
+  PaginationContainer,
+  PageInfo,
+  PaginationButton
+} from "./styled";
 
 export default function SuperAdminDashboard() {
     // --- CONFIGURACIÓN DE BÚFER ---

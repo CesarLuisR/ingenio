@@ -14,43 +14,46 @@ import Usuarios from "./features/users";
 import MachinesPage from "./features/machines";
 import MachineDetailPage from "./features/machines/MachineDetailPage";
 import Ingenios from "./features/ingenios";
+import { AppThemeProvider } from "./context/ThemeContext";
 
 export default function App() {
 	return (
 		<BrowserRouter>
-			<GlobalWebSocketProvider>
-				<Routes>
-					{/* login no está protegido */}
-					<Route path="/login" element={<LoginModule />} />
+			<AppThemeProvider>
+				<GlobalWebSocketProvider>
+					<Routes>
+						{/* login no está protegido */}
+						<Route path="/login" element={<LoginModule />} />
 
-					{/* todo lo demás sí */}
-					<Route element={<ProtectedRoute />}>
-						<Route path="/" element={<Layout />}>
-							<Route index element={<Dashboard />} />
-							<Route
-								path="sensor/:id"
-								element={<SensorDetail />}
-							/>
-							<Route path="maquinas" element={<MachinesPage />} />
-							<Route path="maquinas/:id" element={<MachineDetailPage />} />
-							<Route path="usuarios" element={<Usuarios />} />
-							<Route path="sensores" element={<Sensores />} />
-							<Route
-								path="mantenimientos"
-								element={<Mantenimientos />}
-							/>
-							<Route path="fallos" element={<Fallos />} />
-							<Route path="analisis" element={<Analisis />} />
-							<Route path="tecnicos" element={<Technicians />} />
-							<Route path="ingenios" element={<Ingenios />} />
-							<Route
-								path="*"
-								element={<div>Página no encontrada</div>}
-							/>
+						{/* todo lo demás sí */}
+						<Route element={<ProtectedRoute />}>
+							<Route path="/" element={<Layout />}>
+								<Route index element={<Dashboard />} />
+								<Route
+									path="sensor/:id"
+									element={<SensorDetail />}
+								/>
+								<Route path="maquinas" element={<MachinesPage />} />
+								<Route path="maquinas/:id" element={<MachineDetailPage />} />
+								<Route path="usuarios" element={<Usuarios />} />
+								<Route path="sensores" element={<Sensores />} />
+								<Route
+									path="mantenimientos"
+									element={<Mantenimientos />}
+								/>
+								<Route path="fallos" element={<Fallos />} />
+								<Route path="analisis" element={<Analisis />} />
+								<Route path="tecnicos" element={<Technicians />} />
+								<Route path="ingenios" element={<Ingenios />} />
+								<Route
+									path="*"
+									element={<div>Página no encontrada</div>}
+								/>
+							</Route>
 						</Route>
-					</Route>
-				</Routes>
-			</GlobalWebSocketProvider>
+					</Routes>
+				</GlobalWebSocketProvider>
+			</AppThemeProvider>
 		</BrowserRouter>
 	);
 }

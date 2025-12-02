@@ -12,7 +12,7 @@ export const Container = styled.div`
   max-width: 1600px;
   margin: 0 auto;
   min-height: 100vh;
-  background-color: #f8fafc; /* Slate 50 */
+  background-color: ${({ theme }) => theme.colors.background}; /* Slate 50 */
   font-family: 'Inter', sans-serif;
 
   @media (max-width: 1024px) {
@@ -38,7 +38,7 @@ export const Header = styled.header`
   display: flex;
   flex-direction: column;
   gap: 16px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   padding-bottom: 24px;
 `;
 
@@ -53,7 +53,7 @@ export const HeaderTop = styled.div`
 export const Title = styled.h1`
   font-size: 32px;
   font-weight: 800;
-  color: #0f172a;
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
   line-height: 1.2;
   letter-spacing: -0.02em;
@@ -64,7 +64,7 @@ export const SubInfo = styled.div`
   flex-wrap: wrap;
   gap: 24px;
   font-size: 14px;
-  color: #64748b;
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-weight: 500;
 
   span {
@@ -92,12 +92,12 @@ export const TagRow = styled.div`
 
 export const Tag = styled.span`
   padding: 6px 12px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: ${({ theme }) => theme.colors.card};
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 9999px;
   font-size: 12px;
   font-weight: 600;
-  color: #475569;
+  color: ${({ theme }) => theme.colors.text.secondary};
   box-shadow: 0 1px 2px rgba(0,0,0,0.02);
 `;
 
@@ -130,7 +130,7 @@ export const TabsRow = styled.div`
   display: flex;
   gap: 8px;
   margin-bottom: 24px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   padding-bottom: 1px; /* Para que el borde activo se solape */
 `;
 
@@ -140,7 +140,7 @@ export const TabButton = styled.button<{ $active: boolean }>`
   padding: 12px 16px;
   font-size: 14px;
   font-weight: 600;
-  color: ${({ $active }) => ($active ? "#2563eb" : "#64748b")};
+  color: ${({ $active, theme }) => ($active ? theme.colors.accent.primary : theme.colors.text.secondary)};
   cursor: pointer;
   position: relative;
   transition: all 0.2s;
@@ -152,13 +152,13 @@ export const TabButton = styled.button<{ $active: boolean }>`
     left: 0;
     right: 0;
     height: 2px;
-    background: ${({ $active }) => ($active ? "#2563eb" : "transparent")};
+    background: ${({ $active, theme }) => ($active ? theme.colors.accent.primary : "transparent")};
     transition: all 0.2s;
   }
 
   &:hover {
-    color: #1e293b;
-    background: ${({ $active }) => ($active ? "transparent" : "#f1f5f9")};
+    color: ${({ theme }) => theme.colors.text.primary};
+    background: ${({ $active, theme }) => ($active ? "transparent" : theme.colors.background)};
     border-radius: 6px 6px 0 0;
   }
 `;
@@ -184,7 +184,7 @@ export const Section = styled.section`
 export const SectionTitle = styled.h3`
   font-size: 16px;
   font-weight: 700;
-  color: #334155;
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -196,16 +196,16 @@ export const SectionTitle = styled.h3`
     content: '';
     flex: 1;
     height: 1px;
-    background: #e2e8f0;
+    background: ${({ theme }) => theme.colors.border};
   }
 `;
 
 // --- Cards de Información (Metrics, Info General) ---
 export const SidebarCard = styled.div`
-  background: #ffffff;
+  background: ${({ theme }) => theme.colors.card};
   border-radius: 16px;
   padding: 24px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid ${({ theme }) => theme.colors.border};
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
 `;
 
@@ -217,7 +217,7 @@ export const InfoList = styled.div`
   div {
     display: flex;
     justify-content: space-between;
-    border-bottom: 1px dashed #f1f5f9;
+    border-bottom: 1px dashed ${({ theme }) => theme.colors.border};
     padding-bottom: 8px;
 
     &:last-child {
@@ -226,12 +226,12 @@ export const InfoList = styled.div`
     }
 
     span:first-child {
-      color: #64748b;
+      color: ${({ theme }) => theme.colors.text.secondary};
       font-size: 13px;
       font-weight: 500;
     }
     span:last-child {
-      color: #0f172a;
+      color: ${({ theme }) => theme.colors.text.primary};
       font-size: 14px;
       font-weight: 600;
       text-align: right;
@@ -247,8 +247,8 @@ export const MetricsGrid = styled.div`
 `;
 
 export const MetricCard = styled.div`
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  background: ${({ theme }) => theme.colors.background};
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 12px;
   padding: 16px;
   display: flex;
@@ -258,7 +258,7 @@ export const MetricCard = styled.div`
   transition: transform 0.2s;
 
   &:hover {
-    border-color: #cbd5e1;
+    border-color: ${({ theme }) => theme.colors.text.tertiary};
     transform: translateY(-2px);
   }
 `;
@@ -266,7 +266,7 @@ export const MetricCard = styled.div`
 export const MetricLabel = styled.span`
   font-size: 11px;
   font-weight: 700;
-  color: #64748b;
+  color: ${({ theme }) => theme.colors.text.secondary};
   text-transform: uppercase;
 `;
 
@@ -274,7 +274,7 @@ export const MetricLabel = styled.span`
 export const MetricValue = styled.span`
   font-size: 20px;
   font-weight: 800;
-  color: #0f172a;
+  color: ${({ theme }) => theme.colors.text.primary};
   letter-spacing: -0.5px;
 
   /* Fix overflow */
@@ -293,10 +293,10 @@ export const CardList = styled.div`
 `;
 
 export const InfoCard = styled.div<{ $error?: boolean }>`
-  background: #ffffff;
+  background: ${({ theme }) => theme.colors.card};
   border-radius: 12px;
-  border: 1px solid ${({ $error }) => ($error ? "#fecaca" : "#e2e8f0")};
-  border-left: 4px solid ${({ $error }) => ($error ? "#ef4444" : "#3b82f6")};
+  border: 1px solid ${({ $error, theme }) => ($error ? "#fecaca" : theme.colors.border)};
+  border-left: 4px solid ${({ $error, theme }) => ($error ? "#ef4444" : theme.colors.accent.primary)};
   padding: 20px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.02);
   transition: all 0.2s;
@@ -319,15 +319,15 @@ export const InfoCard = styled.div<{ $error?: boolean }>`
   .title {
     font-size: 16px;
     font-weight: 700;
-    color: #1e293b;
+    color: ${({ theme }) => theme.colors.text.primary};
     margin: 0;
   }
 
   .date {
     font-size: 12px;
-    color: #94a3b8;
+    color: ${({ theme }) => theme.colors.text.tertiary};
     font-weight: 500;
-    background: #f8fafc;
+    background: ${({ theme }) => theme.colors.background};
     padding: 4px 8px;
     border-radius: 6px;
   }
@@ -336,18 +336,18 @@ export const InfoCard = styled.div<{ $error?: boolean }>`
     display: flex;
     gap: 16px;
     font-size: 13px;
-    color: #64748b;
+    color: ${({ theme }) => theme.colors.text.secondary};
     
-    strong { color: #334155; }
+    strong { color: ${({ theme }) => theme.colors.text.primary}; }
   }
 
   .notes {
     margin-top: 8px;
     padding: 12px;
-    background: ${({ $error }) => ($error ? "#fef2f2" : "#f8fafc")};
+    background: ${({ $error, theme }) => ($error ? "#fef2f2" : theme.colors.background)};
     border-radius: 8px;
     font-size: 13px;
-    color: #475569;
+    color: ${({ theme }) => theme.colors.text.secondary};
     line-height: 1.5;
     font-style: italic;
   }
@@ -356,9 +356,9 @@ export const InfoCard = styled.div<{ $error?: boolean }>`
 export const EmptyMessage = styled.div`
   text-align: center;
   padding: 48px;
-  background: #ffffff;
-  border: 1px dashed #cbd5e1;
+  background: ${({ theme }) => theme.colors.card};
+  border: 1px dashed ${({ theme }) => theme.colors.border};
   border-radius: 16px;
-  color: #94a3b8;
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-weight: 500;
 `;

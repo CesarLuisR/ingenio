@@ -161,8 +161,8 @@ export default function Fallos() {
                 >
                     <option value="">Todos los estados</option>
                     <option value="pendiente">Pendiente</option>
-                    <option value="en_progreso">En Progreso</option>
-                    <option value="resuelto">Resuelto</option>
+                    <option value="en reparación">En reparación</option>
+                    <option value="resuelta">Resuelta</option>
                 </SelectInput>
 
                 <TextInput

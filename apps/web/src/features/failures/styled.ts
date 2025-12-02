@@ -11,7 +11,7 @@ export const Container = styled.div`
   max-width: 1600px;
   margin: 0 auto;
   min-height: 100vh;
-  background-color: #f8fafc;
+  background-color: ${({ theme }) => theme.colors.background};
   font-family: 'Inter', sans-serif;
   animation: ${fadeIn} 0.4s ease-out;
 
@@ -26,13 +26,13 @@ export const Header = styled.div`
   align-items: flex-end;
   margin-bottom: 32px;
   padding-bottom: 20px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 export const Title = styled.h1`
   font-size: 32px;
   font-weight: 800;
-  color: #0f172a;
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
   letter-spacing: -0.02em;
 `;
@@ -66,10 +66,10 @@ export const FiltersBar = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 16px;
   margin-bottom: 32px;
-  background: white;
+  background: ${({ theme }) => theme.colors.card};
   padding: 16px;
   border-radius: 16px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid ${({ theme }) => theme.colors.border};
   box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 `;
 
@@ -77,16 +77,16 @@ const inputStyles = css`
   width: 100%;
   padding: 12px;
   border-radius: 10px;
-  border: 1px solid #cbd5e1;
-  background: #f8fafc;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.background};
   font-size: 14px;
-  color: #1e293b;
+  color: ${({ theme }) => theme.colors.text.primary};
   transition: all 0.2s;
 
   &:focus {
     outline: none;
     border-color: #dc2626;
-    background: white;
+    background: ${({ theme }) => theme.colors.card};
     box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
   }
 `;
@@ -102,9 +102,9 @@ export const FailureList = styled.div`
 `;
 
 export const FailureCard = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.card};
   border-radius: 16px;
-  border: 1px solid #f1f5f9;
+  border: 1px solid ${({ theme }) => theme.colors.border};
   /* Borde rojo a la izquierda */
   border-left: 4px solid #ef4444;
   padding: 24px;
@@ -117,7 +117,7 @@ export const FailureCard = styled.div`
   &:hover {
     transform: translateY(-4px);
     box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05);
-    border-color: #e2e8f0;
+    border-color: ${({ theme }) => theme.colors.border};
   }
 `;
 
@@ -130,22 +130,22 @@ export const CardHeader = styled.div`
 export const SensorName = styled.h3`
   font-size: 16px;
   font-weight: 700;
-  color: #1e293b;
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
 `;
 
 export const EditButton = styled.button`
   background: transparent;
-  border: 1px solid #e2e8f0;
+  border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 6px;
   padding: 4px 10px;
   font-size: 12px;
   font-weight: 600;
-  color: #64748b;
+  color: ${({ theme }) => theme.colors.text.secondary};
   cursor: pointer;
   transition: 0.2s;
   
-  &:hover { background: #f1f5f9; color: #0f172a; }
+  &:hover { background: ${({ theme }) => theme.colors.background}; color: ${({ theme }) => theme.colors.text.primary}; }
 `;
 
 // --- Tags ---
@@ -166,12 +166,12 @@ const badgeBase = css`
 
 export const SeverityTag = styled.span<{ $sev: string }>`
   ${badgeBase};
-  ${({ $sev }) => {
-    switch($sev) {
+  ${({ $sev, theme }) => {
+    switch ($sev) {
       case "Crítica": return css`background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;`;
       case "Alta": return css`background: #fff7ed; color: #c2410c; border: 1px solid #fed7aa;`;
       case "Media": return css`background: #fefce8; color: #a16207; border: 1px solid #fef08a;`;
-      default: return css`background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;`;
+      default: return css`background: ${theme.colors.background}; color: ${theme.colors.text.secondary}; border: 1px solid ${theme.colors.border};`;
     }
   }}
 `;
@@ -179,7 +179,7 @@ export const SeverityTag = styled.span<{ $sev: string }>`
 export const StatusTag = styled.span<{ $sts: string }>`
   ${badgeBase};
   ${({ $sts }) => {
-    switch($sts) {
+    switch ($sts) {
       case "resuelta": return css`background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0;`;
       case "en reparación": return css`background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;`;
       default: return css`background: #fef2f2; color: #991b1b; border: 1px solid #fecaca;`;
@@ -189,13 +189,13 @@ export const StatusTag = styled.span<{ $sts: string }>`
 
 export const Description = styled.p`
   font-size: 14px;
-  color: #334155;
+  color: ${({ theme }) => theme.colors.text.primary};
   line-height: 1.5;
   margin: 0;
-  background: #f8fafc;
+  background: ${({ theme }) => theme.colors.background};
   padding: 12px;
   border-radius: 8px;
-  border: 1px solid #f1f5f9;
+  border: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 export const InfoList = styled.div`
@@ -203,19 +203,19 @@ export const InfoList = styled.div`
   flex-direction: column;
   gap: 6px;
   font-size: 13px;
-  color: #64748b;
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-top: auto;
   padding-top: 12px;
-  border-top: 1px dashed #e2e8f0;
+  border-top: 1px dashed ${({ theme }) => theme.colors.border};
 
   p { margin: 0; display: flex; align-items: center; gap: 6px; }
-  strong { color: #334155; font-weight: 600; }
+  strong { color: ${({ theme }) => theme.colors.text.primary}; font-weight: 600; }
 `;
 
 export const LoadingText = styled.div`
   text-align: center;
   padding: 60px;
-  color: #94a3b8;
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 16px;
 `;
 
@@ -234,13 +234,13 @@ export const Modal = styled.div`
 `;
 
 export const ModalContent = styled.div`
-  background: white;
+  background: ${({ theme }) => theme.colors.card};
   border-radius: 24px;
   width: 100%;
   max-width: 500px;
   padding: 32px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  border: 1px solid #e2e8f0;
+  border: 1px solid ${({ theme }) => theme.colors.border};
   max-height: 90vh;
   overflow-y: auto;
 `;
@@ -248,10 +248,10 @@ export const ModalContent = styled.div`
 export const ModalTitle = styled.h2`
   font-size: 24px;
   font-weight: 800;
-  color: #0f172a;
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0 0 24px 0;
   padding-bottom: 16px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 export const CloseIconButton = styled.button`
@@ -261,10 +261,10 @@ export const CloseIconButton = styled.button`
   background: transparent;
   border: none;
   font-size: 24px;
-  color: #94a3b8;
+  color: ${({ theme }) => theme.colors.text.tertiary};
   cursor: pointer;
   transition: 0.2s;
-  &:hover { color: #475569; transform: rotate(90deg); }
+  &:hover { color: ${({ theme }) => theme.colors.text.secondary}; transform: rotate(90deg); }
 `;
 
 // --- FORM ---
@@ -283,7 +283,7 @@ export const Field = styled.div`
 export const Label = styled.label`
   font-size: 13px;
   font-weight: 600;
-  color: #334155;
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 export const TextArea = styled.textarea`
@@ -297,19 +297,19 @@ export const ButtonGroup = styled.div`
   gap: 12px;
   margin-top: 12px;
   padding-top: 24px;
-  border-top: 1px solid #f1f5f9;
+  border-top: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 export const CancelButton = styled.button`
   flex: 1;
   padding: 12px;
   border-radius: 10px;
-  background: white;
-  border: 1px solid #cbd5e1;
-  color: #475569;
+  background: ${({ theme }) => theme.colors.card};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-weight: 600;
   cursor: pointer;
-  &:hover { background: #f8fafc; color: #1e293b; }
+  &:hover { background: ${({ theme }) => theme.colors.background}; color: ${({ theme }) => theme.colors.text.primary}; }
 `;
 
 export const SubmitButton = styled.button`

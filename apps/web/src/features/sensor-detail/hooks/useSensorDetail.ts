@@ -13,9 +13,7 @@ export function useSensorDetail(id: number, navigate: NavigateFunction) {
 
     // Restauramos el estado para fallas
     const [failures, setFailures] = useState<Failure[]>([]);
-
     const [chartData, setChartData] = useState<Record<string, any[]>>({});
-
     const sensorMap = useReadingsStore((s) => s.sensorMap);
 
     // 🔹 1. Cargar datos estáticos del sensor y sus fallas históricas

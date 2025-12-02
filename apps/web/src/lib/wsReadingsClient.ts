@@ -8,13 +8,42 @@ let reconnectAttempt = 0;
 
 const listeners = new Set<ReadingListener>();
 
-function getWsUrl(): string {
-	// Same logic you had in the hook
-	if (window.location.hostname === "localhost") {
-		return "ws://localhost:5000/ws";
-	}
-	return "ws://api:5000/ws";
+// export function getWsUrl(): string {
+//     // 1. Detectar si la web se cargó por HTTP o HTTPS (para usar ws o wss)
+//     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+
+//     // 2. Obtener el hostname actual automáticamente
+//     // Si entras por localhost, esto vale "localhost"
+//     // Si entras por 192.168.1.15, esto vale "192.168.1.15"
+//     const host = window.location.hostname;
+
+//     // 3. Definir el puerto del backend
+//     // NOTA: En tu código anterior usabas el 3000. 
+//     // Si cambiaste al 5000, déjalo así. Si no, cámbialo a 3000.
+//     const port = "5000"; 
+
+//     return `${protocol}//${host}:${port}/ws`;
+// }
+
+export function getWsUrl(): string {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const host = window.location.hostname;
+
+    // Localhost (dev normal)
+    if (host === "localhost" || host === "127.0.0.1") {
+        return `${protocol}//localhost:5000/ws`;
+    }
+
+    // LAN (10.x.x.x , 192.168.x.x)
+    if (/^(10\.|192\.168\.)/.test(host)) {
+        // Usa exactamente la IP desde donde entró el usuario
+        return `${protocol}//${host}:5000/ws`;
+    }
+
+    // Todavía no manejamos producción aquí
+    return `${protocol}//${host}:5000/ws`;
 }
+
 
 function handleMessage(event: MessageEvent) {
 	try {

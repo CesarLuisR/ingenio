@@ -8,7 +8,7 @@ const fadeIn = keyframes`
 
 export const Container = styled.div`
     padding: 2rem 3rem;
-    background: #f8fafc; /* Slate-50 */
+    background: ${({ theme }) => theme.colors.background}; /* Slate-50 */
     min-height: 100vh;
     font-family: 'Inter', sans-serif;
     animation: ${fadeIn} 0.5s ease-out;
@@ -20,19 +20,19 @@ export const Header = styled.div`
     align-items: flex-end;
     margin-bottom: 2.5rem;
     padding-bottom: 1.5rem;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 export const Title = styled.h1`
     font-size: 2.25rem;
     font-weight: 800;
-    color: #0f172a;
+    color: ${({ theme }) => theme.colors.text.primary};
     margin: 0;
     letter-spacing: -0.02em;
 `;
 
 export const Subtitle = styled.p`
-    color: #64748b;
+    color: ${({ theme }) => theme.colors.text.secondary};
     margin-top: 0.5rem;
     font-size: 1rem;
     font-weight: 500;
@@ -50,12 +50,12 @@ export const ConnectionBadge = styled.div<{ status: "connecting" | "connected" |
     align-items: center;
     gap: 6px;
     padding: 6px 12px;
-    background: white;
-    border: 1px solid #e2e8f0;
+    background: ${({ theme }) => theme.colors.card};
+    border: 1px solid ${({ theme }) => theme.colors.border};
     border-radius: 20px;
     font-size: 0.85rem;
     font-weight: 600;
-    color: #475569;
+    color: ${({ theme }) => theme.colors.text.secondary};
     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 
     &::before {
@@ -63,11 +63,11 @@ export const ConnectionBadge = styled.div<{ status: "connecting" | "connected" |
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        background-color: ${p => 
-            p.status === 'connected' ? '#22c55e' : 
+        background-color: ${p =>
+        p.status === 'connected' ? '#22c55e' :
             p.status === 'connecting' ? '#eab308' : '#ef4444'};
-        box-shadow: 0 0 0 2px ${p => 
-            p.status === 'connected' ? '#dcfce7' : 
+        box-shadow: 0 0 0 2px ${p =>
+        p.status === 'connected' ? '#dcfce7' :
             p.status === 'connecting' ? '#fef9c3' : '#fee2e2'};
     }
 `;
@@ -82,9 +82,9 @@ export const HealthBadge = styled.div<{ status: "ok" | "warning" | "critical" | 
     color: white;
     background: ${p =>
         p.status === "ok" ? "linear-gradient(135deg, #16a34a, #15803d)" :
-        p.status === "warning" ? "linear-gradient(135deg, #ca8a04, #a16207)" :
-        p.status === "critical" ? "linear-gradient(135deg, #dc2626, #b91c1c)" :
-        "#94a3b8"};
+            p.status === "warning" ? "linear-gradient(135deg, #ca8a04, #a16207)" :
+                p.status === "critical" ? "linear-gradient(135deg, #dc2626, #b91c1c)" :
+                    "#94a3b8"};
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 `;
 
@@ -93,7 +93,7 @@ export const HealthBadge = styled.div<{ status: "ok" | "warning" | "critical" | 
 export const SectionTitle = styled.h2`
     font-size: 1.25rem;
     font-weight: 700;
-    color: #334155;
+    color: ${({ theme }) => theme.colors.text.primary};
     margin: 2.5rem 0 1.5rem 0;
     display: flex;
     align-items: center;
@@ -121,10 +121,10 @@ export const MetricsGrid = styled.div`
 `;
 
 export const MetricCard = styled.div`
-    background: white;
+    background: ${({ theme }) => theme.colors.card};
     padding: 1.5rem;
     border-radius: 16px;
-    border: 1px solid #f1f5f9;
+    border: 1px solid ${({ theme }) => theme.colors.border};
     box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
 
@@ -137,7 +137,7 @@ export const MetricCard = styled.div`
 export const MetricLabel = styled.div`
     font-size: 0.75rem;
     font-weight: 700;
-    color: #64748b;
+    color: ${({ theme }) => theme.colors.text.secondary};
     text-transform: uppercase;
     letter-spacing: 0.05em;
     margin-bottom: 0.5rem;
@@ -146,24 +146,24 @@ export const MetricLabel = styled.div`
 export const MetricValue = styled.div`
     font-size: 2rem;
     font-weight: 800;
-    color: #0f172a;
+    color: ${({ theme }) => theme.colors.text.primary};
     line-height: 1.1;
 `;
 
 export const MetricUnit = styled.div`
     font-size: 0.875rem;
     font-weight: 500;
-    color: #94a3b8;
+    color: ${({ theme }) => theme.colors.text.tertiary};
     margin-top: 0.5rem;
 `;
 
 /* --- CHARTS & LISTS --- */
 
 export const ChartContainer = styled.div`
-    background: white;
+    background: ${({ theme }) => theme.colors.card};
     padding: 1.5rem;
     border-radius: 16px;
-    border: 1px solid #f1f5f9;
+    border: 1px solid ${({ theme }) => theme.colors.border};
     box-shadow: 0 2px 4px rgba(0,0,0,0.02);
     min-height: 350px;
 `;
@@ -181,7 +181,7 @@ export const Loader = styled.div`
     justify-content: center;
     padding: 4rem;
     font-size: 1.125rem;
-    color: #64748b;
+    color: ${({ theme }) => theme.colors.text.secondary};
     font-weight: 500;
 `;
 
@@ -200,7 +200,7 @@ export const Card = styled(MetricCard)`
     cursor: pointer;
     border-left: 4px solid transparent;
     &:hover {
-        border-left-color: #3b82f6;
+        border-left-color: ${({ theme }) => theme.colors.accent.primary};
     }
 `;
 
