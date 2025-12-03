@@ -75,10 +75,10 @@ export async function createUsers() {
         console.log("ℹ️ Usuario admin ya existe");
     }
 
+    console.log("🎉 Setup inicial completado.");
+}
 
-    // --------------------------------------------
-    // 4. Crear usuario superadmin si no existe
-    // --------------------------------------------
+export async function createSuperAdmin() {
     const superadmin = await prisma.user.findUnique({
         where: { email: "superadmin@admin.com" }
     });
@@ -99,10 +99,4 @@ export async function createUsers() {
     } else {
         console.log("ℹ️ Usuario superadmin ya existe");
     }
-
-
-    // --------------------------------------------
-    // LOG FINAL
-    // --------------------------------------------
-    console.log("🎉 Setup inicial completado.");
 }
