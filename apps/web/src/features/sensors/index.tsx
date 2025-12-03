@@ -39,7 +39,11 @@ import {
     GhostButton,
     DangerTextButton,
     Loading,
-    BadgeCount
+    BadgeCount,
+    PaginationWrapper,
+    PaginationInfo,
+    PaginationButtons,
+    PaginationButton
 } from "./styled";
 
 export default function Sensores() {
@@ -416,57 +420,29 @@ export default function Sensores() {
 
                     {/* ---------------- PAGINACIÓN ---------------- */}
                     {totalItems > 0 && (
-                        <div
-                            style={{
-                                marginTop: 24,
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: "center",
-                                padding: "16px 20px",
-                                background: "#f1f5f9",
-                                borderRadius: 12,
-                                border: "1px solid #e2e8f0",
-                            }}
-                        >
-                            <span style={{ fontSize: 14, color: "#475569" }}>
+                        <PaginationWrapper>
+                            <PaginationInfo>
                                 Página {page} de {totalPages} — {totalItems} sensores
-                            </span>
+                            </PaginationInfo>
 
-                            <div style={{ display: "flex", gap: 12 }}>
-                                <button
+                            <PaginationButtons>
+                                <PaginationButton
                                     onClick={prevPage}
                                     disabled={!canPrev}
-                                    style={{
-                                        padding: "8px 14px",
-                                        background: canPrev ? "#e2e8f0" : "#cbd5e1",
-                                        border: "none",
-                                        borderRadius: 8,
-                                        fontWeight: 600,
-                                        cursor: canPrev ? "pointer" : "not-allowed",
-                                        transition: "0.2s",
-                                    }}
                                 >
                                     ⬅ Anterior
-                                </button>
+                                </PaginationButton>
 
-                                <button
+                                <PaginationButton
+                                    $primary
                                     onClick={nextPage}
                                     disabled={!canNext}
-                                    style={{
-                                        padding: "8px 14px",
-                                        background: canNext ? "#3b82f6" : "#93c5fd",
-                                        color: "white",
-                                        border: "none",
-                                        borderRadius: 8,
-                                        fontWeight: 600,
-                                        cursor: canNext ? "pointer" : "not-allowed",
-                                        transition: "0.2s",
-                                    }}
                                 >
                                     Siguiente ➡
-                                </button>
-                            </div>
-                        </div>
+                                </PaginationButton>
+                            </PaginationButtons>
+                        </PaginationWrapper>
+
                     )}
                 </>
             )}

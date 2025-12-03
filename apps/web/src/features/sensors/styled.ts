@@ -582,3 +582,65 @@ export const DeleteButton = styled.button`
     color: #ef4444;
   }
 `;
+
+export const PaginationWrapper = styled.div`
+  margin-top: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  background: ${({ theme }) => theme.colors.card};
+  border-radius: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+`;
+
+export const PaginationInfo = styled.span`
+  font-size: 14px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+`;
+
+export const PaginationButtons = styled.div`
+  display: flex;
+  gap: 12px;
+`;
+
+export const PaginationButton = styled.button<{ $primary?: boolean }>`
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
+  border: none;
+
+  background: ${({ $primary, theme }) =>
+    $primary
+      ? theme.colors.accent.primary
+      : theme.mode === "dark"
+      ? "#1e293b"
+      : "#e2e8f0"};
+
+  color: ${({ $primary }) =>
+    $primary ? "white" : undefined};
+
+  &:hover {
+    background: ${({ $primary, theme }) =>
+      $primary
+        ? theme.colors.accent.hover
+        : theme.mode === "dark"
+        ? "#334155"
+        : "#cbd5e1"};
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+    background: ${({ $primary, theme }) =>
+      $primary
+        ? theme.mode === "dark"
+          ? "#475569"
+          : "#93c5fd"
+        : theme.mode === "dark"
+        ? "#334155"
+        : "#cbd5e1"};
+  }
+`;

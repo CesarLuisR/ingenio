@@ -1,4 +1,4 @@
-import { InfoSection } from "../styled";
+import { InfoSection, FailuresList, FailureItem, FailureTitle, FailureMeta } from "../styled";
 import { ROLES, type Failure } from "../../../types";
 import { useSessionStore } from "../../../store/sessionStore";
 
@@ -19,7 +19,7 @@ export function SensorFailures({ items }: SensorFailuresProps) {
 			{items.length === 0 && <p>No se han detectado fallas.</p>}
 
 			{items.length > 0 && (
-				<ul style={{ listStyle: "none", padding: 0, marginTop: "1rem" }}>
+				<FailuresList>
 					{items.map((f) => {
 						const occurred = new Date(f.occurredAt).toLocaleString();
 						const resolved = f.resolvedAt
@@ -27,90 +27,44 @@ export function SensorFailures({ items }: SensorFailuresProps) {
 							: null;
 
 						return (
-							<li
-								key={f.id}
-								style={{
-									padding: "0.9rem 1rem",
-									marginBottom: "0.75rem",
-									borderRadius: "8px",
-									background: "#fff7f7",
-									border: "1px solid #fecaca",
-								}}
-							>
-								<div
-									style={{
-										fontWeight: 600,
-										color: "#991b1b",
-										fontSize: "1rem",
-									}}
-								>
+							<FailureItem key={f.id}>
+								<FailureTitle>
 									{f.description}
-								</div>
+								</FailureTitle>
 
-								<div
-									style={{
-										marginTop: "0.35rem",
-										color: "#6b7280",
-										fontSize: "0.9rem",
-									}}
-								>
+								<FailureMeta>
 									⚙️ Severidad:{" "}
 									<b style={{ textTransform: "capitalize" }}>
 										{f.severity}
 									</b>
-								</div>
+								</FailureMeta>
 
-								<div
-									style={{
-										marginTop: "0.2rem",
-										color: "#6b7280",
-										fontSize: "0.9rem",
-									}}
-								>
+								<FailureMeta>
 									📌 Estado:{" "}
 									<b style={{ textTransform: "capitalize" }}>
 										{f.status}
 									</b>
-								</div>
+								</FailureMeta>
 
-								<div
-									style={{
-										marginTop: "0.2rem",
-										color: "#475569",
-										fontSize: "0.9rem",
-									}}
-								>
+								<FailureMeta>
 									🕒 Ocurrió: <b>{occurred}</b>
-								</div>
+								</FailureMeta>
 
 								{resolved && (
-									<div
-										style={{
-											marginTop: "0.2rem",
-											color: "#475569",
-											fontSize: "0.9rem",
-										}}
-									>
+									<FailureMeta>
 										✅ Resuelta: <b>{resolved}</b>
-									</div>
+									</FailureMeta>
 								)}
 
 								{!resolved && (
-									<div
-										style={{
-											marginTop: "0.2rem",
-											color: "#b91c1c",
-											fontSize: "0.9rem",
-											fontWeight: 500,
-										}}
-									>
+									<FailureMeta style={{ color: "#b91c1c", fontWeight: 500 }}>
 										⛔ Aún no resuelta
-									</div>
+									</FailureMeta>
 								)}
-							</li>
+							</FailureItem>
 						);
 					})}
-				</ul>
+				</FailuresList>
 			)}
 		</InfoSection>
 	);

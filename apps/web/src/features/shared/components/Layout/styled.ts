@@ -143,7 +143,7 @@ export const Nav = styled.nav`
   &::-webkit-scrollbar-thumb { background: ${({ theme }) => theme.colors.border}; border-radius: 4px; }
 `;
 
-export const NavLinkStyled = styled(Link)<{ $active: boolean }>`
+export const NavLinkStyled = styled(Link) <{ $active: boolean }>`
   display: flex;
   align-items: center;
   gap: 12px;
@@ -210,7 +210,7 @@ export const MobileBottomNav = styled.nav`
   }
 `;
 
-export const MobileNavItem = styled(Link)<{ $active: boolean }>`
+export const MobileNavItem = styled(Link) <{ $active: boolean }>`
   display: flex;
   flex-direction: column;
   align-items: center;

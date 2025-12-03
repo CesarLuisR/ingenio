@@ -15,7 +15,8 @@ import {
     ChartGrid,
     ChartCard,
     MetricHeader,
-    StatusBadge
+    StatusBadge,
+    ChartFooter
 } from "../styled";
 
 interface SensorChartsProps {
@@ -135,14 +136,15 @@ const SingleMetricChart = ({ title, dataKey, data, colorIndex, latestValue, stat
                         
                         <Tooltip
                             contentStyle={{
-                                backgroundColor: "rgba(255, 255, 255, 0.95)",
+                                backgroundColor: "var(--bg-card, #ffffff)",
                                 borderRadius: "8px",
-                                border: "1px solid #e2e8f0",
+                                border: "1px solid var(--border-color, #e2e8f0)",
                                 boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
                                 fontSize: "12px",
                                 fontWeight: 600,
+                                color: "var(--text-primary, #0f172a)"
                             }}
-                            itemStyle={{ color: "#1e293b" }}
+                            itemStyle={{ color: "var(--text-primary, #0f172a)" }}
                             formatter={(val: number) => [val.toFixed(2), title]}
                             labelStyle={{ color: "#64748b", marginBottom: 4 }}
                         />
@@ -190,18 +192,10 @@ const SingleMetricChart = ({ title, dataKey, data, colorIndex, latestValue, stat
             
             {/* Pie de tarjeta con información de límites si existen */}
             {(limits?.max !== undefined || limits?.min !== undefined) && (
-                 <div style={{ 
-                     marginTop: 12, 
-                     paddingTop: 12, 
-                     borderTop: '1px dashed #f1f5f9', 
-                     display: 'flex', 
-                     gap: 16, 
-                     fontSize: 11, 
-                     color: '#64748b' 
-                 }}>
+                 <ChartFooter>
                     {limits.max !== undefined && <span>Limite Alto: <strong>{limits.max}</strong></span>}
                     {limits.min !== undefined && <span>Limite Bajo: <strong>{limits.min}</strong></span>}
-                 </div>
+                 </ChartFooter>
             )}
         </ChartCard>
     );

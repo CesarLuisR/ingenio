@@ -663,3 +663,72 @@ export const EmptyState = styled.div`
   color: ${({ theme }) => theme.colors.text.tertiary};
   font-style: italic;
 `;
+
+// --- TABLA PROFESIONAL ---
+export const TableContainer = styled.div`
+  width: 100%;
+  overflow-x: auto; /* Permite scroll horizontal en móviles */
+  border-radius: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.card};
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  margin-bottom: 20px;
+`;
+
+export const Table = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px; /* Asegura que no se aplaste en pantallas pequeñas */
+  font-size: 14px;
+`;
+
+export const Thead = styled.thead`
+  background: ${({ theme }) => theme.colors.background};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.border};
+`;
+
+export const Th = styled.th`
+  text-align: left;
+  padding: 16px;
+  font-size: 12px;
+  font-weight: 700;
+  color: ${({ theme }) => theme.colors.text.tertiary};
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+`;
+
+export const Tr = styled.tr`
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  transition: background-color 0.2s;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background-color: ${({ theme }) => theme.colors.background}; /* Color sutil al pasar el mouse */
+  }
+`;
+
+export const Td = styled.td`
+  padding: 14px 16px;
+  color: ${({ theme }) => theme.colors.text.primary};
+  vertical-align: middle;
+
+  &.strong {
+    font-weight: 600;
+  }
+  
+  &.numeric {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace; /* Fuente monoespaciada para números */
+    font-size: 13px;
+  }
+
+  &.actions {
+    text-align: right;
+  }
+`;
+
+// Reutilizamos tu TypeTag pero lo ajustamos ligeramente si es necesario
+// (Puedes mantener el que ya tenías, funciona bien en tablas)

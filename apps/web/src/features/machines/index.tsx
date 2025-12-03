@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import styled from "styled-components";
 
 // Hooks y Servicios
 import { useMachines, type MachineWithRelations } from "./hooks/useMachine";
@@ -32,63 +31,12 @@ import {
   ResetFiltersButton,
   SortDirButton,
   TextInput,
+  SelectInput,
+  SearchButton,
+  PaginationContainer,
+  PageInfo,
+  NavButton,
 } from "./styled";
-
-// --- ESTILOS DE PAGINACIÓN ---
-const PaginationContainer = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  gap: 12px;
-  margin-top: 24px;
-  padding: 16px 24px;
-  background-color: #f8fafc;
-  border-top: 1px solid #e2e8f0;
-  border-radius: 0 0 12px 12px;
-`;
-
-const PageInfo = styled.span`
-  font-size: 14px;
-  color: #64748b;
-  font-weight: 500;
-`;
-
-const NavButton = styled.button`
-  padding: 6px 12px;
-  background: white;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  color: #334155;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover:not(:disabled) {
-    background: #f1f5f9;
-    color: #0f172a;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    background: #f8fafc;
-  }
-`;
-
-const SearchButton = styled.button`
-  background-color: #3b82f6;
-  color: white;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  font-size: 14px;
-  &:hover {
-    background-color: #2563eb;
-  }
-`;
 
 type SortField = "name" | "code" | "createdAt";
 
@@ -273,21 +221,14 @@ export default function MachinesPage() {
         />
 
         {/* SELECT DE ORDENAMIENTO */}
-        <select
+        <SelectInput
           value={tempSortField}
           onChange={(e) => setTempSortField(e.target.value as SortField)}
-          style={{
-            padding: "8px 12px",
-            borderRadius: "10px",
-            border: "1px solid #cbd5e1",
-            fontSize: "14px",
-            background: "white",
-          }}
         >
           <option value="name">Ordenar por nombre</option>
           <option value="code">Ordenar por código</option>
           <option value="createdAt">Ordenar por fecha de creación</option>
-        </select>
+        </SelectInput>
 
         <FiltersRight>
           {/* BOTÓN DE DIRECCIÓN (ASC/DESC) */}
@@ -310,7 +251,7 @@ export default function MachinesPage() {
 
           {/* BOTÓN DE ACCIÓN PRINCIPAL */}
           <SearchButton onClick={handleApplyFilters}>
-            🔍 Buscar
+             Buscar
           </SearchButton>
 
           {/* BOTÓN DE RESET */}

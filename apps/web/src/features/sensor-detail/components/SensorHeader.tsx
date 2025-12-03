@@ -25,7 +25,7 @@ export function SensorHeader({ name, status }: SensorHeaderProps) {
 			</Title>
 			<Sub>
 				Estado actual:{" "}
-				<StatusBadge status={status || "Inactivo"}>
+				<StatusBadge $status={status || "Inactivo"}>
 					{getStatusLabel(status)}
 				</StatusBadge>
 			</Sub>

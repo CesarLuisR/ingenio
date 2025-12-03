@@ -9,7 +9,7 @@ export const fadeIn = keyframes`
 // --- Layout Principal ---
 export const Page = styled.div`
   padding: 32px 40px;
-  background-color: #f8fafc; /* Slate 50 */
+  background-color: ${({ theme }) => theme.colors.background};
   min-height: 100vh;
   font-family: 'Inter', sans-serif;
   animation: ${fadeIn} 0.5s cubic-bezier(0.4, 0, 0.2, 1);
@@ -26,7 +26,7 @@ export const HeaderContainer = styled.div`
   align-items: flex-end;
   margin-bottom: 32px;
   padding-bottom: 24px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 export const TitleBlock = styled.div`
@@ -38,14 +38,14 @@ export const TitleBlock = styled.div`
 export const Title = styled.h1`
   font-size: 32px;
   font-weight: 800;
-  color: #0f172a;
+  color: ${({ theme }) => theme.colors.text.primary};
   margin: 0;
   letter-spacing: -0.02em;
   line-height: 1.1;
 `;
 
 export const Sub = styled.p`
-  color: #64748b;
+  color: ${({ theme }) => theme.colors.text.secondary};
   font-size: 14px;
   margin: 0;
   font-weight: 500;
@@ -59,7 +59,7 @@ export const CategorySection = styled.section`
 export const CategoryTitle = styled.h2`
   font-size: 18px;
   font-weight: 700;
-  color: #334155;
+  color: ${({ theme }) => theme.colors.text.secondary};
   margin-bottom: 16px;
   display: flex;
   align-items: center;
@@ -69,7 +69,7 @@ export const CategoryTitle = styled.h2`
     content: '';
     flex: 1;
     height: 1px;
-    background: #e2e8f0;
+    background: ${({ theme }) => theme.colors.border};
   }
 `;
 
@@ -87,7 +87,7 @@ export const ChartGrid = styled.div`
 // --- Tarjeta de Gráfico (Card Inteligente) ---
 // Recibe $status para cambiar el borde de color si hay alerta
 export const ChartCard = styled.div<{ $status?: string }>`
-  background: white;
+  background: ${({ theme }) => theme.colors.card};
   border-radius: 16px;
   padding: 24px;
   transition: all 0.2s ease;
@@ -95,10 +95,10 @@ export const ChartCard = styled.div<{ $status?: string }>`
   overflow: hidden;
 
   /* Lógica de Borde y Sombra Dinámica */
-  border: 1px solid ${({ $status }) => {
+  border: 1px solid ${({ $status, theme }) => {
     if ($status === 'critical') return '#fecaca'; // Rojo suave
     if ($status === 'warning') return '#fcd34d'; // Amarillo suave
-    return '#f1f5f9'; // Gris normal
+    return theme.colors.border; // Gris normal
   }};
   
   box-shadow: ${({ $status }) => {
@@ -116,15 +116,29 @@ export const ChartCard = styled.div<{ $status?: string }>`
     bottom: 0;
     width: 4px;
     background: ${({ $status }) => {
-      if ($status === 'critical') return '#dc2626';
-      if ($status === 'warning') return '#d97706';
-      return 'transparent'; 
-    }};
+    if ($status === 'critical') return '#dc2626';
+    if ($status === 'warning') return '#d97706';
+    return 'transparent';
+  }};
   }
 
   &:hover {
     transform: translateY(-2px);
     box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  }
+`;
+
+export const ChartFooter = styled.div`
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed ${({ theme }) => theme.colors.border};
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+
+  strong {
+    color: ${({ theme }) => theme.colors.text.primary};
   }
 `;
 
@@ -145,7 +159,7 @@ export const MetricHeader = styled.div`
     margin: 0;
     font-size: 14px;
     font-weight: 600;
-    color: #64748b;
+    color: ${({ theme }) => theme.colors.text.secondary};
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -153,7 +167,7 @@ export const MetricHeader = styled.div`
   .current-value {
     font-size: 28px;
     font-weight: 800;
-    color: #0f172a;
+    color: ${({ theme }) => theme.colors.text.primary};
     line-height: 1;
     font-feature-settings: "tnum";
     display: flex;
@@ -171,30 +185,36 @@ export const StatusBadge = styled.span<{ $status?: string }>`
   letter-spacing: 0.5px;
   width: fit-content;
 
-  ${({ $status }) => {
+  ${({ $status, theme }) => {
     if ($status === 'critical') return css`background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;`;
     if ($status === 'warning') return css`background: #fffbeb; color: #d97706; border: 1px solid #fcd34d;`;
-    // OK (Default)
-    return css`background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;`;
+    if ($status === 'ok') return css`background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;`;
+
+    // Default / Unknown / Inactive
+    return css`
+      background: ${theme.colors.background}; 
+      color: ${theme.colors.text.secondary}; 
+      border: 1px solid ${theme.colors.border};
+    `;
   }}
 `;
 
 // --- Elementos adicionales (Legacy/Utilidad) ---
 export const InfoSection = styled.div`
-  background-color: white;
+  background-color: ${({ theme }) => theme.colors.card};
   border-radius: 16px;
   padding: 24px;
   margin-bottom: 24px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid ${({ theme }) => theme.colors.border};
   box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 
   h2 {
     font-size: 18px;
     font-weight: 700;
-    color: #0f172a;
+    color: ${({ theme }) => theme.colors.text.primary};
     margin-bottom: 16px;
     padding-bottom: 12px;
-    border-bottom: 1px solid #f1f5f9;
+    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   }
 `;
 
@@ -206,4 +226,85 @@ export const CodeBox = styled.pre`
   font-size: 13px;
   overflow-x: auto;
   font-family: 'Fira Code', monospace;
+`;
+
+// --- KPI Cards (SensorMetrics) ---
+export const KpiGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+`;
+
+export const KpiCardStyled = styled.div<{ $clickable?: boolean }>`
+  background: ${({ theme }) => theme.colors.card};
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: ${({ $clickable }) => ($clickable ? "pointer" : "default")};
+  transition: transform 0.1s ease-in-out;
+
+  &:hover {
+    transform: ${({ $clickable }) => ($clickable ? "translateY(-2px)" : "none")};
+  }
+`;
+
+export const KpiLabel = styled.span`
+  font-size: 12px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-weight: 600;
+  text-transform: uppercase;
+`;
+
+export const KpiValueRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+export const KpiValue = styled.span<{ $color?: string }>`
+  font-size: 18px;
+  font-weight: 700;
+  color: ${({ $color, theme }) => $color || theme.colors.text.primary};
+`;
+
+export const KpiDot = styled.div<{ $color: string }>`
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: ${({ $color }) => $color};
+`;
+
+// --- Failures List (SensorFailures) ---
+export const FailuresList = styled.ul`
+  list-style: none;
+  padding: 0;
+  margin-top: 1rem;
+`;
+
+export const FailureItem = styled.li`
+  padding: 0.9rem 1rem;
+  margin-bottom: 0.75rem;
+  border-radius: 8px;
+  background: ${({ theme }) => theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.1)' : '#fff7f7'};
+  border: 1px solid ${({ theme }) => theme.mode === 'dark' ? 'rgba(239, 68, 68, 0.2)' : '#fecaca'};
+`;
+
+export const FailureTitle = styled.div`
+  font-weight: 600;
+  color: ${({ theme }) => theme.mode === 'dark' ? '#fca5a5' : '#991b1b'};
+  font-size: 1rem;
+`;
+
+export const FailureMeta = styled.div`
+  margin-top: 0.35rem;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: 0.9rem;
+  
+  b {
+    color: ${({ theme }) => theme.colors.text.primary};
+  }
 `;

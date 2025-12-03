@@ -9,10 +9,9 @@ const fadeIn = keyframes`
 // --- Layout General ---
 export const Container = styled.div`
   padding: 32px 40px;
-  max-width: 1600px;
-  margin: 0 auto;
+  max-width: 100%; /* Ancho completo para la tabla */
   min-height: 100vh;
-  background-color: ${({ theme }) => theme.colors.background}; /* Slate 50 */
+  background-color: ${({ theme }) => theme.colors.background};
   font-family: 'Inter', sans-serif;
   animation: ${fadeIn} 0.4s ease-out;
 
@@ -40,11 +39,11 @@ export const Title = styled.h1`
 `;
 
 export const Button = styled.button`
-  padding: 12px 24px;
+  padding: 10px 20px;
   background: ${({ theme }) => theme.colors.accent.primary};
   color: white;
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
   font-size: 14px;
@@ -67,18 +66,18 @@ export const FiltersBar = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 16px;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
   background: ${({ theme }) => theme.colors.card};
   padding: 16px;
-  border-radius: 16px;
+  border-radius: 12px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   box-shadow: 0 1px 3px rgba(0,0,0,0.02);
 `;
 
 const inputStyles = css`
   width: 100%;
-  padding: 12px 16px;
-  border-radius: 10px;
+  padding: 10px 14px;
+  border-radius: 8px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   background: ${({ theme }) => theme.colors.background};
   font-size: 14px;
@@ -91,137 +90,115 @@ const inputStyles = css`
     background: ${({ theme }) => theme.colors.card};
     box-shadow: 0 0 0 3px ${({ theme }) => theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.1)'};
   }
-  &:hover { border-color: ${({ theme }) => theme.colors.text.tertiary}; }
 `;
 
-export const SelectInput = styled.select`
-  ${inputStyles};
-  cursor: pointer;
-`;
+export const SelectInput = styled.select`${inputStyles}; cursor: pointer;`;
+export const TextInput = styled.input`${inputStyles};`;
 
-export const TextInput = styled.input`
-  ${inputStyles};
-`;
-
-// --- Lista de Técnicos (Grid) ---
-export const TechnicianList = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 24px;
-`;
-
-export const TechnicianCard = styled.div<{ $active: boolean }>`
-  background: ${({ theme }) => theme.colors.card};
-  border-radius: 20px;
-  padding: 24px;
+// --- TABLA PROFESIONAL ---
+export const TableContainer = styled.div`
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 12px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
-  transition: all 0.2s ease;
-  position: relative;
-  overflow: hidden;
-
-  /* Indicador lateral de estado */
-  &::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
-    background: ${({ $active }) => ($active ? "#10b981" : "#cbd5e1")};
-  }
-
-  &:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05);
-    border-color: ${({ theme }) => theme.colors.border};
-  }
+  background: ${({ theme }) => theme.colors.card};
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  margin-bottom: 20px;
 `;
 
-export const CardHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 16px;
+export const Table = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 900px;
+  font-size: 14px;
 `;
 
-export const Name = styled.h3`
-  font-size: 18px;
+export const Thead = styled.thead`
+  background: ${({ theme }) => theme.colors.background};
+  border-bottom: 2px solid ${({ theme }) => theme.colors.border};
+`;
+
+export const Th = styled.th`
+  text-align: left;
+  padding: 16px;
+  font-size: 12px;
   font-weight: 700;
+  color: ${({ theme }) => theme.colors.text.tertiary};
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+`;
+
+export const Tr = styled.tr`
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  transition: background-color 0.2s;
+  &:last-child { border-bottom: none; }
+  &:hover { background-color: ${({ theme }) => theme.colors.background}; }
+`;
+
+export const Td = styled.td`
+  padding: 14px 16px;
   color: ${({ theme }) => theme.colors.text.primary};
-  margin: 0 0 4px 0;
+  vertical-align: middle;
+
+  &.strong { font-weight: 600; }
+  &.numeric { font-family: 'JetBrains Mono', monospace; font-size: 13px; }
+  &.actions { text-align: right; }
+  
+  a {
+    color: ${({ theme }) => theme.colors.accent.primary};
+    text-decoration: none;
+    &:hover { text-decoration: underline; }
+  }
 `;
 
 export const StatusBadge = styled.span<{ $active: boolean }>`
-  padding: 4px 10px;
+  padding: 3px 10px;
   border-radius: 99px;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.03em;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   
-  background: ${({ $active, theme }) => $active ? "#ecfdf5" : theme.colors.background};
-  color: ${({ $active, theme }) => $active ? "#059669" : theme.colors.text.secondary};
-  border: 1px solid ${({ $active, theme }) => $active ? "#a7f3d0" : theme.colors.border};
-`;
+  background: ${({ $active }) => $active ? "#dcfce7" : "#f1f5f9"};
+  color: ${({ $active }) => $active ? "#15803d" : "#64748b"};
+  border: 1px solid ${({ $active }) => $active ? "#bbf7d0" : "#e2e8f0"};
 
-export const InfoList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 24px;
-
-  p {
-    margin: 0;
-    font-size: 14px;
-    color: ${({ theme }) => theme.colors.text.secondary};
-    display: flex;
-    align-items: center;
-    gap: 8px;
-
-    /* Iconos simulados */
-    &::before { 
-      font-size: 16px; 
-      color: ${({ theme }) => theme.colors.text.tertiary};
-    }
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: currentColor;
   }
 `;
 
-export const Actions = styled.div`
-  display: flex;
-  gap: 8px;
-  padding-top: 16px;
-  border-top: 1px dashed ${({ theme }) => theme.colors.border};
-`;
-
-export const ActionButton = styled.button<{ $danger?: boolean }>`
-  flex: 1;
-  padding: 8px;
-  border-radius: 8px;
-  border: 1px solid transparent;
-  background: ${({ $danger, theme }) => $danger ? theme.colors.card : theme.colors.background};
-  color: ${({ $danger, theme }) => $danger ? "#ef4444" : theme.colors.text.primary};
-  font-size: 13px;
+// --- Botones de Acción (Tabla) ---
+export const TableActionButton = styled.button<{ $variant?: 'edit' | 'delete' }>`
+  background: transparent;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  margin-left: 8px;
 
-  ${({ $danger }) => $danger && css`
-    border-color: #fee2e2;
-    &:hover {
-      background: #fef2f2;
-      border-color: #fca5a5;
-      color: #b91c1c;
-    }
-  `}
-
-  ${({ $danger, theme }) => !$danger && css`
-    &:hover {
-      background: ${theme.colors.background};
-      color: ${theme.colors.text.primary};
-      border-color: ${theme.colors.border};
-    }
-  `}
+  ${({ $variant, theme }) => 
+    $variant === 'delete' 
+      ? css`
+          color: #ef4444;
+          &:hover { background: #fef2f2; border-color: #fca5a5; }
+        `
+      : css`
+          color: ${theme.colors.text.secondary};
+          &:hover { background: ${theme.colors.background}; color: ${theme.colors.text.primary}; border-color: ${theme.colors.text.tertiary}; }
+        `
+  }
 `;
 
 export const LoadingText = styled.div`
@@ -231,113 +208,77 @@ export const LoadingText = styled.div`
   font-size: 16px;
 `;
 
-// --- Modal ---
-export const Modal = styled.div`
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.65);
-  backdrop-filter: blur(4px);
+// --- Paginación ---
+export const PaginationContainer = styled.div`
   display: flex;
-  align-items: center;
   justify-content: center;
-  z-index: 100;
-  padding: 20px;
-  animation: ${fadeIn} 0.2s ease;
+  align-items: center;
+  margin-top: 24px;
+  gap: 16px;
+  padding-bottom: 40px;
+`;
+
+export const PaginationButton = styled.button`
+  background: ${({ theme }) => theme.colors.card};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  cursor: pointer;
+  
+  &:hover:not(:disabled) {
+    background: ${({ theme }) => theme.colors.background};
+    color: ${({ theme }) => theme.colors.text.primary};
+  }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+export const PaginationInfo = styled.span`
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: 0.95rem;
+  strong { color: ${({ theme }) => theme.colors.text.primary}; font-weight: 600; }
+  .total { margin-left: 8px; color: ${({ theme }) => theme.colors.text.tertiary}; font-size: 0.85em; }
+`;
+
+// --- Modal y Formulario (Se mantienen igual) ---
+export const Modal = styled.div`
+  position: fixed; inset: 0; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; animation: ${fadeIn} 0.2s ease;
 `;
 
 export const ModalContent = styled.div`
-  background: ${({ theme }) => theme.colors.card};
-  border-radius: 24px;
-  width: 100%;
-  max-width: 500px;
-  padding: 32px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  position: relative;
-  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.card}; border-radius: 16px; width: 100%; max-width: 500px; padding: 32px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); position: relative; border: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 export const ModalTitle = styled.h2`
-  font-size: 24px;
-  font-weight: 700;
-  color: ${({ theme }) => theme.colors.text.primary};
-  margin: 0 0 24px 0;
+  font-size: 20px; font-weight: 700; color: ${({ theme }) => theme.colors.text.primary}; margin: 0 0 24px 0; border-bottom: 1px solid ${({ theme }) => theme.colors.border}; padding-bottom: 16px;
 `;
 
 export const CloseButton = styled.button`
-  position: absolute;
-  top: 24px;
-  right: 24px;
-  background: transparent;
-  border: none;
-  color: ${({ theme }) => theme.colors.text.tertiary};
-  font-size: 24px;
-  cursor: pointer;
+  position: absolute; top: 24px; right: 24px; background: transparent; border: none; color: ${({ theme }) => theme.colors.text.tertiary}; font-size: 24px; cursor: pointer;
   &:hover { color: ${({ theme }) => theme.colors.text.secondary}; transform: rotate(90deg); transition: 0.2s; }
 `;
 
-// --- Formulario ---
-export const Form = styled.form`
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-`;
+export const Form = styled.form`display: flex; flex-direction: column; gap: 20px;`;
+export const FormGroup = styled.div`display: flex; flex-direction: column; gap: 8px;`;
+export const Label = styled.label`font-size: 13px; font-weight: 600; color: ${({ theme }) => theme.colors.text.primary};`;
+export const Input = styled.input`${inputStyles};`;
+export const Select = styled.select`${inputStyles};`; // Simplificado para no requerir SVG inline si no se desea
 
-export const FormGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-`;
-
-export const Label = styled.label`
-  font-size: 13px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.text.primary};
-`;
-
-export const Input = styled.input`
-  ${inputStyles};
-`;
-
-export const Select = styled.select`
-  ${inputStyles};
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-  background-position: right 0.5rem center;
-  background-repeat: no-repeat;
-  background-size: 1.5em 1.5em;
-  padding-right: 2.5rem;
-`;
-
-export const ButtonGroup = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 12px;
-`;
+export const ButtonGroup = styled.div`display: flex; justify-content: flex-end; gap: 12px; margin-top: 12px; padding-top: 20px; border-top: 1px solid ${({ theme }) => theme.colors.border};`;
 
 export const CancelButton = styled.button`
-  padding: 10px 20px;
-  border-radius: 10px;
-  font-weight: 600;
-  background: ${({ theme }) => theme.colors.card};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  color: ${({ theme }) => theme.colors.text.secondary};
-  cursor: pointer;
-  transition: 0.2s;
-
-  &:hover { background: ${({ theme }) => theme.colors.background}; color: ${({ theme }) => theme.colors.text.primary}; border-color: ${({ theme }) => theme.colors.text.tertiary}; }
+  padding: 10px 20px; border-radius: 8px; font-weight: 600; background: ${({ theme }) => theme.colors.card}; border: 1px solid ${({ theme }) => theme.colors.border}; color: ${({ theme }) => theme.colors.text.secondary}; cursor: pointer; transition: 0.2s;
+  &:hover { background: ${({ theme }) => theme.colors.background}; color: ${({ theme }) => theme.colors.text.primary}; }
 `;
 
 export const SubmitButton = styled.button`
-  padding: 10px 20px;
-  border-radius: 10px;
-  font-weight: 600;
-  background: ${({ theme }) => theme.colors.accent.primary};
-  color: white;
-  border: none;
-  cursor: pointer;
-  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
-  transition: 0.2s;
-
+  padding: 10px 20px; border-radius: 8px; font-weight: 600; background: ${({ theme }) => theme.colors.accent.primary}; color: white; border: none; cursor: pointer; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2); transition: 0.2s;
   &:hover { background: ${({ theme }) => theme.colors.accent.hover}; transform: translateY(-1px); }
 `;

@@ -18,9 +18,9 @@ export const Container = styled.div`
   margin: 0 auto;
   background-color: ${({ theme }) => theme.colors.background};
   min-height: 100vh;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: 'Inter', sans-serif;
 
-  @media (max-width: 768px) {
+  @media (max-width: 1024px) {
     padding: 20px;
   }
 `;
@@ -44,19 +44,20 @@ export const HeaderRight = styled.div`
 
 export const Title = styled.h1`
   margin: 0;
-  font-size: 36px;
+  font-size: 32px;
   font-weight: 800;
   color: ${({ theme }) => theme.colors.text.primary};
   letter-spacing: -0.02em;
-  line-height: 1.1;
+  line-height: 1.2;
 `;
 
 export const SubTitle = styled.p`
-  margin: 12px 0 0 0;
-  font-size: 15px;
+  margin: 8px 0 0 0;
+  font-size: 14px;
   color: ${({ theme }) => theme.colors.text.secondary};
   max-width: 600px;
   line-height: 1.6;
+  font-weight: 500;
 `;
 
 export const ListSummary = styled.div`
@@ -70,10 +71,10 @@ export const ListSummary = styled.div`
     border: 1px solid ${({ theme }) => theme.colors.border};
     border-radius: 9999px;
     padding: 6px 16px;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 600;
     color: ${({ theme }) => theme.colors.text.secondary};
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
     display: flex;
     align-items: center;
     gap: 6px;
@@ -84,19 +85,19 @@ export const ListSummary = styled.div`
       width: 6px;
       height: 6px;
       border-radius: 50%;
-      background-color: #cbd5e1;
+      background-color: ${({ theme }) => theme.colors.text.tertiary};
     }
 
-    &:nth-child(2)::before { background-color: #10b981; } /* Green for active */
-    &:nth-child(3)::before { background-color: #ef4444; } /* Red for inactive */
+    &:nth-child(2)::before { background-color: #10b981; } /* Green */
+    &:nth-child(3)::before { background-color: #ef4444; } /* Red */
   }
 `;
 
-// --- Botones ---
+// --- Botones Principales ---
 
 export const Button = styled.button`
   padding: 12px 24px;
-  background: ${({ theme }) => theme.colors.accent.primary};
+  background: ${({ theme }) => theme.colors.accent.primary}; /* Oscuro */
   color: #ffffff;
   border: none;
   border-radius: 12px;
@@ -106,7 +107,7 @@ export const Button = styled.button`
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.1), 0 2px 4px -1px rgba(15, 23, 42, 0.06);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   transition: all 0.2s ease;
 
   &::before {
@@ -116,9 +117,33 @@ export const Button = styled.button`
   }
 
   &:hover {
+    background: ${({ theme }) => theme.colors.accent.hover}; /* Oscuro */
     transform: translateY(-2px);
-    background: ${({ theme }) => theme.colors.accent.hover};
-    box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.15), 0 4px 6px -2px rgba(15, 23, 42, 0.05);
+    opacity: 0.95;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.15);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+`;
+
+export const SearchButton = styled.button`
+  background-color: ${({ theme }) => theme.colors.accent.primary}; /* Azul Sólido */
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease;
+
+  &:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 10px -1px rgba(0, 0, 0, 0.15);
   }
 
   &:active {
@@ -130,14 +155,14 @@ export const Button = styled.button`
 
 export const FiltersBar = styled.div`
   display: grid;
-  grid-template-columns: minmax(300px, 2fr) 1fr auto;
+  grid-template-columns: minmax(300px, 2fr) 1fr auto auto; /* Ajustado para incluir el botón de buscar */
   gap: 16px;
   align-items: center;
   padding: 8px;
   background: ${({ theme }) => theme.colors.card};
   border-radius: 16px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.01), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.01);
 
   @media (max-width: 1024px) {
     grid-template-columns: 1fr;
@@ -180,8 +205,8 @@ export const CheckboxLabel = styled.label`
     position: relative;
 
     &:checked {
-      background: #2563eb;
-      border-color: #2563eb;
+      background: ${({ theme }) => theme.colors.accent.primary};
+      border-color: ${({ theme }) => theme.colors.accent.primary};
       
       &::after {
         content: '✔';
@@ -211,23 +236,24 @@ const FilterButtonBase = styled.button`
 `;
 
 export const SortDirButton = styled(FilterButtonBase)`
-  background: ${({ theme }) => theme.colors.background};
-  border: 1px solid transparent;
+  background: ${({ theme }) => theme.colors.card}; /* Antes era background, ahora card (blanco) */
+  border: 1px solid ${({ theme }) => theme.colors.border}; /* Con borde para que se note */
   color: ${({ theme }) => theme.colors.text.secondary};
 
   &:hover {
-    background: ${({ theme }) => theme.colors.border};
+    border-color: ${({ theme }) => theme.colors.text.tertiary};
     color: ${({ theme }) => theme.colors.text.primary};
+    background: ${({ theme }) => theme.colors.background};
   }
 `;
 
 export const ResetFiltersButton = styled(FilterButtonBase)`
   background: transparent;
   border: 1px dashed ${({ theme }) => theme.colors.border};
-  color: ${({ theme }) => theme.colors.text.secondary};
+  color: ${({ theme }) => theme.colors.text.tertiary};
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.text.tertiary};
+    border-color: #fca5a5;
     color: #ef4444;
     background: #fef2f2;
   }
@@ -250,7 +276,7 @@ export const MachineCard = styled.div`
   display: flex;
   flex-direction: column;
   gap: 20px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
@@ -271,8 +297,8 @@ export const MachineCard = styled.div`
 
   &:hover {
     transform: translateY(-4px);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
-    border-color: ${({ theme }) => theme.colors.border};
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+    border-color: ${({ theme }) => theme.colors.text.tertiary};
     
     &::before {
       opacity: 1;
@@ -393,9 +419,9 @@ export const StatusTag = styled.span<{ $active: boolean }>`
   text-transform: uppercase;
   letter-spacing: 0.5px;
   
-  background: ${({ $active }) => ($active ? "rgba(16, 185, 129, 0.1)" : "rgba(239, 68, 68, 0.08)")};
+  background: ${({ $active }) => ($active ? "#ecfdf5" : "#fef2f2")};
   color: ${({ $active }) => ($active ? "#059669" : "#b91c1c")};
-  border: 1px solid ${({ $active }) => ($active ? "rgba(16, 185, 129, 0.2)" : "rgba(239, 68, 68, 0.2)")};
+  border: 1px solid ${({ $active }) => ($active ? "#a7f3d0" : "#fecaca")};
   
   display: flex;
   align-items: center;
@@ -408,7 +434,6 @@ export const StatusTag = styled.span<{ $active: boolean }>`
     height: 6px;
     border-radius: 50%;
     background-color: currentColor;
-    box-shadow: ${({ $active }) => ($active ? "0 0 8px rgba(16, 185, 129, 0.6)" : "none")};
   }
 `;
 
@@ -442,16 +467,18 @@ export const IconButton = styled.button`
   }
 `;
 
+// Este botón era el "blanco". Ahora es azul sólido.
 export const PrimaryActionButton = styled(IconButton)`
-  background: #eff6ff;
-  color: #2563eb;
-  border-color: #dbeafe;
+  background: ${({ theme }) => theme.colors.accent.primary};
+  color: white;
+  border: 1px solid transparent;
   flex: 1.5;
 
   &:hover {
-    background: #2563eb;
+    background: ${({ theme }) => theme.colors.accent.primary}; /* Mantener azul */
+    opacity: 0.9;
     color: white;
-    border-color: #2563eb;
+    border-color: transparent;
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
   }
 `;
@@ -459,7 +486,7 @@ export const PrimaryActionButton = styled(IconButton)`
 export const DangerousButton = styled(IconButton)`
   flex: 0 0 auto;
   color: #ef4444;
-  background: ${({ theme }) => theme.colors.card};
+  background: #fff;
   border-color: #fee2e2;
 
   &:hover {
@@ -469,13 +496,67 @@ export const DangerousButton = styled(IconButton)`
   }
 `;
 
+// --- Paginación ---
+
+export const PaginationContainer = styled.div`
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
+  padding: 16px 24px;
+  background-color: ${({ theme }) => theme.colors.card}; /* Fondo blanco para que no se vea sucio */
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 12px;
+`;
+
+export const PageInfo = styled.span`
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-weight: 500;
+
+  strong {
+    color: ${({ theme }) => theme.colors.text.primary};
+    font-weight: 600;
+  }
+`;
+
+export const NavButton = styled.button`
+  padding: 8px 14px;
+  background: ${({ theme }) => theme.colors.card};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: 8px;
+  color: ${({ theme }) => theme.colors.text.secondary};
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover:not(:disabled) {
+    background: ${({ theme }) => theme.colors.background};
+    border-color: ${({ theme }) => theme.colors.text.tertiary};
+    color: ${({ theme }) => theme.colors.text.primary};
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: ${({ theme }) => theme.colors.background};
+    border-color: ${({ theme }) => theme.colors.border};
+  }
+`;
+
 // --- Estados Vacíos y Carga ---
 
 export const LoadingText = styled.div`
   grid-column: 1 / -1;
   text-align: center;
   padding: 60px;
-  color: ${({ theme }) => theme.colors.text.secondary};
+  color: ${({ theme }) => theme.colors.text.tertiary};
   font-size: 16px;
   font-weight: 500;
   background: ${({ theme }) => theme.colors.card};
@@ -514,7 +595,6 @@ export const EmptyState = styled.div`
 
     &:hover {
       background: ${({ theme }) => theme.colors.border};
-      color: ${({ theme }) => theme.colors.text.primary};
     }
   }
 `;
@@ -550,7 +630,7 @@ const inputStyles = css`
   &:focus {
     outline: none;
     border-color: ${({ theme }) => theme.colors.accent.primary};
-    box-shadow: 0 0 0 4px ${({ theme }) => theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.1)'};
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
   }
 
   &:disabled {
@@ -630,10 +710,11 @@ export const ModalContent = styled.div`
   position: relative;
   max-height: 90vh;
   overflow-y: auto;
+  border: 1px solid ${({ theme }) => theme.colors.border};
   
   &::-webkit-scrollbar { width: 6px; }
   &::-webkit-scrollbar-track { background: transparent; }
-  &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  &::-webkit-scrollbar-thumb { background: ${({ theme }) => theme.colors.border}; border-radius: 3px; }
 `;
 
 export const ModalTitle = styled.h2`
@@ -702,16 +783,13 @@ export const CancelButton = styled(BaseButton)`
   }
 `;
 
-export const SubmitButton = styled(BaseButton)`
-  background: ${({ theme }) => theme.colors.accent.primary};
-  color: white;
-  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+// Exports de compatibilidad
+export const ListHeaderRow = styled.div`display: none;`;
 
-  &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.accent.hover};
-    transform: translateY(-1px);
-    box-shadow: 0 6px 10px -1px rgba(37, 99, 235, 0.3);
-  }
+export const Select = styled.select`
+  ${inputStyles}
+  cursor: pointer;
+  appearance: none;
 `;
 
 export const InlineInfoPill = styled.div`
@@ -725,11 +803,13 @@ export const InlineInfoPill = styled.div`
   border: 1px solid #bae6fd;
 `;
 
-// Exports necesarios para mantener compatibilidad pero que no se usan visualmente igual
-export const ListHeaderRow = styled.div`display: none;`;
-
-export const Select = styled.select`
-  ${inputStyles}
-  cursor: pointer;
-  appearance: none;
-`;
+ export const SubmitButton = styled(BaseButton)`
+  background: ${({ theme }) => theme.colors.accent.primary};
+  color: white;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 10px -1px rgba(37, 99, 235, 0.3);
+  }
+`; 

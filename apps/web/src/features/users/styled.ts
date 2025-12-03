@@ -1,6 +1,6 @@
 import styled, { css, keyframes } from "styled-components";
 
-// --- Animaciones ---
+/* --- Animaciones --- */
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -11,13 +11,13 @@ const modalSlide = keyframes`
   to { opacity: 1; transform: translateY(0); }
 `;
 
-// --- Layout Principal ---
+/* --- Layout Principal --- */
 export const Container = styled.div`
   padding: 32px 40px;
   max-width: 1600px;
   margin: 0 auto;
   min-height: 100vh;
-  background-color: ${({ theme }) => theme.colors.background}; /* Slate 50 */
+  background-color: ${({ theme }) => theme.colors.background};
   font-family: 'Inter', sans-serif;
   animation: ${fadeIn} 0.4s ease-out;
 
@@ -58,12 +58,11 @@ export const Button = styled.button`
   &:hover {
     background: ${({ theme }) => theme.colors.accent.hover};
     transform: translateY(-1px);
-    box-shadow: 0 8px 12px -2px rgba(37, 99, 235, 0.3);
   }
   &:active { transform: translateY(0); }
 `;
 
-// --- Tabla Estilizada ---
+/* --- Tabla Estilizada --- */
 export const TableContainer = styled.div`
   background: ${({ theme }) => theme.colors.card};
   border-radius: 16px;
@@ -117,13 +116,13 @@ export const UserName = styled.div`
   font-size: 15px;
 `;
 
+/* --- Role Badge --- */
 export const RoleBadge = styled.span<{ role: string }>`
   padding: 4px 10px;
   border-radius: 99px;
   font-size: 11px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
 
   ${({ role, theme }) => {
     switch (role) {
@@ -133,13 +132,18 @@ export const RoleBadge = styled.span<{ role: string }>`
       case 'technician':
       case 'TECNICO':
         return css`background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe;`;
-      default: // viewer
-        return css`background: ${theme.colors.background}; color: ${theme.colors.text.secondary}; border: 1px solid ${theme.colors.border};`;
+
+      default:
+        return css`
+          background: ${theme.mode === "dark" ? "#1e293b" : "#f1f5f9"};
+          color: ${theme.mode === "dark" ? "#e2e8f0" : "#475569"};
+          border: 1px solid ${theme.colors.border};
+        `;
     }
   }}
 `;
 
-// --- Acciones ---
+/* --- Acciones --- */
 export const Actions = styled.div`
   display: flex;
   gap: 8px;
@@ -149,36 +153,32 @@ export const ActionButton = styled.button<{ $danger?: boolean }>`
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 12px;
-  font-weight: 600;
   cursor: pointer;
-  border: 1px solid transparent;
   transition: all 0.2s;
+  font-weight: 600;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.card};
 
-  ${({ $danger, theme }) =>
+  ${({ $danger }) =>
     $danger
       ? css`
-          background: ${theme.colors.card};
           color: #ef4444;
-          border-color: #fecaca;
-          &:hover { background: #fef2f2; border-color: #f87171; }
+          &:hover { background: #fee2e2; }
         `
       : css`
-          background: ${theme.colors.card};
-          color: ${theme.colors.accent.primary};
-          border-color: ${theme.colors.border}; /* Adjusted border color */
-          &:hover { background: ${theme.colors.background}; border-color: ${theme.colors.accent.primary}; }
+          color: ${({ theme }) => theme.colors.accent.primary};
+          &:hover { background: ${({ theme }) => theme.colors.background}; }
         `}
 `;
 
-// --- Loading ---
+/* --- Loading --- */
 export const LoadingText = styled.div`
   text-align: center;
   padding: 60px;
   color: ${({ theme }) => theme.colors.text.secondary};
-  font-size: 16px;
 `;
 
-// --- MODAL ---
+/* --- MODAL --- */
 export const ModalOverlay = styled.div`
   position: fixed;
   inset: 0;
@@ -199,7 +199,7 @@ export const ModalContent = styled.div`
   max-width: 500px;
   padding: 32px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  animation: ${modalSlide} 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: ${modalSlide} 0.3s ease-out;
   border: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
@@ -207,7 +207,7 @@ export const ModalTitle = styled.h2`
   font-size: 24px;
   font-weight: 800;
   color: ${({ theme }) => theme.colors.text.primary};
-  margin: 0 0 24px 0;
+  margin-bottom: 24px;
   padding-bottom: 16px;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 `;
@@ -235,7 +235,6 @@ const inputStyles = css`
   padding: 12px;
   border-radius: 10px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  font-size: 14px;
   background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.text.primary};
   transition: all 0.2s;
@@ -244,17 +243,17 @@ const inputStyles = css`
     outline: none;
     border-color: ${({ theme }) => theme.colors.accent.primary};
     background: ${({ theme }) => theme.colors.card};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.1)'};
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 `;
 
 export const Input = styled.input`${inputStyles}`;
 export const Select = styled.select`${inputStyles}; cursor: pointer;`;
 
+/* --- Botones del Modal --- */
 export const ButtonGroup = styled.div`
   display: flex;
   gap: 12px;
-  margin-top: 12px;
   padding-top: 20px;
   border-top: 1px solid ${({ theme }) => theme.colors.border};
 `;
@@ -268,9 +267,10 @@ export const CancelButton = styled.button`
   color: ${({ theme }) => theme.colors.text.secondary};
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
 
-  &:hover { background: ${({ theme }) => theme.colors.background}; color: ${({ theme }) => theme.colors.text.primary}; }
+  &:hover {
+    background: ${({ theme }) => theme.colors.background};
+  }
 `;
 
 export const SubmitButton = styled.button`
@@ -280,52 +280,45 @@ export const SubmitButton = styled.button`
   background: ${({ theme }) => theme.colors.accent.primary};
   color: white;
   border: none;
-  font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
-  transition: all 0.2s;
+  font-weight: 600;
 
-  &:hover { background: ${({ theme }) => theme.colors.accent.hover}; transform: translateY(-1px); }
+  &:hover {
+    background: ${({ theme }) => theme.colors.accent.hover};
+    transform: translateY(-1px);
+  }
 `;
 
+/* --- Paginación --- */
 export const PaginationFooter = styled.div`
   display: flex;
   justify-content: center;
-  align-items: center;
   gap: 15px;
-  margin-top: 20px;
   padding-bottom: 30px;
 
   button {
     padding: 8px 16px;
     background: ${({ theme }) => theme.colors.card};
     border: 1px solid ${({ theme }) => theme.colors.border};
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: all 0.2s;
     color: ${({ theme }) => theme.colors.text.secondary};
+    border-radius: 6px;
 
-    &:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
+    &:hover {
       background: ${({ theme }) => theme.colors.background};
     }
-    
-    &:hover:not(:disabled) {
-      background: ${({ theme }) => theme.colors.background};
-      border-color: ${({ theme }) => theme.colors.text.tertiary};
-      color: ${({ theme }) => theme.colors.text.primary};
+
+    &:disabled {
+      cursor: not-allowed;
+      opacity: 0.4;
     }
   }
 
   span {
     color: ${({ theme }) => theme.colors.text.secondary};
-    font-size: 14px;
-    font-weight: 500;
   }
 `;
 
+/* --- Toolbar --- */
 export const Toolbar = styled.div`
   display: flex;
   align-items: center;
@@ -336,12 +329,9 @@ export const TextInput = styled.input`
   padding: 8px 12px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 6px;
-  font-size: 14px;
+  background: ${({ theme }) => theme.colors.card};
   color: ${({ theme }) => theme.colors.text.primary};
-  background-color: ${({ theme }) => theme.colors.card};
-  outline: none;
-  transition: all 0.2s ease-in-out;
-  min-width: 200px; /* Ancho mínimo para que no se vea aplastado */
+  min-width: 200px;
 
   &::placeholder {
     color: ${({ theme }) => theme.colors.text.tertiary};
@@ -349,12 +339,6 @@ export const TextInput = styled.input`
 
   &:focus {
     border-color: ${({ theme }) => theme.colors.accent.primary};
-    box-shadow: 0 0 0 3px ${({ theme }) => theme.mode === 'dark' ? 'rgba(59, 130, 246, 0.25)' : 'rgba(59, 130, 246, 0.1)'};
-  }
-
-  &:disabled {
-    background-color: ${({ theme }) => theme.colors.background};
-    color: ${({ theme }) => theme.colors.text.tertiary};
-    cursor: not-allowed;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
   }
 `;

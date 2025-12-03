@@ -2,33 +2,24 @@ import { useMemo } from "react";
 import MaintenanceForm from "./components/MaintenanceForm";
 import { useMaintenancesLogic } from "./hooks/useMaintenanceLogic";
 
+// Asegúrate de que tu archivo 'styled.ts' exporte los nuevos componentes de tabla
+// (TableContainer, Table, Thead, Tbody, Tr, Th, Td) además de los existentes.
 import {
   Button,
-  CardHeader,
-  CardTitleBlock,
-  DateText,
   Container,
   EditButton,
   FiltersBar,
   Header,
   ImportButton,
-  InfoGrid,
-  InfoItem,
   LoadingText,
-  MaintenanceCard,
-  MaintenanceList,
   Modal,
   ModalContent,
   ModalTitle,
   CloseIconButton,
   SelectInput,
-  SimpleTag,
-  TagRow,
   TextInput,
   Title,
   TypeTag,
-  NoteBox,
-  Label,
   ReportContainer,
   ReportHeader,
   ReportStats,
@@ -38,17 +29,26 @@ import {
   ReportActions,
   ActionButton,
   Field,
+  Label,
   PaginationContainer,
   PaginationInfo,
   PaginationButton,
+  // Nuevos componentes para la Tabla
+  TableContainer,
+  Table,
+  Thead,
+  Th,
+  Tr,
+  Td,
+  // Tbody no suele ser un styled component obligatorio si usas el nativo, 
+  // pero si lo definiste en styled.ts, impórtalo. Si no, usa el HTML estándar <tbody>.
 } from "./styled";
 
 import { formatMoney } from "./utils";
 import { useSessionStore } from "../../store/sessionStore";
 import { hasPermission } from "../../lib/hasPermission";
 import { ROLES } from "../../types";
-// Asegúrate de que esta ruta apunte a donde tienes tu SearchableSelect
-import SearchableSelect from "../shared/components/SearchableSelect"; 
+import SearchableSelect from "../shared/components/SearchableSelect";
 
 export default function Mantenimientos() {
   const {
@@ -227,11 +227,9 @@ export default function Mantenimientos() {
           onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
           style={{ flex: 1 }}
         />
-
-        {/* El botón de Buscar ha sido eliminado, la búsqueda es automática */}
       </FiltersBar>
 
-      {/* --- LISTADO DE MANTENIMIENTOS --- */}
+      {/* --- TABLA DE MANTENIMIENTOS (Data Grid) --- */}
       {loading ? (
         <LoadingText>Cargando registros...</LoadingText>
       ) : (
@@ -240,90 +238,109 @@ export default function Mantenimientos() {
             <div
               style={{
                 textAlign: "center",
-                padding: "40px",
+                padding: "60px",
                 color: "#64748b",
+                background: "#fff",
+                borderRadius: 12,
+                border: "1px dashed #cbd5e1"
               }}
             >
               No se encontraron mantenimientos con estos filtros.
             </div>
           ) : (
-            <MaintenanceList>
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
-                  gap: 16,
-                }}
-              >
-                {filteredMaintenances.map((m) => {
-                  const tech =
-                    m.technician ?? technicians.find((t) => t.id === m.technicianId);
-                  const machine =
-                    m.machine ?? machines.find((mc) => mc.id === m.machineId);
+            <TableContainer>
+              <Table>
+                <Thead>
+                  <Tr>
+                    <Th>Estado</Th>
+                    <Th>Máquina</Th>
+                    <Th>Técnico</Th>
+                    <Th>Fecha</Th>
+                    <Th>Duración</Th>
+                    <Th>Costo</Th>
+                    <Th>Detalles</Th>
+                    {canEdit && <Th style={{ textAlign: "right" }}>Acciones</Th>}
+                  </Tr>
+                </Thead>
+                <tbody>
+                  {filteredMaintenances.map((m) => {
+                    const tech =
+                      m.technician ?? technicians.find((t) => t.id === m.technicianId);
+                    const machine =
+                      m.machine ?? machines.find((mc) => mc.id === m.machineId);
 
-                  const nestedFailures = (m as any).failures;
-                  const relatedFailures = Array.isArray(nestedFailures)
-                    ? nestedFailures
-                    : failures.filter((f) => f.maintenanceId === m.id);
+                    const nestedFailures = (m as any).failures;
+                    const relatedFailures = Array.isArray(nestedFailures)
+                      ? nestedFailures
+                      : failures.filter((f) => f.maintenanceId === m.id);
 
-                  return (
-                    <MaintenanceCard key={m.id} $type={m.type}>
-                      <CardHeader>
-                        <CardTitleBlock>
-                          <TypeTag $type={m.type}>{m.type}</TypeTag>
-                          <div style={{ display: "flex", flexDirection: "column" }}>
-                            <span style={{ fontWeight: 600 }}>
-                              {machine ? machine.name : "Máquina desconocida"}
-                            </span>
-                            <DateText>
-                              {new Date(m.performedAt).toLocaleDateString()}
-                            </DateText>
+                    const hasNotes = m.notes && m.notes.length > 0;
+
+                    return (
+                      <Tr key={m.id}>
+                        <Td>
+                          <TypeTag $type={m.type} style={{ fontSize: '11px', padding: '3px 8px' }}>
+                            {m.type}
+                          </TypeTag>
+                        </Td>
+                        
+                        <Td className="strong">
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span>{machine ? machine.name : <span style={{color: '#94a3b8', fontStyle: 'italic'}}>Desconocida</span>}</span>
+                            {machine?.code && <span style={{ fontSize: 11, color: '#64748b' }}>{machine.code}</span>}
                           </div>
-                        </CardTitleBlock>
+                        </Td>
+                        
+                        <Td>
+                          {tech ? tech.name : <span style={{color: '#cbd5e1'}}>—</span>}
+                        </Td>
+                        
+                        <Td className="numeric">
+                          {new Date(m.performedAt).toLocaleDateString()}
+                        </Td>
+                        
+                        <Td className="numeric" style={{ color: '#64748b' }}>
+                          {m.durationMinutes ? `${m.durationMinutes} min` : "—"}
+                        </Td>
+                        
+                        <Td className="numeric" style={{ fontWeight: 600 }}>
+                          {formatMoney(m.cost || 0)}
+                        </Td>
+                        
+                        <Td>
+                          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                            {relatedFailures.length > 0 ? (
+                              <span 
+                                title={`Fallas reportadas:\n${relatedFailures.map((f: any) => `• ${f.description}`).join('\n')}`}
+                                style={{ cursor: 'help', display: 'flex', alignItems: 'center', gap: 4 }}
+                              >
+                                ⚠️ <span style={{ fontSize: 11, color: '#dc2626', fontWeight: 'bold' }}>{relatedFailures.length}</span>
+                              </span>
+                            ) : (
+                              <span style={{ color: '#e2e8f0', fontSize: 12 }}>✓</span>
+                            )}
+
+                            {hasNotes && (
+                              <span title={m.notes!} style={{ cursor: 'help', fontSize: 16 }}>
+                                📝
+                              </span>
+                            )}
+                          </div>
+                        </Td>
+
                         {canEdit && (
-                          <EditButton onClick={() => handleEdit(m)}>Editar</EditButton>
+                          <Td className="actions">
+                            <EditButton onClick={() => handleEdit(m)}>
+                              Editar
+                            </EditButton>
+                          </Td>
                         )}
-                      </CardHeader>
-
-                      <InfoGrid>
-                        <InfoItem>
-                          <span>Técnico</span>
-                          <span>{tech ? tech.name : "—"}</span>
-                        </InfoItem>
-                        <InfoItem>
-                          <span>Duración</span>
-                          <span>
-                            {m.durationMinutes ? `${m.durationMinutes} min` : "—"}
-                          </span>
-                        </InfoItem>
-                        <InfoItem>
-                          <span>Costo</span>
-                          <span>{formatMoney(m.cost || 0)}</span>
-                        </InfoItem>
-                      </InfoGrid>
-
-                      {m.notes && <NoteBox>📝 {m.notes}</NoteBox>}
-
-                      {relatedFailures.length > 0 && (
-                        <TagRow style={{ marginTop: 8 }}>
-                          <SimpleTag
-                            title={relatedFailures.map((f: any) => `• ${f.description}`).join("\n")}
-                            style={{
-                              color: "#dc2626",
-                              borderColor: "#fecaca",
-                              background: "#fef2f2",
-                              cursor: "help",
-                            }}
-                          >
-                            ⚠️ {relatedFailures.length} falla(s)
-                          </SimpleTag>
-                        </TagRow>
-                      )}
-                    </MaintenanceCard>
-                  );
-                })}
-              </div>
-            </MaintenanceList>
+                      </Tr>
+                    );
+                  })}
+                </tbody>
+              </Table>
+            </TableContainer>
           )}
 
           {/* --- CONTROLES DE PAGINACIÓN --- */}

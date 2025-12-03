@@ -8,42 +8,37 @@ let reconnectAttempt = 0;
 
 const listeners = new Set<ReadingListener>();
 
-// export function getWsUrl(): string {
-//     // 1. Detectar si la web se cargó por HTTP o HTTPS (para usar ws o wss)
-//     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-
-//     // 2. Obtener el hostname actual automáticamente
-//     // Si entras por localhost, esto vale "localhost"
-//     // Si entras por 192.168.1.15, esto vale "192.168.1.15"
-//     const host = window.location.hostname;
-
-//     // 3. Definir el puerto del backend
-//     // NOTA: En tu código anterior usabas el 3000. 
-//     // Si cambiaste al 5000, déjalo así. Si no, cámbialo a 3000.
-//     const port = "5000"; 
-
-//     return `${protocol}//${host}:${port}/ws`;
-// }
-
 export function getWsUrl(): string {
-    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const host = window.location.hostname;
+    const apiUrl = import.meta.env.VITE_API_URL;
 
-    // Localhost (dev normal)
-    if (host === "localhost" || host === "127.0.0.1") {
-        return `${protocol}//localhost:5000/ws`;
+    // 1. Validación de seguridad para no romper la app
+    if (!apiUrl) {
+        console.error("VITE_API_URL no está definida");
+        return ""; 
     }
 
-    // LAN (10.x.x.x , 192.168.x.x)
-    if (/^(10\.|192\.168\.)/.test(host)) {
-        // Usa exactamente la IP desde donde entró el usuario
-        return `${protocol}//${host}:5000/ws`;
-    }
+    try {
+        // 2. Usar el constructor URL para parsear
+        const url = new URL(apiUrl);
 
-    // Todavía no manejamos producción aquí
-    return `${protocol}//${host}:5000/ws`;
+        // 3. Determinar protocolo basado en la API, no en la ventana
+        // Si la API es https, el socket debe ser wss. Si es http, ws.
+        url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+
+        // 4. Ajustar el pathname (manteniendo subrutas si existen o reemplazando)
+        // Opción A: Reemplazar todo el path con /ws
+        url.pathname = "/ws";
+        
+        // Opción B (Si tu API es /api/v1 y el socket es /api/v1/ws):
+        // url.pathname = url.pathname.replace(/\/$/, "") + "/ws";
+
+        return url.toString();
+
+    } catch (error) {
+        console.error("Error construyendo WS URL:", error);
+        return "";
+    }
 }
-
 
 function handleMessage(event: MessageEvent) {
 	try {
