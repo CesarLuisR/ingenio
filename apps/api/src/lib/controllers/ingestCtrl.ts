@@ -7,7 +7,6 @@ import PostgresRepository from "../repositories/database/postgresRepository";
 import { Reading } from "../../database/mongo.db";
 import { createFormattedInfo } from "../services/infoFormatterService";
 import prisma from "../../database/postgres.db";
-import { Prisma } from "@prisma/client";
 
 // todo: este codigo es una mierda o no??? tendria que analizar trade-offs
 const cacheRepository = new RedisRepository();
@@ -135,7 +134,7 @@ export const addSensorCtrl: RequestHandler = async (req, res) => {
         }
 
         // Sensor perdido porque no se creo en la UI
-        if (!data.name) {
+        if (!data.metricsConfig) {
             console.log("SENSOR PERDIDO", data.sensorId);
             return res.status(500).json({ ok: false, sensor });
         }

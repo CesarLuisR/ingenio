@@ -1,21 +1,49 @@
-# ---- Deps ----
-FROM node:20-alpine AS deps
+# 1. Base compartida (Node + Alpine)
+FROM node:20-alpine AS base
 WORKDIR /app
-COPY package*.json ./
-ENV NODE_ENV=development
-RUN npm install --include=dev
+RUN apk add --no-cache openssl
 
-# ---- Dev ----
-FROM node:20-alpine AS dev
-WORKDIR /app
+# 2. Dependencias (Cacheable)
+FROM base AS deps
+COPY package*.json ./
+# Instalamos TODO para tener herramientas de desarrollo disponibles si se necesitan
+RUN npm ci
+
+# ==========================================
+#  TARGET: DEVELOPMENT (Para ti y tus amigos)
+# ==========================================
+FROM base AS dev
 ENV NODE_ENV=development
-RUN apk add --no-cache postgresql-client
+# Copiamos dependencias
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+# Generamos prisma client
 RUN npx prisma generate
+EXPOSE 5000
+# Comando con hot-reload (ajusta si usas nodemon o ts-node-dev)
+CMD ["sh", "-c", "npx prisma db push && npm run dev"]
+
+# ==========================================
+#  TARGET: BUILDER (Solo para compilar)
+# ==========================================
+FROM deps AS builder
+COPY . .
+RUN npx prisma generate
+RUN npm run build
+
+# ==========================================
+#  TARGET: PRODUCTION (Para el Servidor VPS)
+# ==========================================
+FROM base AS runner
+ENV NODE_ENV=production
+# Copiamos solo lo compilado y necesario
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/prisma ./prisma
+
+# Limpiamos dependencias de desarrollo para ahorrar espacio
+RUN npm prune --production
 
 EXPOSE 5000
-CMD ["sh", "-c", "until nc -z mongo 27017; do echo 'Esperando Mongo...'; sleep 2; done; until pg_isready -h postgres -p 5432 -U postgres; do echo 'Esperando Postgres (pg_isready)...'; sleep 2; done; npx prisma migrate deploy && npm run dev"]
-
-
-
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main.js"]
