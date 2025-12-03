@@ -1,0 +1,87 @@
+services:
+  # --- FRONTEND ---
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=/api
+    restart: always
+    ports:
+      - "8080:80" # Exponemos el 80 interno al 8080 del host (temporalmente)
+    depends_on:
+      - api
+
+  # --- BACKEND ---
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - DATABASE_URL=postgresql://postgres:mysecretpassword@postgres:5432/ingenio
+      - MONGO_URI=mongodb://mongo:27017/ingenio
+      - REDIS_URL=redis://redis:6379
+      - IA_API=http://ia-service:8000
+    ports:
+      - "5000:5000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  # --- IA SERVICE ---
+  ia-service:
+    build:
+      context: ./apps/ia-service
+      dockerfile: Dockerfile
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 800M # Bajamos un poco el límite para proteger la VM
+
+  # --- DATABASES ---
+  postgres:
+    image: postgres:16
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: ingenio
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ingenio"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  mongo:
+    image: mongo:4.4.18
+    restart: always
+    volumes:
+      - mongo_data_prod:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongo localhost:27017/test --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  redis:
+    image: redis:7
+    restart: always
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data_prod:/data
+
+volumes:
+  postgres_data_prod:
+  mongo_data_prod:
+  redis_data_prod:
