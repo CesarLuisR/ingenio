@@ -22,7 +22,6 @@ import {
   ItemLeft,
   ItemName,
   ItemSub,
-  Badge,
   Actions,
   ActionButton,
   PaginationContainer,
