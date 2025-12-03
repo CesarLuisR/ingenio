@@ -5,7 +5,6 @@ import type {
     Sensor,
     Maintenance,
     Failure,
-    ROLES
 } from "../../../types";
 import { useSessionStore } from "../../../store/sessionStore";
 

@@ -170,7 +170,7 @@ export default function Dashboard() {
                                 <ResponsiveContainer width="100%" height={280}>
                                     <PieChart>
                                         <Pie data={sensorStats} innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value">
-                                            {sensorStats.map((e, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                                            {sensorStats.map((_e, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
                                         </Pie>
                                         <RechartsTooltip />
                                         <Legend verticalAlign="bottom" height={36} iconType="circle"/>
