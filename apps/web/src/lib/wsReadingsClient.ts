@@ -19,7 +19,12 @@ export function getWsUrl(): string {
 
     try {
         // 2. Usar el constructor URL para parsear
-        const url = new URL(apiUrl);
+		let url: URL;
+		if (apiUrl.startsWith('/')) {
+			url = new URL(apiUrl, window.location.origin);
+		} else {
+			url = new URL(apiUrl);
+		}
 
         // 3. Determinar protocolo basado en la API, no en la ventana
         // Si la API es https, el socket debe ser wss. Si es http, ws.
