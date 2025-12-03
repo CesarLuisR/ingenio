@@ -18,7 +18,7 @@ export interface ConfigData {
     >;
     createdAt?: Date | string;
     lastSeen?: Date | string;
-    active?: boolean;
+    active: boolean;
     configVersion: string;
 }
 

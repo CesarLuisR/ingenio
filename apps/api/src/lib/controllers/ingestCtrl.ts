@@ -68,7 +68,8 @@ export function createIngestCtrl(bus: IMessageBus): RequestHandler {
                     type: "NOTDEFINED",
                     intervalMs: 1000,
                     metricsConfig: metricsConfig, 
-                    configVersion: "v1"
+                    configVersion: "v1",
+                    active: true
                 });
 
                 // borramos la cache para que la actualice
@@ -126,7 +127,8 @@ export const addSensorCtrl: RequestHandler = async (req, res) => {
                     type: "NOCOFIGURADO",
                     intervalMs: 1000,
                     metricsConfig: {},
-                    configVersion: "v1"
+                    configVersion: "v1",
+                    active: true
                 });
             }
 

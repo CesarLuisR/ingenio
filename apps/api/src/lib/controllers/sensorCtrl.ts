@@ -251,7 +251,8 @@ export const createSensor = async (req: Request, res: Response) => {
                     type: "NOCONFIGURADO",
                     intervalMs: 1000,
                     metricsConfig: {},
-                    configVersion: "v1"
+                    configVersion: "v1",
+                    active: false 
                 }),
 				lastSeen: new Date(),
 				createdAt: new Date(),
