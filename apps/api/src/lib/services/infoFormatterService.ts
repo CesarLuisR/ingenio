@@ -18,7 +18,7 @@ interface FormattedInfo {
 	severityLevel: number;
 }
 
-export async function createFormattedInfoInfo(
+export async function createFormattedInfo(
 	data: ReadingData,
 	config: ConfigData
 ): Promise<FormattedInfo> {

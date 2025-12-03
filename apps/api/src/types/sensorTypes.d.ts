@@ -1,30 +1,41 @@
 // ------------------------------
 // CONFIG DATA (Sensor Setup)
+
+import { JsonValue } from "@prisma/client/runtime/library";
+
 // ------------------------------
 export interface ConfigData {
     sensorId: string;
-
     machineId: number;
     ingenioId: number;
-
     name?: string | null;
     type: string;
     location?: string | null;
-
     intervalMs: number;
-
     metricsConfig: Record<
         string,
         Record<string, { min?: number; max?: number }>
     >;
-
     createdAt?: Date | string;
     lastSeen?: Date | string;
-
     active?: boolean;
     configVersion: string;
 }
 
+export type DBSensor = {
+    name: string;
+    id: number;
+    sensorId: string;
+    type: string;
+    location: string | null;
+    active: boolean;
+    config: JsonValue;
+    lastSeen: Date | null;
+    createdAt: Date;
+    updatedAt: Date;
+    machineId: number;
+    ingenioId: number;
+}
 
 // ------------------------------
 // VERSION PARA GUARDAR EN BD / JSON

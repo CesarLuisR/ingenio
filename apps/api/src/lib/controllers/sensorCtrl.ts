@@ -243,7 +243,16 @@ export const createSensor = async (req: Request, res: Response) => {
 				name: "NOCONFIGURADO",
 				type: "NOCONFIGURADO",
 				location: "NOCONFIGURADO",
-				config: toConfigJson(data),
+				config: toConfigJson({
+                    sensorId: data.sensorId,
+                    name: "NOCONFIGURADO",
+                    machineId: data.machineId,
+                    ingenioId: data.ingenioId,
+                    type: "NOCONFIGURADO",
+                    intervalMs: 1000,
+                    metricsConfig: {},
+                    configVersion: "v1"
+                }),
 				lastSeen: new Date(),
 				createdAt: new Date(),
 				machineId: data.machineId,

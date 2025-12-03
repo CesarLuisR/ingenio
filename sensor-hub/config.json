@@ -1,28 +1,3 @@
 {
-  "sensorId": "motor-01-hwt905",
-  "type": "inclinometer",
-  "location": "Planta A - L\u00c3\u00adnea 1",
-  "intervalMs": 3000,
-  "metricsConfig": {
-    "mechanical": {
-      "yaw": {
-        "max": 180,
-        "min": -180
-      },
-      "roll": {
-        "max": 180,
-        "min": -180
-      },
-      "pitch": {
-        "max": 90,
-        "min": -90
-      }
-    }
-  },
-  "active": true,
-  "configVersion": "v1",
-  "createdAt": "2025-11-09T00:00:00.000Z",
-  "lastSeen": "2025-11-09T00:00:00.000Z",
-  "ingenioId": 1,
-  "machineId": 1
+  "sensorId": "hola"
 }

@@ -1,11 +1,13 @@
 import { RequestHandler } from "express";
 import { IMessageBus } from "../sockets/messageBus";
-import { ConfigData, ReadingData } from "../../types/sensorTypes";
+import { ConfigData, DBSensor, ReadingData } from "../../types/sensorTypes";
 import SensorRepository from "../repositories/sensorRepository";
 import RedisRepository from "../repositories/cache/redisRepository";
 import PostgresRepository from "../repositories/database/postgresRepository";
 import { Reading } from "../../database/mongo.db";
-import { createFormattedInfoInfo } from "../services/infoFormatterService";
+import { createFormattedInfo } from "../services/infoFormatterService";
+import prisma from "../../database/postgres.db";
+import { Prisma } from "@prisma/client";
 
 // todo: este codigo es una mierda o no??? tendria que analizar trade-offs
 const cacheRepository = new RedisRepository();
@@ -36,7 +38,46 @@ export function createIngestCtrl(bus: IMessageBus): RequestHandler {
                 return res.status(404).json({ ok: false });
             }
 
-            const info = await createFormattedInfoInfo(data, readingSensorConfig);
+            if (readingSensorConfig.type === "NOCONFIGURADO") {
+                const metricsConfig: Record<string, any> = {};
+
+                // crea una config inicial a partir de una reading
+                for (const [category, readings] of Object.entries(data.metrics)) {
+                    metricsConfig[category] = {};
+                    for (const [metricName, value] of Object.entries(readings)) {
+                        metricsConfig[category][metricName] = { max: 0, min: 0 }
+                    }
+                }
+
+                // establecemos la config con estos valores iniciales en los campos de las readings
+                // cambiamos tipo a "NOTDEFINED" para que cada vez que llegue una read no se cambien ya que no entra en el if
+                const newSensor = await prisma.sensor.update({
+                    where: {
+                        sensorId: readingSensorConfig.sensorId,
+                    },
+                    data: {
+                        config: metricsConfig,
+                        type: "NOTDEFINED"
+                    }
+                });
+
+                await sensorRepository.setSensorConfig({
+                    sensorId: newSensor.sensorId,
+                    name: newSensor.sensorId,
+                    machineId: newSensor.machineId,
+                    ingenioId: newSensor.ingenioId,
+                    type: "NOTDEFINED",
+                    intervalMs: 1000,
+                    metricsConfig: metricsConfig, 
+                    configVersion: "v1"
+                });
+
+                // borramos la cache para que la actualice
+                // todo: por alguna razon no esta funcionando esto pero funciona igual xd
+                await cacheRepository.delete(sensorRepository.getCacheKey(data.sensorId));
+            }
+
+            const info = await createFormattedInfo(data, readingSensorConfig);
             if (readingSensorConfig?.active === true)
                 bus.publishToIngenio("reading", info, readingSensorConfig.ingenioId);
 
@@ -63,11 +104,40 @@ export const addSensorCtrl: RequestHandler = async (req, res) => {
     console.log("Received sensor config:", data);
 
     try {
-        let sensor = await sensorRepository.getSensorConfig(data.sensorId);
+        let sensor: DBSensor = await sensorRepository.getSensorConfig(data.sensorId);
 
         if (sensor) {
             console.log(`✅ Config encontrada para ${sensor.sensorId}`);
+
+            if (sensor.name === "NOCONFIGURADO") {
+                const newSensor = await prisma.sensor.update({
+                    where: {
+                        sensorId: sensor.sensorId,
+                    },
+                    data: {
+                        name: sensor.sensorId,
+                    }
+                });
+
+                await sensorRepository.setSensorConfig({
+                    sensorId: newSensor.sensorId,
+                    name: newSensor.sensorId,
+                    machineId: newSensor.machineId,
+                    ingenioId: newSensor.ingenioId,
+                    type: "NOCOFIGURADO",
+                    intervalMs: 1000,
+                    metricsConfig: {},
+                    configVersion: "v1"
+                });
+            }
+
             return res.status(201).json({ ok: true, sensor });
+        }
+
+        // Sensor perdido porque no se creo en la UI
+        if (!data.name) {
+            console.log("SENSOR PERDIDO", data.sensorId);
+            return res.status(500).json({ ok: false, sensor });
         }
 
         sensor = await sensorRepository.setSensorConfig(data);

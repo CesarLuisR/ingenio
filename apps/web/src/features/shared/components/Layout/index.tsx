@@ -151,8 +151,14 @@ export default function Layout() {
                             <NavLinkStyled to="/usuarios" $active={isActive("/usuarios")} onClick={() => setShowSidebar(false)}>
                                 <span>👥</span> Usuarios
                             </NavLinkStyled>
+                            <NavLinkStyled to="/analisis" $active={isActive("/reportes")} onClick={() => setShowSidebar(false)}>
+                                <span>📑</span> Reportes
+                            </NavLinkStyled>
                             <NavLinkStyled to="/analisis" $active={isActive("/analisis")} onClick={() => setShowSidebar(false)}>
                                 <span>📈</span> Análisis
+                            </NavLinkStyled>
+                            <NavLinkStyled to="/analisis" $active={isActive("/reportes")} onClick={() => setShowSidebar(false)}>
+                                <span>🧾</span> Historial
                             </NavLinkStyled>
                         </>
                     )}
