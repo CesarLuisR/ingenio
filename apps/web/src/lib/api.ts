@@ -13,7 +13,7 @@ import type {
 } from "../types";
 
 const API_BASE_URL =
-    import.meta.env.VITE_API_URL?.replace(/\/$/, "") /*|| "http://localhost:5000";*/
+    import.meta.env.VITE_API_URL?.replace(/\/$/, "") || "http://localhost:5000";
 console.log("LA API MIRALA AQUI: ", API_BASE_URL);
 
 // --- CLIENTE BASE ---

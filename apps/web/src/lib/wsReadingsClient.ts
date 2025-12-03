@@ -9,7 +9,7 @@ let reconnectAttempt = 0;
 const listeners = new Set<ReadingListener>();
 
 export function getWsUrl(): string {
-    const apiUrl = import.meta.env.VITE_API_URL;
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
     // 1. Validación de seguridad para no romper la app
     if (!apiUrl) {
