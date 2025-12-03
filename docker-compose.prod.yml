@@ -4,6 +4,8 @@ services:
     build:
       context: ./apps/web
       dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=/api
     restart: always
     ports:
       - "8080:80" # Exponemos el 80 interno al 8080 del host (temporalmente)
