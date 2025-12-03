@@ -23,6 +23,8 @@ services:
       - MONGO_URI=mongodb://mongo:27017/ingenio
       - REDIS_URL=redis://redis:6379
       - IA_API=http://ia-service:8000
+    ports:
+      - "5000:5000"
     depends_on:
       postgres:
         condition: service_healthy
