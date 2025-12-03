@@ -1,187 +1,142 @@
 import styled from "styled-components";
 
-export const Container = styled.div`
+export const Container = styled.div<{ $dark: boolean }>`
   padding: 32px;
-  background-color: ${({ theme }) => theme.colors.background};
+  max-width: 1200px;
+  margin: 0 auto;
+  background: ${(p) => (p.$dark ? "#0f172a" : "white")};
   min-height: 100vh;
+  transition: 0.25s;
 `;
 
 export const Header = styled.div`
-  margin-bottom: 32px;
-`;
-
-export const Title = styled.h1`
-  font-size: 24px;
-  font-weight: 800;
-  color: ${({ theme }) => theme.colors.text.primary};
-  margin: 0;
-`;
-
-export const Subtitle = styled.p`
-  color: ${({ theme }) => theme.colors.text.secondary};
-  margin: 8px 0 0 0;
-`;
-
-export const FilterBar = styled.div`
-  display: flex;
-  gap: 12px;
-  margin-bottom: 24px;
-  background: ${({ theme }) => theme.colors.card};
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  align-items: center;
-  flex-wrap: wrap;
-`;
-
-export const InputGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-`;
-
-export const Label = styled.label`
-  font-size: 12px;
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.text.secondary};
-  text-transform: uppercase;
-`;
-
-export const TextInput = styled.input`
-  padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 6px;
-  font-size: 14px;
-  min-width: 200px;
-  background: ${({ theme }) => theme.colors.background};
-  color: ${({ theme }) => theme.colors.text.primary};
-  
-  &:focus { 
-    outline: 2px solid ${({ theme }) => theme.colors.accent.primary}; 
-    border-color: transparent; 
-    background: ${({ theme }) => theme.colors.card};
-  }
-`;
-
-export const SelectInput = styled.select`
-  padding: 8px 12px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 6px;
-  font-size: 14px;
-  min-width: 150px;
-  background-color: ${({ theme }) => theme.colors.card};
-  color: ${({ theme }) => theme.colors.text.primary};
-  
-  &:focus { 
-    outline: 2px solid ${({ theme }) => theme.colors.accent.primary}; 
-    border-color: transparent; 
-  }
-`;
-
-export const PrimaryButton = styled.button`
-  background: ${({ theme }) => theme.colors.accent.primary};
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
-  font-weight: 600;
-  cursor: pointer;
-  align-self: flex-end; /* Alinear con los inputs */
-  
-  &:hover { background: ${({ theme }) => theme.colors.accent.hover}; }
-`;
-
-export const StatsGrid = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 24px;
-  margin-bottom: 24px;
-`;
-
-export const StatCard = styled.div`
-  background: ${({ theme }) => theme.colors.card};
-  padding: 24px;
-  border-radius: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-`;
-
-export const StatLabel = styled.div`
-  color: ${({ theme }) => theme.colors.text.secondary};
-  font-size: 14px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin-bottom: 8px;
-`;
-
-export const StatValue = styled.div`
-  font-size: 32px;
-  font-weight: 800;
-  color: ${({ theme }) => theme.colors.text.primary};
-`;
-
-export const IngeniosList = styled.div`
-  background: ${({ theme }) => theme.colors.card};
-  border-radius: 12px;
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  overflow: hidden;
-`;
-
-export const ListHeader = styled.div`
-  padding: 20px 24px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-  font-weight: 600;
-  color: ${({ theme }) => theme.colors.text.primary};
-`;
-
-export const ListItem = styled.div`
-  padding: 16px 24px;
-  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
   display: flex;
   justify-content: space-between;
   align-items: center;
-
-  &:last-child {
-    border-bottom: none;
-  }
+  margin-bottom: 32px;
 `;
 
-export const PaginationContainer = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between; /* Espaciado para el botón "Primera" */
-  padding: 16px 24px;
-  border-top: 1px solid ${({ theme }) => theme.colors.border};
-  background-color: ${({ theme }) => theme.colors.background};
+export const Title = styled.h1<{ $dark: boolean }>`
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0;
+  color: ${(p) => (p.$dark ? "#f8fafc" : "#0f172a")};
 `;
 
-export const PageInfo = styled.span`
-  font-size: 14px;
-  color: ${({ theme }) => theme.colors.text.secondary};
-  font-weight: 500;
-`;
-
-export const PaginationButton = styled.button`
-  padding: 6px 12px;
-  background: ${({ theme }) => theme.colors.card};
-  border: 1px solid ${({ theme }) => theme.colors.border};
-  border-radius: 6px;
-  color: ${({ theme }) => theme.colors.text.primary};
-  font-size: 13px;
-  font-weight: 500;
+export const Button = styled.button`
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
-  margin-left: 8px;
 
-  &:hover:not(:disabled) {
-    background: ${({ theme }) => theme.colors.background};
-    color: ${({ theme }) => theme.colors.text.primary};
+  &:hover {
+    background-color: #2563eb;
   }
+`;
 
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    background: ${({ theme }) => theme.colors.background};
+export const ToggleTheme = styled.button`
+  background: transparent;
+  color: #3b82f6;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  margin-right: 16px;
+`;
+
+export const Grid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+`;
+
+export const Card = styled.div<{ $dark: boolean }>`
+  background: ${(p) => (p.$dark ? "#1e293b" : "white")};
+  border-radius: 12px;
+  padding: 24px;
+  border: 1px solid ${(p) => (p.$dark ? "#334155" : "#e2e8f0")};
+  transition: 0.25s;
+  box-shadow: ${(p) =>
+    p.$dark ? "none" : "0 1px 3px rgba(0,0,0,0.1)"};
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+`;
+
+export const CardHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+`;
+
+export const IngenioName = styled.h3<{ $dark: boolean }>`
+  font-size: 18px;
+  margin: 0;
+  color: ${(p) => (p.$dark ? "#f1f5f9" : "#1e293b")};
+`;
+
+export const IngenioCode = styled.span<{ $dark: boolean }>`
+  background: ${(p) => (p.$dark ? "#334155" : "#f1f5f9")};
+  color: ${(p) => (p.$dark ? "#cbd5e1" : "#64748b")};
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+`;
+
+export const InfoRow = styled.div<{ $dark: boolean }>`
+  color: ${(p) => (p.$dark ? "#cbd5e1" : "#64748b")};
+  font-size: 14px;
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+`;
+
+export const Actions = styled.div`
+  display: flex;
+  gap: 8px;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 16px;
+  margin-top: 20px;
+`;
+
+export const ActionButton = styled.button<{ $danger?: boolean }>`
+  flex: 1;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid ${(p) => (p.$danger ? "#fecaca" : "#e2e8f0")};
+  background: ${(p) => (p.$danger ? "#fef2f2" : "white")};
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    background: ${(p) => (p.$danger ? "#fee2e2" : "#f8fafc")};
+  }
+`;
+
+export const Pagination = styled.div<{ $dark: boolean }>`
+  margin-top: 32px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  align-items: center;
+  color: ${(p) => (p.$dark ? "#e2e8f0" : "#475569")};
+`;
+
+export const PageButton = styled.button<{ $active?: boolean }>`
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  cursor: pointer;
+  background: ${(p) => (p.$active ? "#3b82f6" : "white")};
+  color: ${(p) => (p.$active ? "white" : "#475569")};
+
+  &:hover {
+    background: ${(p) => (p.$active ? "#2563eb" : "#f1f5f9")};
   }
 `;
