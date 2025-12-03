@@ -1,173 +1,273 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { api } from "../../lib/api";
-import { type Ingenio, ROLES } from "../../types";
-import { useSessionStore } from "../../store/sessionStore";
 import IngenioForm from "./components/IngenioForm";
+import { type Ingenio } from "../../types";
 
-// estilos separados
 import {
   Container,
   Header,
+  HeaderGroup,
   Title,
-  Button,
-  ToggleTheme,
-  Grid,
-  Card,
-  CardHeader,
-  IngenioName,
-  IngenioCode,
-  InfoRow,
+  Subtitle,
+  AddButton,
+  FilterBar,
+  InputGroup,
+  Label,
+  TextInput,
+  SelectInput,
+  PrimaryButton,
+  IngeniosList,
+  ListHeader,
+  ListItem,
+  ItemLeft,
+  ItemName,
+  ItemSub,
+  Badge,
   Actions,
   ActionButton,
-  Pagination,
-  PageButton,
+  PaginationContainer,
+  PageInfo,
+  PaginationButton
 } from "./styled";
 
-export default function Ingenios() {
-  const [ingenios, setIngenios] = useState<Ingenio[]>([]);
+export default function IngeniosPage() {
+  // ---- CONFIG ----
+  const API_LIMIT = 50;
+  const UI_LIMIT = 10;
+
+  // ---- STATE ----
+  const [ingeniosBuffer, setIngeniosBuffer] = useState<Ingenio[]>([]);
   const [loading, setLoading] = useState(true);
+  const [totalItems, setTotalItems] = useState(0);
+
+  const [apiPage, setApiPage] = useState(1);
+  const [uiPage, setUiPage] = useState(1);
+
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<Ingenio | null>(null);
 
-  const [dark, setDark] = useState(false);
+  // Filters
+  const [tempFilters, setTempFilters] = useState({
+    search: "",
+    active: "all"
+  });
 
-  // paginación
-  const ITEMS_PER_PAGE = 6;
-  const [page, setPage] = useState(1);
+  const [appliedFilters, setAppliedFilters] = useState({
+    search: "",
+    active: "all"
+  });
 
-  const { user } = useSessionStore();
+  // ---- LOAD DATA ----
+  const loadData = useCallback(
+    async (reset = false) => {
+      try {
+        if (reset) setLoading(true);
 
-  const loadIngenios = async () => {
-    try {
-      setLoading(true);
-      const data = await api.getAllIngenios();
-      setIngenios(data.data);
-    } finally {
-      setLoading(false);
-    }
-  };
+        const params: any = {
+          page: reset ? 1 : apiPage,
+          limit: API_LIMIT
+        };
 
-  useEffect(() => {
-    loadIngenios();
-  }, []);
+        if (appliedFilters.search) params.search = appliedFilters.search;
+        if (appliedFilters.active !== "all")
+          params.active = appliedFilters.active;
 
-  if (user?.role !== ROLES.SUPERADMIN) {
-    return (
-      <Container $dark={dark}>
-        <Title $dark={dark}>Acceso denegado</Title>
-      </Container>
-    );
-  }
+        const response = await api.getAllIngenios(params);
 
-  const totalPages = Math.ceil(ingenios.length / ITEMS_PER_PAGE);
-  const paginated = ingenios.slice(
-    (page - 1) * ITEMS_PER_PAGE,
-    page * ITEMS_PER_PAGE
+        if (reset) {
+          setIngeniosBuffer(response.data);
+          setTotalItems(response.meta.totalItems);
+        } else {
+          setIngeniosBuffer(prev => {
+            const ids = new Set(prev.map(i => i.id));
+            const newItems = response.data.filter(i => !ids.has(i.id));
+            return [...prev, ...newItems];
+          });
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [apiPage, appliedFilters]
   );
 
+  // Trigger load
+  useEffect(() => {
+    if (apiPage > 1) loadData(false);
+    else loadData(true);
+  }, [apiPage, appliedFilters]);
+
+  // Pagination calculations
+  const startIndex = (uiPage - 1) * UI_LIMIT;
+  const endIndex = startIndex + UI_LIMIT;
+  const visibleIngenios = ingeniosBuffer.slice(startIndex, endIndex);
+
+  useEffect(() => {
+    const needMore =
+      endIndex >= ingeniosBuffer.length &&
+      ingeniosBuffer.length < totalItems &&
+      ingeniosBuffer.length > 0;
+
+    if (needMore) {
+      setApiPage(prev => prev + 1);
+    }
+  }, [uiPage, ingeniosBuffer.length, totalItems, endIndex]);
+
+  // --- FILTER HANDLERS ---
+  const applyFilters = () => {
+    setAppliedFilters(tempFilters);
+    setApiPage(1);
+    setUiPage(1);
+    setIngeniosBuffer([]);
+  };
+
+  // ---- RENDER ----
+  const totalUiPages = Math.ceil(totalItems / UI_LIMIT);
+
   return (
-    <Container $dark={dark}>
+    <Container>
       <Header>
-        <div>
-          <Title $dark={dark}>Gestión de Ingenios</Title>
-          <p style={{ color: dark ? "#cbd5e1" : "#64748b" }}>
-            Administración global del sistema
-          </p>
-        </div>
+        <HeaderGroup>
+          <Title>Gestión de Ingenios</Title>
+          <Subtitle>Administración global del sistema</Subtitle>
+        </HeaderGroup>
 
-        <div style={{ display: "flex", gap: 12 }}>
-          <ToggleTheme onClick={() => setDark((d) => !d)}>
-            {dark ? "☀️ Claro" : "🌙 Oscuro"}
-          </ToggleTheme>
-
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setShowForm(true);
-            }}
-          >
-            + Nuevo Ingenio
-          </Button>
-        </div>
+        <AddButton
+          onClick={() => {
+            setEditing(null);
+            setShowForm(true);
+          }}
+        >
+          + Nuevo Ingenio
+        </AddButton>
       </Header>
 
-      {loading ? (
-        <p style={{ color: dark ? "white" : "black" }}>Cargando...</p>
-      ) : (
-        <Grid>
-          {paginated.map((ingenio) => (
-            <Card key={ingenio.id} $dark={dark}>
-              <CardHeader>
-                <IngenioName $dark={dark}>{ingenio.name}</IngenioName>
-                <IngenioCode $dark={dark}>{ingenio.code}</IngenioCode>
-              </CardHeader>
+      {/* FILTER BAR */}
+      <FilterBar>
+        <InputGroup>
+          <Label>Búsqueda</Label>
+          <TextInput
+            placeholder="Nombre, código, ubicación..."
+            value={tempFilters.search}
+            onChange={e =>
+              setTempFilters(prev => ({ ...prev, search: e.target.value }))
+            }
+          />
+        </InputGroup>
 
-              <InfoRow $dark={dark}>
-                <span>📍</span>
-                {ingenio.location || "Sin ubicación"}
-              </InfoRow>
+        <InputGroup>
+          <Label>Estado</Label>
+          <SelectInput
+            value={tempFilters.active}
+            onChange={e =>
+              setTempFilters(prev => ({ ...prev, active: e.target.value }))
+            }
+          >
+            <option value="all">Todos</option>
+            <option value="true">Activos</option>
+            <option value="false">Inactivos</option>
+          </SelectInput>
+        </InputGroup>
 
-              <InfoRow $dark={dark}>
-                <span>📅</span>
-                Creado el {new Date(ingenio.createdAt).toLocaleDateString()}
-              </InfoRow>
+        <PrimaryButton onClick={applyFilters}>🔍 Buscar</PrimaryButton>
+      </FilterBar>
+
+      {/* LIST */}
+      <IngeniosList>
+        <ListHeader>Ingenios Registrados</ListHeader>
+
+        {loading && apiPage === 1 ? (
+          <div
+            style={{
+              padding: 40,
+              textAlign: "center",
+              color: "var(--text-secondary)"
+            }}
+          >
+            Cargando...
+          </div>
+        ) : visibleIngenios.length === 0 ? (
+          <div
+            style={{
+              padding: 40,
+              textAlign: "center",
+              color: "var(--text-secondary)"
+            }}
+          >
+            No se encontraron ingenios.
+          </div>
+        ) : (
+          visibleIngenios.map(ing => (
+            <ListItem key={ing.id}>
+              <ItemLeft>
+                <ItemName>{ing.name}</ItemName>
+                <ItemSub>{ing.location || "Sin ubicación"}</ItemSub>
+              </ItemLeft>
 
               <Actions>
-                <ActionButton
-                  onClick={() => {
-                    setEditing(ingenio);
-                    setShowForm(true);
-                  }}
-                >
+                <ActionButton onClick={() => {
+                  setEditing(ing);
+                  setShowForm(true);
+                }}>
                   Editar
                 </ActionButton>
 
                 <ActionButton
                   $danger
                   onClick={async () => {
-                    if (confirm(`¿Eliminar ${ingenio.name}?`)) {
-                      await api.deleteIngenio(ingenio.id);
-                      loadIngenios();
+                    if (confirm(`¿Eliminar ${ing.name}?`)) {
+                      await api.deleteIngenio(ing.id);
+                      applyFilters();
                     }
                   }}
                 >
                   Eliminar
                 </ActionButton>
               </Actions>
-            </Card>
-          ))}
-        </Grid>
-      )}
+            </ListItem>
+          ))
+        )}
 
-      {/* --- PAGINACIÓN --- */}
-      {totalPages > 1 && (
-        <Pagination $dark={dark}>
-          <PageButton
-            disabled={page === 1}
-            onClick={() => setPage((p) => p - 1)}
-          >
-            ←
-          </PageButton>
+        {/* PAGINATION */}
+        {totalItems > 0 && (
+          <PaginationContainer>
+            <div>
+              <PaginationButton
+                disabled={uiPage === 1}
+                onClick={() => setUiPage(1)}
+              >
+                ⇤ Primera
+              </PaginationButton>
+            </div>
 
-          {Array.from({ length: totalPages }).map((_, i) => (
-            <PageButton
-              key={i}
-              $active={page === i + 1}
-              onClick={() => setPage(i + 1)}
-            >
-              {i + 1}
-            </PageButton>
-          ))}
+            <div style={{ display: "flex", gap: 12 }}>
+              <PageInfo>
+                Página {uiPage} de {totalUiPages}
+              </PageInfo>
 
-          <PageButton
-            disabled={page === totalPages}
-            onClick={() => setPage((p) => p + 1)}
-          >
-            →
-          </PageButton>
-        </Pagination>
-      )}
+              <div>
+                <PaginationButton
+                  disabled={uiPage === 1}
+                  onClick={() => setUiPage(p => p - 1)}
+                >
+                  Anterior
+                </PaginationButton>
 
+                <PaginationButton
+                  disabled={uiPage >= totalUiPages}
+                  onClick={() => setUiPage(p => p + 1)}
+                >
+                  Siguiente
+                </PaginationButton>
+              </div>
+            </div>
+          </PaginationContainer>
+        )}
+      </IngeniosList>
+
+      {/* MODAL */}
       {showForm && (
         <IngenioForm
           initialData={editing}
@@ -178,7 +278,7 @@ export default function Ingenios() {
           onSave={() => {
             setShowForm(false);
             setEditing(null);
-            loadIngenios();
+            applyFilters(); // recarga limpia con filtros activos
           }}
         />
       )}
