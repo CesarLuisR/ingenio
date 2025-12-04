@@ -1,7 +1,7 @@
 import os, json, time, datetime, requests
 from sensors.hwt905 import HWT905Sensor
 
-API_URL = os.getenv("API_URL", "http://localhost:5000")
+API_URL = os.getenv("API_URL", "https://ingenio-cesar.duckdns.org/api")
 CONFIG_PATH = os.getenv("CONFIG_PATH", "config.json")
 
 CONFIG = {}
@@ -50,7 +50,12 @@ def send_sensor(config):
 def send_reading(reading):
     """Envía una lectura y aplica nueva configuración si llega del servidor."""
     try:
-        res = requests.post(f"{API_URL}/ingest", json=reading, timeout=5)
+        res = requests.post(
+            f"{API_URL}/ingest", 
+            json=reading, 
+            timeout=5,
+            verify=False
+        )
 
         # Mostrar siempre código de respuesta
         print(f"📨 Respuesta del servidor: {res.status_code}")

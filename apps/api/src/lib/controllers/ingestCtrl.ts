@@ -124,7 +124,7 @@ export const addSensorCtrl: RequestHandler = async (req, res) => {
                     name: newSensor.sensorId,
                     machineId: newSensor.machineId,
                     ingenioId: newSensor.ingenioId,
-                    type: "NOCOFIGURADO",
+                    type: "NOCONFIGURADO",
                     intervalMs: 1000,
                     metricsConfig: {},
                     configVersion: "v1",
