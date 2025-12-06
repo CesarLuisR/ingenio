@@ -11,6 +11,7 @@ import type {
     Machine,
     PaginatedResponse,
 } from "../types";
+import type { AIResponse, ReportData } from "../types/reports";
 
 const API_BASE_URL =
     import.meta.env.VITE_API_URL?.replace(/\/$/, "") || "http://localhost:5000";
@@ -409,6 +410,37 @@ class IngestService extends BaseApiClient {
     }
 }
 
+class ReportService extends BaseApiClient {
+    
+    /**
+     * Envía una pregunta en lenguaje natural a la IA (Gemini).
+     * La IA decidirá qué reporte devolver o si responder con texto.
+     * * @param query La pregunta del usuario (ej: "¿Cuántas fallas hubo ayer?")
+     */
+    async askAssistant(query: string): Promise<AIResponse> {
+        return this.request<AIResponse>('/api/reports', {
+            method: 'POST',
+            body: JSON.stringify({ query }),
+        });
+    }
+
+    /**
+     * Obtiene un reporte específico directamente por su ID, saltándose la IA.
+     * Útil para cargar dashboards predefinidos o widgets fijos.
+     * * @param reportId El ID del reporte (ej: 'GLOBAL_OEE')
+     * @param params Filtros opcionales (fechas, ids, etc.)
+     */
+    async getReportDirectly(reportId: string, params?: Record<string, any>): Promise<ReportData> {
+        // Usamos tu método buildQuery para convertir el objeto a query string
+        // Ej: /reports/GLOBAL_OEE?startDate=2023-10-01&active=true
+        const queryString = this.buildQuery(params);
+        
+        return this.request<ReportData>(`/reports/${reportId}${queryString}`, {
+            method: 'GET'
+        });
+    }
+}
+
 // --- API FAÇADE ---
 
 const auth = new AuthService();
@@ -422,6 +454,7 @@ const technicians = new TechnicianService();
 const users = new UserService();
 const metrics = new MetricsService();
 const ingest = new IngestService();
+const reports = new ReportService();
 
 export const api = {
     auth,
@@ -435,6 +468,7 @@ export const api = {
     users,
     metrics,
     ingest,
+    reports,
 
     // Legacy:
 

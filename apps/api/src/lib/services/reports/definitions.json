@@ -1,0 +1,182 @@
+{
+  "MACHINE_STATUS_SUMMARY": {
+    "name": "Resumen de Estado de Máquinas",
+    "description": "Cantidad de máquinas operativas vs detenidas.",
+    "model": "machine",
+    "type": "PIE_CHART",
+    "units": "máquinas",
+    "groupBy": "active",
+    "aggregations": { "id": "count" },
+    "formatters": {
+      "name": {
+        "true": "Operativas",
+        "false": "Detenidas"
+      }
+    },
+    "colors": {
+      "true": "#4CAF50",
+      "false": "#F44336"
+    },
+    "filterByIngenio": true,
+    "requiredRoles": ["SUPERADMIN", "ADMIN", "TECNICO", "LECTOR"]
+  },
+
+  "OEE_BY_MACHINE_24H": {
+    "name": "OEE por Máquina (24h)",
+    "description": "Promedio OEE basado en KPIs horarios.",
+    "model": "machineHourlyKPI",
+    "timestampField": "timestamp",
+    "timeRange": { "hours": 24 },
+    "type": "BAR_CHART",
+    "units": "%",
+    "groupBy": "machineId",
+    "aggregations": { "oee": "avg" },
+    "join": {
+      "machineId": {
+        "model": "machine",
+        "select": ["name"]
+      }
+    },
+    "filterByIngenio": true,
+    "requiredRoles": ["SUPERADMIN", "ADMIN", "TECNICO", "LECTOR"]
+  },
+
+  "FAILURES_BY_SEVERITY_WEEK": {
+    "name": "Fallas por Severidad (7 días)",
+    "description": "Cantidad de fallas agrupadas por severidad.",
+    "model": "failure",
+    "timestampField": "occurredAt",
+    "timeRange": { "days": 7 },
+    "type": "BAR_CHART",
+    "units": "fallas",
+    "groupBy": "severity",
+    "aggregations": { "id": "count" },
+    "filterByIngenio": true,
+    "requiredRoles": ["ADMIN", "SUPERADMIN", "TECNICO"]
+  },
+
+  "TOP_FAILING_MACHINES": {
+    "name": "Máquinas con Más Fallas",
+    "description": "Ranking de máquinas con mayor cantidad de fallas.",
+    "model": "failure",
+    "groupBy": "machineId",
+    "aggregations": { "id": "count" },
+    "join": {
+      "machineId": {
+        "model": "machine",
+        "select": ["name"]
+      }
+    },
+    "type": "BAR_CHART",
+    "units": "fallas",
+    "filterByIngenio": true,
+    "requiredRoles": ["ADMIN", "SUPERADMIN", "TECNICO"]
+  },
+
+  "MAINTENANCE_COST_30D": {
+    "name": "Costo Total de Mantenimientos (30 días)",
+    "description": "Suma total de costos de mantenimiento en los últimos 30 días.",
+    "model": "maintenance",
+    "timestampField": "performedAt",
+    "timeRange": { "days": 30 },
+    "groupBy": "ingenioId",
+    "aggregations": { "cost": "sum" },
+    "join": {
+      "ingenioId": {
+        "model": "ingenio",
+        "select": ["name"]
+      }
+    },
+    "type": "BAR_CHART",
+    "units": "USD",
+    "filterByIngenio": false,
+    "requiredRoles": ["ADMIN", "SUPERADMIN"]
+  },
+
+  "INACTIVE_SENSORS_24H": {
+    "name": "Sensores Inactivos (24h)",
+    "description": "Sensores sin actividad en las últimas 24 horas.",
+    "model": "sensor",
+    "groupBy": "sensorId",
+    "aggregations": { "id": "count" },
+    "timestampField": "lastSeen",
+    "timeRange": { "hours": 24 },
+    "formatters": {
+      "name": { }
+    },
+    "type": "BAR_CHART",
+    "units": "sensores",
+    "filterByIngenio": true,
+    "requiredRoles": ["ADMIN", "TECNICO", "SUPERADMIN"]
+  },
+
+  "PRODUCTION_BY_INGENIO": {
+    "name": "Producción Total por Ingenio",
+    "description": "Total acumulado de producción por ingenio.",
+    "model": "ingenioHourlyKPI",
+    "groupBy": "ingenioId",
+    "aggregations": {
+      "totals": "sum"
+    },
+    "join": {
+      "ingenioId": {
+        "model": "ingenio",
+        "select": ["name"]
+      }
+    },
+    "type": "BAR_CHART",
+    "units": "unidades",
+    "requiredRoles": ["ADMIN", "SUPERADMIN"]
+  },
+
+  "ENERGY_PER_MACHINE": {
+    "name": "Consumo Energético por Máquina",
+    "description": "Energía total consumida según métricas del proceso.",
+    "model": "machineHourlyKPI",
+    "groupBy": "machineId",
+    "aggregations": {
+      "processMetrics.energy_kwh": "sum"
+    },
+    "join": {
+      "machineId": {
+        "model": "machine",
+        "select": ["name"]
+      }
+    },
+    "type": "BAR_CHART",
+    "units": "kWh",
+    "filterByIngenio": true,
+    "requiredRoles": ["ADMIN", "SUPERADMIN"]
+  },
+
+  "LOW_OEE_MACHINES": {
+    "name": "Máquinas con Bajo OEE",
+    "description": "Máquinas con OEE promedio por debajo de 60%.",
+    "model": "machineHourlyKPI",
+    "groupBy": "machineId",
+    "aggregations": { "oee": "avg" },
+    "join": {
+      "machineId": {
+        "model": "machine",
+        "select": ["name"]
+      }
+    },
+    "type": "BAR_CHART",
+    "units": "%",
+    "filterByIngenio": true,
+    "requiredRoles": ["ADMIN", "TECNICO", "SUPERADMIN"]
+  },
+
+  "WEEKLY_OEE_TREND": {
+    "name": "Tendencia Semanal del OEE",
+    "description": "Promedio diario del OEE en los últimos 7 días.",
+    "model": "ingenioHourlyKPI",
+    "timestampField": "timestamp",
+    "timeRange": { "days": 7 },
+    "groupBy": "timestamp",
+    "aggregations": { "oee": "avg" },
+    "type": "LINE_CHART",
+    "units": "%",
+    "requiredRoles": ["ADMIN", "SUPERADMIN", "TECNICO"]
+  }
+}

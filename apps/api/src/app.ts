@@ -43,6 +43,7 @@ import ingenioRoutes from "./lib/routes/ingenioRoutes";
 import metricsRoutes from "./lib/routes/metricsRoutes";
 import machineRoutes from "./lib/routes/machineRoutes";
 import dashboardRoutes from "./lib/routes/dashboardRoutes";
+import reportRoutes from "./lib/routes/reportRoutes";
 
 // Sensor info ingestion
 app.use("/ingest", ingestRoutes(messageBus));
@@ -59,5 +60,6 @@ app.use("/api/ingenios", requireAuth, ingenioRoutes);
 app.use("/api/metrics", requireAuth, metricsRoutes);
 app.use("/api/machines", requireAuth, machineRoutes);
 app.use("/api/dashboard", requireAuth, dashboardRoutes);
+app.use("/api/reports", requireAuth, reportRoutes);
 
 export default server;

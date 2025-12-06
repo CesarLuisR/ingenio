@@ -15,6 +15,7 @@ import MachinesPage from "./features/machines";
 import MachineDetailPage from "./features/machines/MachineDetailPage";
 import Ingenios from "./features/ingenios";
 import { AppThemeProvider } from "./context/ThemeContext";
+import ReportsPage from "./features/reports";
 
 export default function App() {
 	return (
@@ -45,6 +46,7 @@ export default function App() {
 								<Route path="analisis" element={<Analisis />} />
 								<Route path="tecnicos" element={<Technicians />} />
 								<Route path="ingenios" element={<Ingenios />} />
+								<Route path="reportes" element={<ReportsPage /> } />
 								<Route
 									path="*"
 									element={<div>Página no encontrada</div>}
