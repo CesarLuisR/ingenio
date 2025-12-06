@@ -11,7 +11,7 @@ import type {
     Machine,
     PaginatedResponse,
 } from "../types";
-import type { AIResponse, ReportData } from "../types/reports";
+import type { AIResponse, ExecutiveReport } from "../types/reports";
 
 const API_BASE_URL =
     import.meta.env.VITE_API_URL?.replace(/\/$/, "") || "http://localhost:5000";
@@ -430,12 +430,12 @@ class ReportService extends BaseApiClient {
      * * @param reportId El ID del reporte (ej: 'GLOBAL_OEE')
      * @param params Filtros opcionales (fechas, ids, etc.)
      */
-    async getReportDirectly(reportId: string, params?: Record<string, any>): Promise<ReportData> {
+    async getReportDirectly(reportId: string, params?: Record<string, any>): Promise<ExecutiveReport> {
         // Usamos tu método buildQuery para convertir el objeto a query string
         // Ej: /reports/GLOBAL_OEE?startDate=2023-10-01&active=true
         const queryString = this.buildQuery(params);
         
-        return this.request<ReportData>(`/reports/${reportId}${queryString}`, {
+        return this.request<ExecutiveReport>(`/reports/${reportId}${queryString}`, {
             method: 'GET'
         });
     }

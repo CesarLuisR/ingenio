@@ -372,3 +372,61 @@ export const KPICard = styled.div`
     line-height: 1;
   }
 `;
+
+// --- TABLA DETALLADA ---
+
+export const TableContainer = styled.div`
+  margin-top: 4px;
+  border-radius: 16px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.background};
+  overflow: hidden;
+  max-height: 260px;
+  overflow-y: auto;
+
+  /* Scroll discreto */
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: ${({ theme }) => theme.colors.border};
+    border-radius: 999px;
+  }
+`;
+
+export const DataTable = styled.table`
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+
+  thead {
+    background: ${({ theme }) => theme.colors.card};
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+
+  th,
+  td {
+    padding: 8px 12px;
+    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+    text-align: left;
+    white-space: nowrap;
+  }
+
+  th {
+    font-weight: 600;
+    font-size: 12px;
+    color: ${({ theme }) => theme.colors.text.secondary};
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  td {
+    color: ${({ theme }) => theme.colors.text.primary};
+  }
+
+  tbody tr:hover {
+    background: ${({ theme }) => theme.colors.card};
+  }
+`;

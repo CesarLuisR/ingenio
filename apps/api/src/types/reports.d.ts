@@ -1,58 +1,88 @@
-// types/reports.ts
 import { UserRole } from '@prisma/client';
 
-// --- ENUMS DE VISUALIZACIÓN ---
-// Le dice al Frontend qué componente renderizar
-export type VisualizationType = 
-  | 'KPI_CARD'      // Tarjeta simple con un número grande
-  | 'LINE_CHART'    // Gráfico de líneas (series de tiempo)
-  | 'BAR_CHART'     // Comparativo
-  | 'PIE_CHART'     // Distribución
-  | 'TABLE'         // Datos crudos
-  | 'GAUGE';        // Velocímetro (para OEE)
+/* -------------------------------------------------------
+   NUEVO MODELO DE INFORMES EJECUTIVOS (🔥 CLAVE DEL SISTEMA)
+---------------------------------------------------------*/
 
-// --- CONFIGURACIÓN DE UI ---
-// Instrucciones para que el frontend sepa qué pintar en los ejes
-export interface UIConfig {
+export interface ExecutiveReport {
   title: string;
   description?: string;
-  type: VisualizationType;
-  xAxisKey?: string; // Ej: 'timestamp'
-  yAxisKeys?: string[]; // Ej: ['availability', 'performance']
-  colors?: string[]; // Hex codes opcionales
-  units?: string; // Ej: '%', 'kWh'
+  generatedAt: string; // ISO string para PDF y exportación
+  sections: ReportSection[]; // Cada bloque visible del informe
 }
 
-// --- RESPUESTA DEL REPORTE ---
-export interface ReportResponse {
-  meta: UIConfig;
-  data: any[]; // Array de objetos agnóstico
-  generatedAt: Date;
+/* -------------------------------------------------------
+   TIPOS DE SECCIONES QUE PUEDE CONTENER UN INFORME
+---------------------------------------------------------*/
+
+export type ReportSection =
+  | KPISection
+  | ChartSection
+  | TableSection
+  | InsightSection;
+
+/* ------------------- KPI SECTION ---------------------- */
+
+export interface KPISection {
+  type: "KPI";
+  metrics: {
+    label: string;
+    value: number | string;
+    unit?: string;
+  }[];
 }
 
-// --- CONTEXTO DE EJECUCIÓN ---
-// Datos necesarios para filtrar por seguridad
+/* ------------------- CHART SECTION -------------------- */
+
+export interface ChartSection {
+  type: "CHART";
+  chartType: "LINE" | "BAR" | "PIE";
+  data: any[];
+  xKey: string;
+  yKeys: string[];
+  colors?: string[];
+}
+
+/* ------------------- TABLE SECTION -------------------- */
+
+export interface TableSection {
+  type: "TABLE";
+  columns: string[];
+  rows: any[];
+}
+
+/* ------------------- INSIGHT SECTION ------------------ */
+
+export interface InsightSection {
+  type: "INSIGHT";
+  text: string; // generada por IA o algoritmo interno
+}
+
+/* -------------------------------------------------------
+   CONTEXTO, PARAMETROS Y DEFINICIÓN DE CADA REPORTE
+---------------------------------------------------------*/
+
 export interface ReportContext {
   userId: number;
   userRole: UserRole;
-  ingenioId?: number; // Si el usuario está atado a un ingenio
+  ingenioId?: number;
 }
 
-// --- PARÁMETROS DE ENTRADA ---
 export interface ReportParams {
   startDate?: Date;
   endDate?: Date;
   machineId?: number;
-  [key: string]: any; // Filtros extra flexibles
+  [key: string]: any;
 }
 
-// --- DEFINICIÓN DEL REPORTE (REGISTRO) ---
-// Esto es lo que "ve" el sistema y la IA para saber qué existe
+// Lo que tu sistema “ve”
 export interface ReportDefinition {
-  id: string; // Clave única, ej: 'GLOBAL_OEE'
-  name: string; // Para la IA y humanos
-  description: string; // Contexto para la IA
-  requiredRoles: UserRole[]; // Security Layer
-  // La función generadora real
-  generator: (ctx: ReportContext, params: ReportParams) => Promise<ReportResponse>;
+  id: string;
+  name: string;
+  description: string;
+  requiredRoles: UserRole[];
+  generator: (
+    ctx: ReportContext,
+    params: ReportParams
+  ) => Promise<ExecutiveReport>;
 }

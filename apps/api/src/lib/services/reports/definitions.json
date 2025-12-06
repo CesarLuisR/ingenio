@@ -1,182 +1,1126 @@
 {
-  "MACHINE_STATUS_SUMMARY": {
-    "name": "Resumen de Estado de Máquinas",
-    "description": "Cantidad de máquinas operativas vs detenidas.",
-    "model": "machine",
-    "type": "PIE_CHART",
-    "units": "máquinas",
-    "groupBy": "active",
-    "aggregations": { "id": "count" },
-    "formatters": {
-      "name": {
-        "true": "Operativas",
-        "false": "Detenidas"
-      }
-    },
-    "colors": {
-      "true": "#4CAF50",
-      "false": "#F44336"
-    },
-    "filterByIngenio": true,
-    "requiredRoles": ["SUPERADMIN", "ADMIN", "TECNICO", "LECTOR"]
-  },
-
-  "OEE_BY_MACHINE_24H": {
-    "name": "OEE por Máquina (24h)",
-    "description": "Promedio OEE basado en KPIs horarios.",
-    "model": "machineHourlyKPI",
-    "timestampField": "timestamp",
-    "timeRange": { "hours": 24 },
-    "type": "BAR_CHART",
-    "units": "%",
-    "groupBy": "machineId",
-    "aggregations": { "oee": "avg" },
-    "join": {
-      "machineId": {
+  "MACHINE_OVERVIEW_REPORT": {
+    "name": "Reporte General de Máquinas",
+    "description": "Resumen ejecutivo del estado operativo, fallas y desempeño de las máquinas.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN", "TECNICO", "LECTOR"],
+    "sections": [
+      {
+        "title": "Estado Operativo de Máquinas",
+        "type": "PIE_CHART",
         "model": "machine",
-        "select": ["name"]
-      }
-    },
-    "filterByIngenio": true,
-    "requiredRoles": ["SUPERADMIN", "ADMIN", "TECNICO", "LECTOR"]
-  },
-
-  "FAILURES_BY_SEVERITY_WEEK": {
-    "name": "Fallas por Severidad (7 días)",
-    "description": "Cantidad de fallas agrupadas por severidad.",
-    "model": "failure",
-    "timestampField": "occurredAt",
-    "timeRange": { "days": 7 },
-    "type": "BAR_CHART",
-    "units": "fallas",
-    "groupBy": "severity",
-    "aggregations": { "id": "count" },
-    "filterByIngenio": true,
-    "requiredRoles": ["ADMIN", "SUPERADMIN", "TECNICO"]
-  },
-
-  "TOP_FAILING_MACHINES": {
-    "name": "Máquinas con Más Fallas",
-    "description": "Ranking de máquinas con mayor cantidad de fallas.",
-    "model": "failure",
-    "groupBy": "machineId",
-    "aggregations": { "id": "count" },
-    "join": {
-      "machineId": {
+        "groupBy": "active",
+        "aggregations": { "id": "count" },
+        "formatters": {
+          "label": {
+            "true": "Operativas",
+            "false": "Detenidas"
+          }
+        },
+        "colors": {
+          "true": "#4CAF50",
+          "false": "#F44336"
+        },
+        "filterByIngenio": true
+      },
+      {
+        "title": "Máquinas con Más Fallas",
+        "type": "BAR_CHART",
+        "model": "failure",
+        "groupBy": "machineId",
+        "aggregations": { "id": "count" },
+        "join": {
+          "machineId": {
+            "model": "machine",
+            "select": ["name"]
+          }
+        },
+        "units": "fallas",
+        "filterByIngenio": true
+      },
+      {
+        "title": "Tendencia de OEE (7 días)",
+        "type": "LINE_CHART",
+        "model": "machineHourlyKPI",
+        "timestampField": "timestamp",
+        "timeRange": { "days": 7 },
+        "groupBy": "timestamp",
+        "aggregations": { "oee": "avg" },
+        "units": "%"
+      },
+      {
+        "title": "Resumen Tabular por Estado",
+        "type": "TABLE",
         "model": "machine",
-        "select": ["name"]
+        "groupBy": "active",
+        "aggregations": { "id": "count" },
+        "columns": ["label", "id"],
+        "filterByIngenio": true
+      },
+      {
+        "title": "Análisis Ejecutivo",
+        "type": "TEXT_AI",
+        "prompt": "Analiza el estado actual de las máquinas, identifica riesgos operativos, cuellos de botella y oportunidades de mejora basándote en la distribución operativas/detenidas, el ranking de fallas y la tendencia de OEE."
       }
-    },
-    "type": "BAR_CHART",
-    "units": "fallas",
-    "filterByIngenio": true,
-    "requiredRoles": ["ADMIN", "SUPERADMIN", "TECNICO"]
+    ]
   },
 
-  "MAINTENANCE_COST_30D": {
-    "name": "Costo Total de Mantenimientos (30 días)",
-    "description": "Suma total de costos de mantenimiento en los últimos 30 días.",
-    "model": "maintenance",
-    "timestampField": "performedAt",
-    "timeRange": { "days": 30 },
-    "groupBy": "ingenioId",
-    "aggregations": { "cost": "sum" },
-    "join": {
-      "ingenioId": {
-        "model": "ingenio",
-        "select": ["name"]
+  "MAINTENANCE_OVERVIEW_REPORT": {
+    "name": "Reporte General de Mantenimiento",
+    "description": "Visión global de actividad, frecuencia y costos de mantenimiento.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN", "TECNICO"],
+    "sections": [
+      {
+        "title": "Mantenimientos por Tipo",
+        "type": "BAR_CHART",
+        "model": "maintenance",
+        "groupBy": "type",
+        "aggregations": { "id": "count" },
+        "units": "mantenimientos",
+        "filterByIngenio": true
+      },
+      {
+        "title": "Costos de Mantenimiento (30 días)",
+        "type": "BAR_CHART",
+        "model": "maintenance",
+        "timestampField": "performedAt",
+        "timeRange": { "days": 30 },
+        "groupBy": "ingenioId",
+        "aggregations": { "cost": "sum" },
+        "join": {
+          "ingenioId": {
+            "model": "ingenio",
+            "select": ["name"]
+          }
+        },
+        "units": "USD"
+      },
+      {
+        "title": "Tendencia de Mantenimientos (7 días)",
+        "type": "LINE_CHART",
+        "model": "maintenance",
+        "timestampField": "performedAt",
+        "timeRange": { "days": 7 },
+        "groupBy": "performedAt",
+        "aggregations": { "id": "count" },
+        "units": "mantenimientos"
+      },
+      {
+        "title": "Detalle Tabular por Tipo",
+        "type": "TABLE",
+        "model": "maintenance",
+        "timestampField": "performedAt",
+        "timeRange": { "days": 30 },
+        "groupBy": "type",
+        "aggregations": { "id": "count" },
+        "columns": ["label", "id"],
+        "filterByIngenio": true
+      },
+      {
+        "title": "Análisis Ejecutivo",
+        "type": "TEXT_AI",
+        "prompt": "Analiza la carga de trabajo de mantenimiento, el impacto económico, la tendencia temporal y sugiere acciones para reducir costos y tiempos muertos."
       }
-    },
-    "type": "BAR_CHART",
-    "units": "USD",
-    "filterByIngenio": false,
-    "requiredRoles": ["ADMIN", "SUPERADMIN"]
+    ]
   },
 
-  "INACTIVE_SENSORS_24H": {
-    "name": "Sensores Inactivos (24h)",
-    "description": "Sensores sin actividad en las últimas 24 horas.",
-    "model": "sensor",
-    "groupBy": "sensorId",
-    "aggregations": { "id": "count" },
-    "timestampField": "lastSeen",
-    "timeRange": { "hours": 24 },
-    "formatters": {
-      "name": { }
-    },
-    "type": "BAR_CHART",
-    "units": "sensores",
-    "filterByIngenio": true,
-    "requiredRoles": ["ADMIN", "TECNICO", "SUPERADMIN"]
-  },
-
-  "PRODUCTION_BY_INGENIO": {
-    "name": "Producción Total por Ingenio",
-    "description": "Total acumulado de producción por ingenio.",
-    "model": "ingenioHourlyKPI",
-    "groupBy": "ingenioId",
-    "aggregations": {
-      "totals": "sum"
-    },
-    "join": {
-      "ingenioId": {
-        "model": "ingenio",
-        "select": ["name"]
+  "INGENIO_KPI_OVERVIEW_REPORT": {
+    "name": "KPI Global del Ingenio",
+    "description": "Vista consolidada de OEE, disponibilidad y desempeño global del ingenio.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN", "TECNICO", "LECTOR"],
+    "sections": [
+      {
+        "title": "Tendencia OEE Global (7 días)",
+        "type": "LINE_CHART",
+        "model": "ingenioHourlyKPI",
+        "timestampField": "timestamp",
+        "timeRange": { "days": 7 },
+        "groupBy": "timestamp",
+        "aggregations": { "oee": "avg" },
+        "units": "%"
+      },
+      {
+        "title": "Disponibilidad Promedio por Ingenio",
+        "type": "BAR_CHART",
+        "model": "ingenioHourlyKPI",
+        "groupBy": "ingenioId",
+        "aggregations": { "availability": "avg" },
+        "join": {
+          "ingenioId": {
+            "model": "ingenio",
+            "select": ["name"]
+          }
+        },
+        "units": "%"
+      },
+      {
+        "title": "Resumen Tabular de KPIs",
+        "type": "TABLE",
+        "model": "ingenioHourlyKPI",
+        "timestampField": "timestamp",
+        "timeRange": { "days": 1 },
+        "groupBy": "ingenioId",
+        "aggregations": {
+          "availability": "avg",
+          "oee": "avg"
+        },
+        "columns": ["ingenioId", "availability", "oee"]
+      },
+      {
+        "title": "Comentario Ejecutivo de KPIs",
+        "type": "TEXT_AI",
+        "prompt": "Resume el desempeño global del ingenio destacando mejoras o deterioros en OEE y disponibilidad en los últimos 7 días."
       }
-    },
-    "type": "BAR_CHART",
-    "units": "unidades",
-    "requiredRoles": ["ADMIN", "SUPERADMIN"]
+    ]
   },
 
-  "ENERGY_PER_MACHINE": {
-    "name": "Consumo Energético por Máquina",
-    "description": "Energía total consumida según métricas del proceso.",
-    "model": "machineHourlyKPI",
-    "groupBy": "machineId",
-    "aggregations": {
-      "processMetrics.energy_kwh": "sum"
-    },
-    "join": {
-      "machineId": {
+  "MACHINE_KPI_DETAIL_REPORT": {
+    "name": "Detalle de KPIs por Máquina",
+    "description": "Análisis detallado de la evolución de OEE, disponibilidad, desempeño y calidad por máquina.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN", "TECNICO"],
+    "sections": [
+      {
+        "title": "Top Máquinas por OEE Promedio (7 días)",
+        "type": "BAR_CHART",
+        "model": "machineHourlyKPI",
+        "timestampField": "timestamp",
+        "timeRange": { "days": 7 },
+        "groupBy": "machineId",
+        "aggregations": { "oee": "avg" },
+        "join": {
+          "machineId": {
+            "model": "machine",
+            "select": ["name"]
+          }
+        },
+        "units": "%"
+      },
+      {
+        "title": "Tendencia de Disponibilidad (48 horas)",
+        "type": "LINE_CHART",
+        "model": "machineHourlyKPI",
+        "timestampField": "timestamp",
+        "timeRange": { "days": 2 },
+        "groupBy": "timestamp",
+        "aggregations": { "availability": "avg" },
+        "units": "%"
+      },
+      {
+        "title": "Comparativo de Performance y Calidad por Máquina",
+        "type": "BAR_CHART",
+        "model": "machineHourlyKPI",
+        "timestampField": "timestamp",
+        "timeRange": { "days": 1 },
+        "groupBy": "machineId",
+        "aggregations": {
+          "performance": "avg",
+          "quality": "avg"
+        },
+        "join": {
+          "machineId": {
+            "model": "machine",
+            "select": ["name"]
+          }
+        },
+        "units": "%"
+      },
+      {
+        "title": "Resumen Tabular de KPIs por Máquina (24 horas)",
+        "type": "TABLE",
+        "model": "machineHourlyKPI",
+        "timestampField": "timestamp",
+        "timeRange": { "days": 1 },
+        "groupBy": "machineId",
+        "aggregations": {
+          "availability": "avg",
+          "performance": "avg",
+          "quality": "avg",
+          "oee": "avg"
+        },
+        "columns": ["machineId", "availability", "performance", "quality", "oee"]
+      }
+    ]
+  },
+
+  "FAILURE_OVERVIEW_REPORT": {
+    "name": "Reporte General de Fallas",
+    "description": "Panorama general de fallas, severidad y estados.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN", "TECNICO"],
+    "sections": [
+      {
+        "title": "Fallas por Severidad (30 días)",
+        "type": "BAR_CHART",
+        "model": "failure",
+        "timestampField": "occurredAt",
+        "timeRange": { "days": 30 },
+        "groupBy": "severity",
+        "aggregations": { "id": "count" },
+        "units": "fallas",
+        "filterByIngenio": true
+      },
+      {
+        "title": "Distribución de Estado de Fallas",
+        "type": "PIE_CHART",
+        "model": "failure",
+        "groupBy": "status",
+        "aggregations": { "id": "count" },
+        "units": "fallas",
+        "filterByIngenio": true
+      },
+      {
+        "title": "Tendencia de Fallas Diarias (14 días)",
+        "type": "LINE_CHART",
+        "model": "failure",
+        "timestampField": "occurredAt",
+        "timeRange": { "days": 14 },
+        "groupBy": "occurredAt",
+        "aggregations": { "id": "count" },
+        "units": "fallas",
+        "filterByIngenio": true
+      },
+      {
+        "title": "Tabla de Fallas Recientes",
+        "type": "TABLE",
+        "model": "failure",
+        "timestampField": "occurredAt",
+        "timeRange": { "days": 7 },
+        "columns": ["id", "occurredAt", "severity", "status", "machineId"],
+        "filterByIngenio": true
+      }
+    ]
+  },
+
+  "FAILURE_SEVERITY_TREND_REPORT": {
+    "name": "Tendencias de Severidad de Fallas",
+    "description": "Análisis de cómo evoluciona la severidad de las fallas en el tiempo.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN", "TECNICO"],
+    "sections": [
+      {
+        "title": "Fallas Críticas por Día (30 días)",
+        "type": "LINE_CHART",
+        "model": "failure",
+        "timestampField": "occurredAt",
+        "timeRange": { "days": 30 },
+        "groupBy": "occurredAt",
+        "aggregations": { "id": "count" },
+        "filters": {
+          "severity": ["critica", "crítica", "alta"]
+        },
+        "units": "fallas críticas",
+        "filterByIngenio": true
+      },
+      {
+        "title": "Ranking de Máquinas por Severidad Promedio",
+        "type": "BAR_CHART",
+        "model": "failure",
+        "groupBy": "machineId",
+        "aggregations": { "id": "count" },
+        "join": {
+          "machineId": {
+            "model": "machine",
+            "select": ["name"]
+          }
+        },
+        "units": "fallas",
+        "filterByIngenio": true
+      },
+      {
+        "title": "Comentario sobre Riesgo Operativo",
+        "type": "TEXT_AI",
+        "prompt": "Evalúa la tendencia de fallas críticas y señala las máquinas con mayor aporte al riesgo operativo."
+      }
+    ]
+  },
+
+  "DOWNTIME_BY_MACHINE_REPORT": {
+    "name": "Paradas por Máquina",
+    "description": "Identifica las máquinas con más intervenciones y potencial tiempo muerto.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN", "TECNICO"],
+    "sections": [
+      {
+        "title": "Cantidad de Fallas por Máquina (30 días)",
+        "type": "BAR_CHART",
+        "model": "failure",
+        "timestampField": "occurredAt",
+        "timeRange": { "days": 30 },
+        "groupBy": "machineId",
+        "aggregations": { "id": "count" },
+        "join": {
+          "machineId": {
+            "model": "machine",
+            "select": ["name"]
+          }
+        },
+        "units": "fallas",
+        "filterByIngenio": true
+      },
+      {
+        "title": "Mantenimientos por Máquina (30 días)",
+        "type": "BAR_CHART",
+        "model": "maintenance",
+        "timestampField": "performedAt",
+        "timeRange": { "days": 30 },
+        "groupBy": "machineId",
+        "aggregations": { "id": "count" },
+        "join": {
+          "machineId": {
+            "model": "machine",
+            "select": ["name"]
+          }
+        },
+        "units": "mantenimientos",
+        "filterByIngenio": true
+      },
+      {
+        "title": "Duración Promedio de Mantenimientos por Máquina",
+        "type": "TABLE",
+        "model": "maintenance",
+        "groupBy": "machineId",
+        "aggregations": { "durationMinutes": "avg" },
+        "columns": ["machineId", "durationMinutes"],
+        "filterByIngenio": true
+      }
+    ]
+  },
+
+  "SENSOR_STATUS_REPORT": {
+    "name": "Salud de Sensores",
+    "description": "Visión general del estado, actividad y participación de sensores en fallas.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN", "TECNICO"],
+    "sections": [
+      {
+        "title": "Sensores Activos vs Inactivos",
+        "type": "PIE_CHART",
+        "model": "sensor",
+        "groupBy": "active",
+        "aggregations": { "id": "count" },
+        "formatters": {
+          "label": {
+            "true": "Activos",
+            "false": "Inactivos"
+          }
+        },
+        "filterByIngenio": true
+      },
+      {
+        "title": "Sensores por Tipo",
+        "type": "BAR_CHART",
+        "model": "sensor",
+        "groupBy": "type",
+        "aggregations": { "id": "count" },
+        "units": "sensores",
+        "filterByIngenio": true
+      },
+      {
+        "title": "Fallas Asociadas a Sensores",
+        "type": "BAR_CHART",
+        "model": "failure",
+        "groupBy": "sensorId",
+        "aggregations": { "id": "count" },
+        "join": {
+          "sensorId": {
+            "model": "sensor",
+            "select": ["name"]
+          }
+        },
+        "units": "fallas",
+        "filterByIngenio": true
+      },
+      {
+        "title": "Tabla de Sensores con Último Contacto",
+        "type": "TABLE",
+        "model": "sensor",
+        "columns": ["id", "name", "type", "lastSeen", "machineId", "ingenioId"],
+        "filterByIngenio": true
+      }
+    ]
+  },
+
+  "TECHNICIAN_WORKLOAD_REPORT": {
+    "name": "Carga de Trabajo por Técnico",
+    "description": "Distribución de mantenimientos y tareas por técnico.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN"],
+    "sections": [
+      {
+        "title": "Mantenimientos por Técnico (30 días)",
+        "type": "BAR_CHART",
+        "model": "maintenance",
+        "timestampField": "performedAt",
+        "timeRange": { "days": 30 },
+        "groupBy": "technicianId",
+        "aggregations": { "id": "count" },
+        "join": {
+          "technicianId": {
+            "model": "technician",
+            "select": ["name"]
+          }
+        },
+        "units": "mantenimientos"
+      },
+      {
+        "title": "Horas Totales de Mantenimiento por Técnico",
+        "type": "BAR_CHART",
+        "model": "maintenance",
+        "timestampField": "performedAt",
+        "timeRange": { "days": 30 },
+        "groupBy": "technicianId",
+        "aggregations": { "durationMinutes": "sum" },
+        "join": {
+          "technicianId": {
+            "model": "technician",
+            "select": ["name"]
+          }
+        },
+        "units": "minutos"
+      },
+      {
+        "title": "Tabla de Técnicos y su Estado",
+        "type": "TABLE",
+        "model": "technician",
+        "columns": ["id", "name", "email", "phone", "active", "ingenioId"]
+      }
+    ]
+  },
+
+  "TECHNICIAN_PERFORMANCE_REPORT": {
+    "name": "Desempeño de Técnicos",
+    "description": "Vista de productividad y efectividad de los técnicos.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN"],
+    "sections": [
+      {
+        "title": "Fallas Asociadas por Técnico (últimos 30 días)",
+        "type": "BAR_CHART",
+        "model": "maintenance",
+        "timestampField": "performedAt",
+        "timeRange": { "days": 30 },
+        "groupBy": "technicianId",
+        "aggregations": { "id": "count" },
+        "join": {
+          "technicianId": {
+            "model": "technician",
+            "select": ["name"]
+          }
+        },
+        "units": "mantenimientos"
+      },
+      {
+        "title": "Costo Total de Mantenimiento por Técnico",
+        "type": "BAR_CHART",
+        "model": "maintenance",
+        "timestampField": "performedAt",
+        "timeRange": { "days": 30 },
+        "groupBy": "technicianId",
+        "aggregations": { "cost": "sum" },
+        "join": {
+          "technicianId": {
+            "model": "technician",
+            "select": ["name"]
+          }
+        },
+        "units": "USD"
+      },
+      {
+        "title": "Análisis de Desempeño de Técnicos",
+        "type": "TEXT_AI",
+        "prompt": "Analiza la carga de trabajo, costo asociado y distribución de mantenimientos por técnico. Identifica técnicos sobrecargados o subutilizados."
+      }
+    ]
+  },
+
+  "MAINTENANCE_TYPE_EFFORT_REPORT": {
+    "name": "Esfuerzo por Tipo de Mantenimiento",
+    "description": "Cuánto esfuerzo y costo se invierte en cada tipo de mantenimiento.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN", "TECNICO"],
+    "sections": [
+      {
+        "title": "Duración Total por Tipo de Mantenimiento (30 días)",
+        "type": "BAR_CHART",
+        "model": "maintenance",
+        "timestampField": "performedAt",
+        "timeRange": { "days": 30 },
+        "groupBy": "type",
+        "aggregations": { "durationMinutes": "sum" },
+        "units": "minutos",
+        "filterByIngenio": true
+      },
+      {
+        "title": "Costo Total por Tipo de Mantenimiento (30 días)",
+        "type": "BAR_CHART",
+        "model": "maintenance",
+        "timestampField": "performedAt",
+        "timeRange": { "days": 30 },
+        "groupBy": "type",
+        "aggregations": { "cost": "sum" },
+        "units": "USD",
+        "filterByIngenio": true
+      },
+      {
+        "title": "Detalle Tabular de Tipos (30 días)",
+        "type": "TABLE",
+        "model": "maintenance",
+        "timestampField": "performedAt",
+        "timeRange": { "days": 30 },
+        "groupBy": "type",
+        "aggregations": {
+          "id": "count",
+          "durationMinutes": "avg",
+          "cost": "avg"
+        },
+        "columns": ["label", "id", "durationMinutes", "cost"],
+        "filterByIngenio": true
+      }
+    ]
+  },
+
+  "FAILURE_MAINTENANCE_LINK_REPORT": {
+    "name": "Relación Fallas-Mantenimiento",
+    "description": "Cómo las fallas disparan mantenimientos y qué tan efectivos son.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN", "TECNICO"],
+    "sections": [
+      {
+        "title": "Fallas que Generaron Mantenimiento",
+        "type": "BAR_CHART",
+        "model": "failure",
+        "groupBy": "maintenanceId",
+        "aggregations": { "id": "count" },
+        "units": "fallas"
+      },
+      {
+        "title": "Mantenimientos con Fallas Asociadas",
+        "type": "TABLE",
+        "model": "maintenance",
+        "columns": ["id", "performedAt", "type", "durationMinutes", "cost"],
+        "relations": {
+          "failures": true
+        }
+      },
+      {
+        "title": "Comentario sobre Efectividad",
+        "type": "TEXT_AI",
+        "prompt": "Analiza qué tan alineadas están las fallas con mantenimientos posteriores y sugiere si se requiere más mantenimiento preventivo."
+      }
+    ]
+  },
+
+  "USER_ACCESS_ROLES_REPORT": {
+    "name": "Usuarios y Roles",
+    "description": "Mapa de accesos, roles y pertenencia a ingenios.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN"],
+    "sections": [
+      {
+        "title": "Usuarios por Rol",
+        "type": "BAR_CHART",
+        "model": "user",
+        "groupBy": "role",
+        "aggregations": { "id": "count" },
+        "units": "usuarios"
+      },
+      {
+        "title": "Usuarios por Ingenio",
+        "type": "BAR_CHART",
+        "model": "user",
+        "groupBy": "ingenioId",
+        "aggregations": { "id": "count" },
+        "join": {
+          "ingenioId": {
+            "model": "ingenio",
+            "select": ["name"]
+          }
+        },
+        "units": "usuarios"
+      },
+      {
+        "title": "Listado de Usuarios",
+        "type": "TABLE",
+        "model": "user",
+        "columns": ["id", "name", "email", "role", "ingenioId", "createdAt"]
+      }
+    ]
+  },
+
+  "AUDIT_LOG_ACTIVITY_REPORT": {
+    "name": "Actividad del Sistema",
+    "description": "Registro de acciones importantes para auditoría y trazabilidad.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN"],
+    "sections": [
+      {
+        "title": "Eventos por Tipo de Acción (24 horas)",
+        "type": "BAR_CHART",
+        "model": "auditLog",
+        "timestampField": "createdAt",
+        "timeRange": { "days": 1 },
+        "groupBy": "action",
+        "aggregations": { "id": "count" },
+        "units": "eventos"
+      },
+      {
+        "title": "Eventos por Usuario (24 horas)",
+        "type": "BAR_CHART",
+        "model": "auditLog",
+        "timestampField": "createdAt",
+        "timeRange": { "days": 1 },
+        "groupBy": "userId",
+        "aggregations": { "id": "count" },
+        "join": {
+          "userId": {
+            "model": "user",
+            "select": ["name"]
+          }
+        },
+        "units": "eventos"
+      },
+      {
+        "title": "Listado de Últimos Eventos",
+        "type": "TABLE",
+        "model": "auditLog",
+        "timestampField": "createdAt",
+        "timeRange": { "days": 1 },
+        "columns": ["id", "createdAt", "userId", "ingenioId", "action", "entity", "entityId", "ip"]
+      }
+    ]
+  },
+
+  "INGENIO_COMPARISON_REPORT": {
+    "name": "Comparativo entre Ingenios",
+    "description": "Compara desempeño, fallas y mantenimiento entre ingenios.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN"],
+    "sections": [
+      {
+        "title": "OEE Promedio por Ingenio (7 días)",
+        "type": "BAR_CHART",
+        "model": "ingenioHourlyKPI",
+        "timestampField": "timestamp",
+        "timeRange": { "days": 7 },
+        "groupBy": "ingenioId",
+        "aggregations": { "oee": "avg" },
+        "join": {
+          "ingenioId": {
+            "model": "ingenio",
+            "select": ["name"]
+          }
+        },
+        "units": "%"
+      },
+      {
+        "title": "Fallas por Ingenio (30 días)",
+        "type": "BAR_CHART",
+        "model": "failure",
+        "timestampField": "occurredAt",
+        "timeRange": { "days": 30 },
+        "groupBy": "ingenioId",
+        "aggregations": { "id": "count" },
+        "join": {
+          "ingenioId": {
+            "model": "ingenio",
+            "select": ["name"]
+          }
+        },
+        "units": "fallas"
+      },
+      {
+        "title": "Costos de Mantenimiento por Ingenio (30 días)",
+        "type": "BAR_CHART",
+        "model": "maintenance",
+        "timestampField": "performedAt",
+        "timeRange": { "days": 30 },
+        "groupBy": "ingenioId",
+        "aggregations": { "cost": "sum" },
+        "join": {
+          "ingenioId": {
+            "model": "ingenio",
+            "select": ["name"]
+          }
+        },
+        "units": "USD"
+      },
+      {
+        "title": "Comentario Comparativo",
+        "type": "TEXT_AI",
+        "prompt": "Compara el desempeño de los ingenios considerando OEE, fallas y costos de mantenimiento. Destaca mejores prácticas y áreas rezagadas."
+      }
+    ]
+  },
+
+  "MACHINE_LIFECYCLE_REPORT": {
+    "name": "Ciclo de Vida de Máquinas",
+    "description": "Edad, actividad y carga de mantenimiento por máquina.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN", "TECNICO"],
+    "sections": [
+      {
+        "title": "Máquinas por Año de Alta",
+        "type": "BAR_CHART",
         "model": "machine",
-        "select": ["name"]
-      }
-    },
-    "type": "BAR_CHART",
-    "units": "kWh",
-    "filterByIngenio": true,
-    "requiredRoles": ["ADMIN", "SUPERADMIN"]
-  },
-
-  "LOW_OEE_MACHINES": {
-    "name": "Máquinas con Bajo OEE",
-    "description": "Máquinas con OEE promedio por debajo de 60%.",
-    "model": "machineHourlyKPI",
-    "groupBy": "machineId",
-    "aggregations": { "oee": "avg" },
-    "join": {
-      "machineId": {
+        "groupBy": "createdAt",
+        "aggregations": { "id": "count" },
+        "units": "máquinas",
+        "filterByIngenio": true
+      },
+      {
+        "title": "Mantenimientos Acumulados por Máquina",
+        "type": "BAR_CHART",
+        "model": "maintenance",
+        "groupBy": "machineId",
+        "aggregations": { "id": "count" },
+        "join": {
+          "machineId": {
+            "model": "machine",
+            "select": ["name"]
+          }
+        },
+        "units": "mantenimientos",
+        "filterByIngenio": true
+      },
+      {
+        "title": "Tabla de Máquinas con Datos Clave",
+        "type": "TABLE",
         "model": "machine",
-        "select": ["name"]
+        "columns": ["id", "name", "code", "type", "location", "active", "createdAt", "ingenioId"],
+        "filterByIngenio": true
       }
-    },
-    "type": "BAR_CHART",
-    "units": "%",
-    "filterByIngenio": true,
-    "requiredRoles": ["ADMIN", "TECNICO", "SUPERADMIN"]
+    ]
   },
 
-  "WEEKLY_OEE_TREND": {
-    "name": "Tendencia Semanal del OEE",
-    "description": "Promedio diario del OEE en los últimos 7 días.",
-    "model": "ingenioHourlyKPI",
-    "timestampField": "timestamp",
-    "timeRange": { "days": 7 },
-    "groupBy": "timestamp",
-    "aggregations": { "oee": "avg" },
-    "type": "LINE_CHART",
-    "units": "%",
-    "requiredRoles": ["ADMIN", "SUPERADMIN", "TECNICO"]
+  "RECENT_FAILURE_ALERTS_REPORT": {
+    "name": "Alertas de Fallas Recientes",
+    "description": "Monitoreo corto plazo de incidentes y criticidad.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN", "TECNICO", "LECTOR"],
+    "sections": [
+      {
+        "title": "Fallas de las Últimas 24 Horas",
+        "type": "TABLE",
+        "model": "failure",
+        "timestampField": "occurredAt",
+        "timeRange": { "days": 1 },
+        "columns": ["id", "occurredAt", "severity", "status", "machineId", "description"],
+        "filterByIngenio": true
+      },
+      {
+        "title": "Fallas Críticas por Máquina (24 horas)",
+        "type": "BAR_CHART",
+        "model": "failure",
+        "timestampField": "occurredAt",
+        "timeRange": { "days": 1 },
+        "groupBy": "machineId",
+        "aggregations": { "id": "count" },
+        "filters": {
+          "severity": ["critica", "crítica", "alta"]
+        },
+        "join": {
+          "machineId": {
+            "model": "machine",
+            "select": ["name"]
+          }
+        },
+        "units": "fallas críticas",
+        "filterByIngenio": true
+      }
+    ]
+  },
+
+  "PREVENTIVE_VS_CORRECTIVE_REPORT": {
+    "name": "Preventivo vs Correctivo",
+    "description": "Equilibrio entre mantenimiento preventivo y correctivo.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN", "TECNICO"],
+    "sections": [
+      {
+        "title": "Distribución por Tipo de Mantenimiento",
+        "type": "PIE_CHART",
+        "model": "maintenance",
+        "groupBy": "type",
+        "aggregations": { "id": "count" },
+        "units": "mantenimientos",
+        "filterByIngenio": true
+      },
+      {
+        "title": "Tendencia de Preventivos vs Correctivos (90 días)",
+        "type": "LINE_CHART",
+        "model": "maintenance",
+        "timestampField": "performedAt",
+        "timeRange": { "days": 90 },
+        "groupBy": "performedAt",
+        "aggregations": { "id": "count" },
+        "units": "mantenimientos",
+        "filterByIngenio": true
+      },
+      {
+        "title": "Comentario sobre Estrategia de Mantenimiento",
+        "type": "TEXT_AI",
+        "prompt": "Evalúa si el balance entre mantenimiento preventivo y correctivo es adecuado. Sugiere un objetivo de proporciones si aplica."
+      }
+    ]
+  },
+
+  "COST_PER_MACHINE_REPORT": {
+    "name": "Costos por Máquina",
+    "description": "Cuánto se gasta en mantenimiento por máquina.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN"],
+    "sections": [
+      {
+        "title": "Costo Total de Mantenimiento por Máquina (6 meses)",
+        "type": "BAR_CHART",
+        "model": "maintenance",
+        "timestampField": "performedAt",
+        "timeRange": { "days": 180 },
+        "groupBy": "machineId",
+        "aggregations": { "cost": "sum" },
+        "join": {
+          "machineId": {
+            "model": "machine",
+            "select": ["name"]
+          }
+        },
+        "units": "USD",
+        "filterByIngenio": true
+      },
+      {
+        "title": "Costo Promedio por Intervención",
+        "type": "TABLE",
+        "model": "maintenance",
+        "timestampField": "performedAt",
+        "timeRange": { "days": 180 },
+        "groupBy": "machineId",
+        "aggregations": {
+          "cost": "avg",
+          "id": "count"
+        },
+        "columns": ["machineId", "cost", "id"],
+        "filterByIngenio": true
+      }
+    ]
+  },
+
+  "COST_PER_INGENIO_REPORT": {
+    "name": "Costos por Ingenio",
+    "description": "Cómo se distribuyen los costos de mantenimiento entre ingenios.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN"],
+    "sections": [
+      {
+        "title": "Costo Total de Mantenimiento por Ingenio (6 meses)",
+        "type": "BAR_CHART",
+        "model": "maintenance",
+        "timestampField": "performedAt",
+        "timeRange": { "days": 180 },
+        "groupBy": "ingenioId",
+        "aggregations": { "cost": "sum" },
+        "join": {
+          "ingenioId": {
+            "model": "ingenio",
+            "select": ["name"]
+          }
+        },
+        "units": "USD"
+      },
+      {
+        "title": "Mantenimientos por Ingenio (6 meses)",
+        "type": "BAR_CHART",
+        "model": "maintenance",
+        "timestampField": "performedAt",
+        "timeRange": { "days": 180 },
+        "groupBy": "ingenioId",
+        "aggregations": { "id": "count" },
+        "join": {
+          "ingenioId": {
+            "model": "ingenio",
+            "select": ["name"]
+          }
+        },
+        "units": "mantenimientos"
+      }
+    ]
+  },
+
+  "ANALYSIS_AI_SUMMARY_REPORT": {
+    "name": "Resumen de Análisis Avanzados",
+    "description": "Uso de los registros de análisis de sensores para generar insights.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN", "TECNICO"],
+    "sections": [
+      {
+        "title": "Análisis Recientes por Sensor",
+        "type": "TABLE",
+        "model": "analysis",
+        "timestampField": "createdAt",
+        "timeRange": { "days": 7 },
+        "columns": ["id", "sensorId", "createdAt", "summary"]
+      },
+      {
+        "title": "Conteo de Análisis por Sensor (7 días)",
+        "type": "BAR_CHART",
+        "model": "analysis",
+        "timestampField": "createdAt",
+        "timeRange": { "days": 7 },
+        "groupBy": "sensorId",
+        "aggregations": { "id": "count" },
+        "join": {
+          "sensorId": {
+            "model": "sensor",
+            "select": ["name"]
+          }
+        },
+        "units": "análisis"
+      },
+      {
+        "title": "Insight Global de Análisis",
+        "type": "TEXT_AI",
+        "prompt": "Revisa los análisis y resúmenes de sensores recientes y genera conclusiones sobre tendencias de proceso y riesgos emergentes."
+      }
+    ]
+  },
+
+  "PROCESS_STABILITY_REPORT": {
+    "name": "Estabilidad de Proceso",
+    "description": "Uso de KPIs horarios para medir estabilidad de operación.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN", "TECNICO"],
+    "sections": [
+      {
+        "title": "Variación de OEE por Hora (24 horas)",
+        "type": "LINE_CHART",
+        "model": "machineHourlyKPI",
+        "timestampField": "timestamp",
+        "timeRange": { "days": 1 },
+        "groupBy": "timestamp",
+        "aggregations": { "oee": "avg" },
+        "units": "%"
+      },
+      {
+        "title": "Variación de Disponibilidad por Hora (24 horas)",
+        "type": "LINE_CHART",
+        "model": "machineHourlyKPI",
+        "timestampField": "timestamp",
+        "timeRange": { "days": 1 },
+        "groupBy": "timestamp",
+        "aggregations": { "availability": "avg" },
+        "units": "%"
+      },
+      {
+        "title": "Comentario sobre Estabilidad",
+        "type": "TEXT_AI",
+        "prompt": "Evalúa la estabilidad del proceso observando la variación de OEE y disponibilidad por hora. Indica si el proceso es estable o presenta picos y valles preocupantes."
+      }
+    ]
+  },
+
+  "OEE_DISTRIBUTION_REPORT": {
+    "name": "Distribución de OEE por Máquina",
+    "description": "Cómo se distribuye el OEE entre máquinas en un periodo.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN", "TECNICO", "LECTOR"],
+    "sections": [
+      {
+        "title": "OEE Promedio por Máquina (7 días)",
+        "type": "BAR_CHART",
+        "model": "machineHourlyKPI",
+        "timestampField": "timestamp",
+        "timeRange": { "days": 7 },
+        "groupBy": "machineId",
+        "aggregations": { "oee": "avg" },
+        "join": {
+          "machineId": {
+            "model": "machine",
+            "select": ["name"]
+          }
+        },
+        "units": "%"
+      },
+      {
+        "title": "Ranking de Máquinas por OEE",
+        "type": "TABLE",
+        "model": "machineHourlyKPI",
+        "timestampField": "timestamp",
+        "timeRange": { "days": 7 },
+        "groupBy": "machineId",
+        "aggregations": { "oee": "avg" },
+        "columns": ["machineId", "oee"]
+      }
+    ]
+  },
+
+  "AVAILABILITY_TREND_REPORT": {
+    "name": "Tendencia de Disponibilidad Global",
+    "description": "Evolución de la disponibilidad del ingenio.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN", "TECNICO", "LECTOR"],
+    "sections": [
+      {
+        "title": "Disponibilidad Global por Día (30 días)",
+        "type": "LINE_CHART",
+        "model": "ingenioHourlyKPI",
+        "timestampField": "timestamp",
+        "timeRange": { "days": 30 },
+        "groupBy": "timestamp",
+        "aggregations": { "availability": "avg" },
+        "units": "%"
+      },
+      {
+        "title": "Disponibilidad Promedio por Ingenio (30 días)",
+        "type": "BAR_CHART",
+        "model": "ingenioHourlyKPI",
+        "timestampField": "timestamp",
+        "timeRange": { "days": 30 },
+        "groupBy": "ingenioId",
+        "aggregations": { "availability": "avg" },
+        "join": {
+          "ingenioId": {
+            "model": "ingenio",
+            "select": ["name"]
+          }
+        },
+        "units": "%"
+      }
+    ]
+  },
+
+  "EXECUTIVE_GLOBAL_SUMMARY_REPORT": {
+    "name": "Resumen Ejecutivo Global",
+    "description": "Resumen de alto nivel de producción, fallas, mantenimiento y KPIs.",
+    "requiredRoles": ["SUPERADMIN", "ADMIN"],
+    "sections": [
+      {
+        "title": "Indicadores Clave Resumidos (24 horas)",
+        "type": "TABLE",
+        "model": "ingenioHourlyKPI",
+        "timestampField": "timestamp",
+        "timeRange": { "days": 1 },
+        "groupBy": "ingenioId",
+        "aggregations": {
+          "availability": "avg",
+          "oee": "avg"
+        },
+        "columns": ["ingenioId", "availability", "oee"]
+      },
+      {
+        "title": "Fallas Totales vs Mantenimientos (24 horas)",
+        "type": "BAR_CHART",
+        "model": "failure",
+        "timestampField": "occurredAt",
+        "timeRange": { "days": 1 },
+        "groupBy": "ingenioId",
+        "aggregations": { "id": "count" },
+        "join": {
+          "ingenioId": {
+            "model": "ingenio",
+            "select": ["name"]
+          }
+        },
+        "units": "fallas"
+      },
+      {
+        "title": "Mantenimientos Totales (24 horas)",
+        "type": "BAR_CHART",
+        "model": "maintenance",
+        "timestampField": "performedAt",
+        "timeRange": { "days": 1 },
+        "groupBy": "ingenioId",
+        "aggregations": { "id": "count" },
+        "join": {
+          "ingenioId": {
+            "model": "ingenio",
+            "select": ["name"]
+          }
+        },
+        "units": "mantenimientos"
+      },
+      {
+        "title": "Narrativa Ejecutiva Global",
+        "type": "TEXT_AI",
+        "prompt": "Genera un resumen ejecutivo que explique el estado global del ingenio: desempeño (OEE, disponibilidad), volumen y severidad de fallas, carga de mantenimiento y riesgos clave."
+      }
+    ]
   }
 }

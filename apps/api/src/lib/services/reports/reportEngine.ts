@@ -1,139 +1,186 @@
+// src/lib/services/reports/executiveReportEngine.ts
 import { PrismaClient } from "@prisma/client";
 import definitions from "./definitions.json";
-import { ReportDefinitionJSON } from "./reportTypes";
-import { VisualizationType } from "../../../types/reports";
-
-// Valida y convierte tipo de grafica
-function mapToVisualizationType(type: string): VisualizationType {
-    const allowed = ["PIE_CHART", "BAR_CHART", "LINE_CHART", "KPI"];
-    if (!allowed.includes(type)) {
-        throw new Error(`VisualizationType inválido: ${type}`);
-    }
-    return type as VisualizationType;
-}
+import {
+    ReportDefinitionJSON,
+    SectionJSON,
+    DataSectionJSON,
+    AggregationType
+} from "./reportTypes";
 
 const prisma = new PrismaClient();
 
-// JSON tipado como diccionario
-const reportDefs: Record<string, ReportDefinitionJSON> = definitions as any;
+// Cargamos el JSON tipado
+const defs: Record<string, ReportDefinitionJSON> = definitions as any;
 
-const AGGREGATION_MAP = {
+const AGG_MAP = {
     sum: "_sum",
     avg: "_avg",
     count: "_count"
 } as const;
 
-type PrismaAggOp = keyof typeof AGGREGATION_MAP;
+type PrismaAggKey = keyof typeof AGG_MAP;
 
-export async function runReport(
-    reportId: string,
-    ctx: { ingenioId?: number },
-    params: Record<string, any> = {}
+// --- Tipo de salida que consumirá el frontend ---
+export interface ExecutiveReportDTO {
+    title: string;
+    description?: string;
+    generatedAt: Date;
+    sections: Array<
+        | {
+            type: "CHART";
+            title: string;
+            chartType: "PIE" | "BAR" | "LINE";
+            data: any[];
+            xKey: string;
+            yKeys: string[];
+            units?: string;
+            colors?: string[];
+        }
+        | {
+            type: "TABLE";
+            title: string;
+            columns: string[];
+            rows: any[];
+        }
+        | {
+            type: "INSIGHT";
+            title: string;
+            text: string;
+        }
+    >;
+}
+
+// Util para saber si la sección es de datos
+function isDataSection(section: SectionJSON): section is DataSectionJSON {
+    return section.type !== "TEXT_AI";
+}
+
+// Ejecuta 1 sección de datos contra Prisma y la convierte en CHART o TABLE
+async function runDataSection(
+    section: DataSectionJSON,
+    ctx: { ingenioId?: number }
 ) {
-    const def = reportDefs[reportId];
-    if (!def) throw new Error(`Reporte no registrado: ${reportId}`);
-
-    // ------------------------------
-    // FILTRO BASE DE CONSULTA
-    // ------------------------------
+    // WHERE base
     const where: any = {};
 
-    if (def.filterByIngenio && ctx.ingenioId) {
+    if (section.filterByIngenio && ctx.ingenioId) {
         where.ingenioId = ctx.ingenioId;
     }
 
-    // FILTRO DE RANGO DE TIEMPO
-    if (def.timeRange && def.timestampField) {
+    if (section.timestampField && section.timeRange) {
         const now = new Date();
-        let since = new Date(now);
+        const since = new Date(now);
 
-        if (def.timeRange.hours) since.setHours(since.getHours() - def.timeRange.hours);
-        if (def.timeRange.days) since.setDate(since.getDate() - def.timeRange.days);
+        if (section.timeRange.hours) {
+            since.setHours(since.getHours() - section.timeRange.hours);
+        }
+        if (section.timeRange.days) {
+            since.setDate(since.getDate() - section.timeRange.days);
+        }
 
-        where[def.timestampField] = { gte: since };
+        where[section.timestampField] = { gte: since };
     }
 
-    // ------------------------------
-    // PREPARAR AGREGACIONES DINÁMICAS
-    // ------------------------------
-    const prismaAggregations: any = {};
+    // MODELO PRISMA
+    const prismaModel = (prisma as any)[section.model];
+    if (!prismaModel) {
+        throw new Error(`Modelo Prisma no encontrado: ${section.model}`);
+    }
 
-    for (const field in def.aggregations) {
-        const method = def.aggregations[field] as PrismaAggOp;
-        const prismaKey = AGGREGATION_MAP[method];
+    // ---------------------------------------------------------
+    // 🟦 CASO ESPECIAL: TABLA SIN AGREGACIONES (NO GROUP BY)
+    // ---------------------------------------------------------
+    if (!section.aggregations || !section.groupBy) {
+        const raw = await prismaModel.findMany({
+            where,
+            select: undefined // deja que Prisma devuelva todo
+        });
 
-        prismaAggregations[prismaKey] = {
-            ...(prismaAggregations[prismaKey] || {}),
+        return {
+            kind: "TABLE" as const,
+            title: section.title,
+            columns: section.columns ?? Object.keys(raw[0] ?? {}),
+            rows: raw
+        };
+    }
+
+    // ---------------------------------------------------------
+    // 🟩 CASO NORMAL: CHART + AGGREGATIONS + GROUP BY
+    // ---------------------------------------------------------
+
+    if (!prismaModel.groupBy) {
+        throw new Error(`Modelo Prisma no soporta groupBy: ${section.model}`);
+    }
+
+    // Agregaciones dinámicas
+    const prismaAgg: any = {};
+    for (const field of Object.keys(section.aggregations)) {
+        const method = section.aggregations[field] as AggregationType;
+        const prismaKey = AGG_MAP[method];
+        prismaAgg[prismaKey] = {
+            ...(prismaAgg[prismaKey] || {}),
             [field]: true
         };
     }
 
-    // ------------------------------
-    // EJECUTAR GROUP BY DINÁMICO
-    // ------------------------------
-    const prismaModel = (prisma as any)[def.model];
-    if (!prismaModel?.groupBy) {
-        throw new Error(`Modelo Prisma inválido: ${def.model}`);
-    }
-
     const rows = await prismaModel.groupBy({
-        by: [def.groupBy],
+        by: [section.groupBy],
         where,
-        ...prismaAggregations
+        ...prismaAgg
     });
 
-    // ------------------------------
-    // PROCESAR FILAS A FORMATO DE REPORTES
-    // ------------------------------
-    const isPieChart = def.type === "PIE_CHART";
+    const isPie = section.type === "PIE_CHART";
+    const isTable = section.type === "TABLE";
 
-    const processedData = await Promise.all(
+    const data = await Promise.all(
         rows.map(async (row: any) => {
-            let label = row[def.groupBy];
+            let label: any = row[section.groupBy];
 
-            // Formatters (e.g. true → “Operativas”)
-            if (def.formatters?.name?.[String(label)]) {
-                label = def.formatters.name[String(label)];
+            // FORMATTERS opcionales
+            if (section.formatters?.label?.[String(label)]) {
+                label = section.formatters.label[String(label)];
             }
 
-            // JOIN dinámico
-            if (def.join?.[def.groupBy]) {
-                const joinCfg = def.join[def.groupBy];
-                const joinModel = (prisma as any)[joinCfg.model];
+            // JOIN opcional
+            // JOIN opcional y seguro ante nulls
+            if (section.join?.[section.groupBy]) {
+                const joinValue = row[section.groupBy];
 
-                const ref = await joinModel.findUnique({
-                    where: { id: row[def.groupBy] },
-                    select: Object.fromEntries(joinCfg.select.map(f => [f, true]))
-                });
+                // Si el groupBy es null, usamos un label fallback y NO intentamos el join
+                if (joinValue === null || joinValue === undefined) {
+                    label = section.formatters?.label?.["null"] ?? "Sin asignar";
+                } else {
+                    const joinCfg = section.join[section.groupBy];
+                    const joinModel = (prisma as any)[joinCfg.model];
 
-                if (ref?.name) label = ref.name;
+                    const ref = await joinModel.findUnique({
+                        where: { id: joinValue },
+                        select: Object.fromEntries(joinCfg.select.map((f) => [f, true]))
+                    });
+
+                    if (ref?.name) label = ref.name;
+                }
             }
 
-            // Extraer valor del agregador
+
+            // Valor agregado
             let aggValue = null;
             if (row._avg) aggValue = Object.values(row._avg)[0];
             if (row._sum) aggValue = Object.values(row._sum)[0];
             if (row._count) aggValue = Object.values(row._count)[0];
 
-            // ----------------------------
-            // FORMATO FINAL SEGÚN TIPO DE GRÁFICO
-            // ----------------------------
-
-            // 🎯 PIE → { label, value, fill }
-            if (isPieChart) {
+            if (isPie) {
                 return {
                     label,
                     value: aggValue,
-                    fill: def.colors?.[String(row[def.groupBy])]
+                    fill: section.colors?.[String(row[section.groupBy])]
                 };
             }
 
-            // 🎯 BAR / LINE → claves dinámicas
-            const entry: any = {
-                label
-            };
+            const entry: any = { label };
 
-            for (const metricName of Object.keys(def.aggregations)) {
+            for (const metricName of Object.keys(section.aggregations)) {
                 entry[metricName] = aggValue;
             }
 
@@ -141,23 +188,100 @@ export async function runReport(
         })
     );
 
-    // ------------------------------
-    // RESPUESTA FINAL NORMALIZADA
-    // ------------------------------
+    // TABLA con aggregations
+    if (isTable) {
+        const columns =
+            section.columns && section.columns.length > 0
+                ? section.columns
+                : ["label", ...Object.keys(section.aggregations)];
+
+        return {
+            kind: "TABLE" as const,
+            title: section.title,
+            columns,
+            rows: data
+        };
+    }
+
+    // CHART
+    const chartType: "PIE" | "BAR" | "LINE" =
+        section.type === "LINE_CHART"
+            ? "LINE"
+            : section.type === "BAR_CHART"
+                ? "BAR"
+                : "PIE";
+
+    const yKeys =
+        chartType === "PIE" ? ["value"] : Object.keys(section.aggregations);
+
     return {
-        meta: {
-            title: def.name,
-            description: def.description,
-            type: mapToVisualizationType(def.type),
-            units: def.units || "",
+        kind: "CHART" as const,
+        title: section.title,
+        chartType,
+        data,
+        xKey: "label",
+        yKeys,
+        units: section.units,
+        colors: section.colors ? Object.values(section.colors) : undefined
+    };
+}
 
-            // Más expresivo y consistente
-            xKey: isPieChart ? "label" : def.groupBy,
-            yKeys: isPieChart ? ["value"] : Object.keys(def.aggregations),
 
-            colors: def.colors ? Object.values(def.colors) : undefined
-        },
-        data: processedData,
-        generatedAt: new Date()
+// --- MOTOR PRINCIPAL ---
+
+export async function runExecutiveReport(
+    reportId: string,
+    ctx: { ingenioId?: number },
+    params: Record<string, any> = {}
+): Promise<ExecutiveReportDTO> {
+    const def = defs[reportId];
+    if (!def) {
+        throw new Error(`Reporte no registrado: ${reportId}`);
+    }
+
+    const sectionResults: ExecutiveReportDTO["sections"] = [];
+
+    for (const section of def.sections) {
+        // TEXT_AI: de momento stub (luego lo conectamos a Gemini)
+        if (section.type === "TEXT_AI") {
+            sectionResults.push({
+                type: "INSIGHT",
+                title: section.title,
+                text:
+                    "✍️ Análisis ejecutivo pendiente de generar por IA.\n\n" +
+                    `Prompt sugerido:\n${section.prompt}`
+            });
+            continue;
+        }
+
+        // Sección de datos: CHART o TABLE
+        const res = await runDataSection(section as DataSectionJSON, ctx);
+
+        if (res.kind === "TABLE") {
+            sectionResults.push({
+                type: "TABLE",
+                title: res.title,
+                columns: res.columns,
+                rows: res.rows
+            });
+        } else {
+            sectionResults.push({
+                type: "CHART",
+                title: res.title,
+                chartType: res.chartType,
+                data: res.data,
+                xKey: res.xKey,
+                yKeys: res.yKeys,
+                units: res.units,
+                colors: res.colors
+            });
+        }
+    }
+
+    return {
+        title: def.name,
+        description: def.description,
+        generatedAt: new Date(),
+        sections: sectionResults
     };
 }
