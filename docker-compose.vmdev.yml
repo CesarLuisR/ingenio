@@ -1,40 +1,51 @@
+version: "3.9"
+
 services:
+  # ---------------------------------------------------------
+  # FRONTEND (Vite en modo dev)
+  # ---------------------------------------------------------
   web:
     build:
       context: ./apps/web
       dockerfile: Dockerfile
       target: dev
-    # volumes:
-      # - ./apps/web:/app
-      # - /app/node_modules
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
     ports:
       - "5173:5173"
     environment:
-      - NODE_ENV=development
+      NODE_ENV: development
+      VITE_API_URL: http://localhost:5000
+    depends_on:
+      - api
 
+  # ---------------------------------------------------------
+  # BACKEND (Node.js + Prisma autogenerate)
+  # ---------------------------------------------------------
   api:
     build:
       context: ./apps/api
       dockerfile: Dockerfile
       target: dev
-    # volumes:
-    #   - ./apps/api:/app
-      # - /app/node_modules:/app/node_modules 
-    
-    # 👇 AQUÍ ESTÁ LA SOLUCIÓN:
-    # Esto fuerza a que se cree la estructura de la base de datos antes de iniciar la app
+    volumes:
+      - ./apps/api:/app
+      - /app/node_modules
     command: sh -c "npx prisma db push && npm run dev"
-    
     ports:
       - "5000:5000"
     environment:
-      - NODE_ENV=development
-      - PORT=5000
-      - MONGO_URI=mongodb://mongo:27017/ingenio
-      - REDIS_URL=redis://redis:6379
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/ingenio
-      # - IA_API=http://ia_mock:8081
-      - IA_API=http://ia-service:8000
+      NODE_ENV: development
+      PORT: 5000
+
+      # Bases de datos internas de docker
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ingenio
+      MONGO_URI: mongodb://mongo:27017/ingenio
+      REDIS_URL: redis://redis:6379
+
+      # IA
+      IA_API: http://ia-service:8000
+
     depends_on:
       postgres:
         condition: service_healthy
@@ -42,24 +53,33 @@ services:
         condition: service_started
       redis:
         condition: service_started
-      ia-service: 
+      ia-service:
         condition: service_started
-   
+
+  # ---------------------------------------------------------
+  # MONGO (telemetría, sensores)
+  # ---------------------------------------------------------
   mongo:
     image: mongo:4.4.18
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
-   
+
+  # ---------------------------------------------------------
+  # REDIS (cache + cola)
+  # ---------------------------------------------------------
   redis:
     image: redis:7
     ports:
       - "6379:6379"
     command: ["redis-server", "--appendonly", "yes"]
     volumes:
-      - ./data/redis:/data
+      - redis_data:/data
 
+  # ---------------------------------------------------------
+  # POSTGRES (base core)
+  # ---------------------------------------------------------
   postgres:
     image: postgres:16
     environment:
@@ -69,47 +89,64 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./data/postgres:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d ingenio"]
       interval: 5s
       timeout: 3s
       retries: 10
 
+  # ---------------------------------------------------------
+  # SENSOR MOCK (simulación de entradas)
+  # ---------------------------------------------------------
   sensor_mock:
     build:
-      context: ./apps/sensor-mock 
+      context: ./apps/sensor-mock
       dockerfile: Dockerfile
-      # target: dev
-    # ports:
-    #   - "5001:5001"
     volumes:
       - ./apps/sensor-mock/config:/app/config
     environment:
-      - NODE_ENV=development
-      # - PORT=5001
-      - API=http://api:5000
-      - CONFIG_FILE_NAME=motor-01.json
-   
+      NODE_ENV: development
+      API: http://api:5000
+      CONFIG_FILE_NAME: motor-01.json
+    depends_on:
+      - api
+
+  # ---------------------------------------------------------
+  # IA MOCK (si querés simular IA en dev)
+  # ---------------------------------------------------------
   ia_mock:
     build:
       context: ./apps/ia-mock
       dockerfile: Dockerfile
-    # volumes:
-      # - ./apps/ia-mock:/app
+    environment:
+      NODE_ENV: development
+    # No ports, solo interno
 
+  # ---------------------------------------------------------
+  # IA SERVICE REAL (Python)
+  # ---------------------------------------------------------
   ia-service:
     build:
       context: ./apps/ia-service
       dockerfile: Dockerfile
     ports:
-      - "8000:8000" # Exponemos el puerto para debug
-    networks:
-      - default # Asegúrate de que todos usen la red por defecto o define una
+      - "8000:8000" # modo debug
+    environment:
+      NODE_ENV: development
+      SECURE_DATABASE_URL: postgresql://postgres:postgres@postgres:5432/ingenio
     deploy:
       resources:
         limits:
-          memory: 1G # Prophet consume RAM, dale espacio
+          memory: 1G
+    depends_on:
+      postgres:
+        condition: service_healthy
 
+# ---------------------------------------------------------
+# VOLUMES
+# ---------------------------------------------------------
 volumes:
   mongo_data:
+  redis_data:
+  postgres_data:

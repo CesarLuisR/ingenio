@@ -1,42 +1,46 @@
+version: "3.9"
+
 services:
   web:
     build:
       context: ./apps/web
       dockerfile: Dockerfile
       target: dev
-    # volumes:
-      # - ./apps/web:/app
-      # - /app/node_modules
     ports:
       - "5173:5173"
     environment:
-      - NODE_ENV=development
-      - VITE_API_URL=${VITE_API_URL}
+      NODE_ENV: development
+      VITE_API_URL: ${VITE_API_URL}
+    depends_on:
+      - api
 
   api:
     build:
       context: ./apps/api
       dockerfile: Dockerfile
       target: dev
-    # volumes:
-    #   - ./apps/api:/app
-      # - /app/node_modules:/app/node_modules 
     
-    # 👇 AQUÍ ESTÁ LA SOLUCIÓN:
-    # Esto fuerza a que se cree la estructura de la base de datos antes de iniciar la app
+    # Asegura que Prisma genere la BD antes de iniciar
     command: sh -c "npx prisma db push && npm run dev"
-    
+
     ports:
       - "5000:5000"
     environment:
-      - NODE_ENV=development
-      - PORT=5000
-      - MONGO_URI=mongodb://mongo:27017/ingenio
-      - REDIS_URL=redis://redis:6379
-      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/ingenio
-      # - IA_API=http://ia_mock:8081
-      - IA_API=http://ia-service:8000
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      NODE_ENV: development
+      PORT: ${PORT}
+
+      # Base de datos principal
+      DATABASE_URL: ${DATABASE_URL}
+
+      # IA
+      IA_API: ${IA_API_URL}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+
+      # Otras DB
+      MONGO_URI: ${MONGO_URI}
+      REDIS_URL: ${REDIS_URL}
+
     depends_on:
       postgres:
         condition: service_healthy
@@ -44,16 +48,16 @@ services:
         condition: service_started
       redis:
         condition: service_started
-      ia-service: 
+      ia-service:
         condition: service_started
-   
+
   mongo:
     image: mongo:7
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
-   
+
   redis:
     image: redis:7
     ports:
@@ -65,53 +69,45 @@ services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: ingenio
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
       - "5433:5432"
     volumes:
       - ./data/postgres:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d ingenio"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 3s
       retries: 10
 
   sensor_mock:
     build:
-      context: ./apps/sensor-mock 
+      context: ./apps/sensor-mock
       dockerfile: Dockerfile
-      # target: dev
-    # ports:
-    #   - "5001:5001"
     volumes:
       - ./apps/sensor-mock/config:/app/config
     environment:
-      - NODE_ENV=development
-      # - PORT=5001
-      - API=http://api:5000
-      - CONFIG_FILE_NAME=motor-01.json
-   
-  ia_mock:
-    build:
-      context: ./apps/ia-mock
-      dockerfile: Dockerfile
-    # volumes:
-      # - ./apps/ia-mock:/app
+      NODE_ENV: development
+      API: ${INTERNAL_API_URL}
+      CONFIG_FILE_NAME: motor-01.json
+    depends_on:
+      - api
 
   ia-service:
     build:
       context: ./apps/ia-service
       dockerfile: Dockerfile
     ports:
-      - "8000:8000" # Exponemos el puerto para debug
-    networks:
-      - default # Asegúrate de que todos usen la red por defecto o define una
+      - "8000:8000"
+    environment:
+      SECURE_DATABASE_URL: ${SECURE_DATABASE_URL}
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
     deploy:
       resources:
         limits:
-          memory: 1G # Prophet consume RAM, dale espacio
+          memory: 1G
 
 volumes:
   mongo_data:
