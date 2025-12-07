@@ -44,22 +44,25 @@ import metricsRoutes from "./lib/routes/metricsRoutes";
 import machineRoutes from "./lib/routes/machineRoutes";
 import dashboardRoutes from "./lib/routes/dashboardRoutes";
 import reportRoutes from "./lib/routes/reportRoutes";
+import auditLogRoutes from "./lib/routes/auditLogRoutes";
+import { logger } from "./lib/middlewares/logger";
 
 // Sensor info ingestion
 app.use("/ingest", ingestRoutes(messageBus));
 
 // REST CRUD
 app.use("/api/auth", authRoutes);
-app.use("/api/sensors", requireAuth, sensorRoutes);
-app.use("/api/maintenances", requireAuth, maintenanceRoutes);
-app.use("/api/failures", requireAuth, failureRoutes);
-app.use("/api/users", requireAuth, userRoutes);
-app.use("/api/analyze", requireAuth, analyzeRoutes);
-app.use("/api/technicians", requireAuth, technicianRoutes); 
-app.use("/api/ingenios", requireAuth, ingenioRoutes);
-app.use("/api/metrics", requireAuth, metricsRoutes);
-app.use("/api/machines", requireAuth, machineRoutes);
-app.use("/api/dashboard", requireAuth, dashboardRoutes);
-app.use("/api/reports", requireAuth, reportRoutes);
+app.use("/api/sensors", requireAuth, logger, sensorRoutes);
+app.use("/api/maintenances", requireAuth, logger, maintenanceRoutes);
+app.use("/api/failures", requireAuth, logger, failureRoutes);
+app.use("/api/users", requireAuth, logger, userRoutes);
+app.use("/api/analyze", requireAuth, logger, analyzeRoutes);
+app.use("/api/technicians", requireAuth, logger, technicianRoutes); 
+app.use("/api/ingenios", requireAuth, logger, ingenioRoutes);
+app.use("/api/metrics", requireAuth, logger, metricsRoutes);
+app.use("/api/machines", requireAuth, logger, machineRoutes);
+app.use("/api/dashboard", requireAuth, logger, dashboardRoutes);
+app.use("/api/reports", requireAuth, logger, reportRoutes);
+app.use("/api/logs", requireAuth, logger, auditLogRoutes);
 
 export default server;

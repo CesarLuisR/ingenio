@@ -1,3 +1,28 @@
 {
-  "sensorId": "hola1"
+  "sensorId": "hola",
+  "type": "inclinometro",
+  "location": "Aqui",
+  "intervalMs": 1000,
+  "metricsConfig": {
+    "mechanical": {
+      "yaw": {
+        "max": 180,
+        "min": -180
+      },
+      "roll": {
+        "max": 180,
+        "min": -180
+      },
+      "pitch": {
+        "max": 90,
+        "min": -90
+      }
+    }
+  },
+  "active": true,
+  "configVersion": "v1",
+  "createdAt": "2025-12-07T22:07:52.456Z",
+  "lastSeen": "2025-12-07T22:04:26.476Z",
+  "ingenioId": 1,
+  "machineId": 1
 }

@@ -10,6 +10,7 @@ import type {
     User,
     Machine,
     PaginatedResponse,
+    AuditLog,
 } from "../types";
 import type { AIResponse, ExecutiveReport } from "../types/reports";
 
@@ -441,6 +442,24 @@ class ReportService extends BaseApiClient {
     }
 }
 
+class AuditLogService extends BaseApiClient {
+    /**
+     * Obtiene los logs con filtros y paginación.
+     * Params útiles: page, limit, userId, action, entity, startDate, endDate
+     */
+    getAll(params: Record<string, any> = {}): Promise<PaginatedResponse<AuditLog>> {
+        const query = this.buildQuery(params);
+        return this.request<PaginatedResponse<AuditLog>>(`/api/logs${query}`);
+    }
+
+    /**
+     * Obtiene el detalle de un log específico (incluyendo el meta completo)
+     */
+    getOne(id: string): Promise<AuditLog> {
+        return this.request<AuditLog>(`/api/logs/${id}`);
+    }
+}
+
 // --- API FAÇADE ---
 
 const auth = new AuthService();
@@ -455,6 +474,7 @@ const users = new UserService();
 const metrics = new MetricsService();
 const ingest = new IngestService();
 const reports = new ReportService();
+const auditLogs = new AuditLogService();
 
 export const api = {
     auth,
@@ -469,6 +489,7 @@ export const api = {
     metrics,
     ingest,
     reports,
+    auditLogs,
 
     // Legacy:
 

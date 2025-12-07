@@ -251,3 +251,21 @@ export interface PaginatedResponse<T> {
         hasPreviousPage: boolean;
     };
 }
+
+export interface AuditLog {
+  id: string; // String porque viene serializado del BigInt
+  action: string;
+  entity: string;
+  entityId?: number;
+  userId: number;
+  ingenioId: number;
+  ip: string;
+  meta: any; // El JSON con el "antes"
+  createdAt: string;
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+  };
+}

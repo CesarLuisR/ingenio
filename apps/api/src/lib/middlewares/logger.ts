@@ -1,7 +1,7 @@
 import { RequestHandler } from 'express';
 import { requestContext } from '../utils/ctxStorage';
 
-export const contextMiddleware: RequestHandler = (req, res, next) => {
+export const logger: RequestHandler = (req, res, next) => {
     // 1. Intentamos obtener el usuario de la sesión (ajusta según tu auth real)
     const user = (req as any).session?.user; 
 

@@ -16,6 +16,7 @@ import MachineDetailPage from "./features/machines/MachineDetailPage";
 import Ingenios from "./features/ingenios";
 import { AppThemeProvider } from "./context/ThemeContext";
 import ReportsPage from "./features/reports";
+import AuditPage from "./features/auditLogs";
 
 export default function App() {
 	return (
@@ -47,6 +48,7 @@ export default function App() {
 								<Route path="tecnicos" element={<Technicians />} />
 								<Route path="ingenios" element={<Ingenios />} />
 								<Route path="reportes" element={<ReportsPage /> } />
+								<Route path="historial" element={<AuditPage /> } />
 								<Route
 									path="*"
 									element={<div>Página no encontrada</div>}

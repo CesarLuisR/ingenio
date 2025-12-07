@@ -157,7 +157,7 @@ export default function Layout() {
                             <NavLinkStyled to="/analisis" $active={isActive("/analisis")} onClick={() => setShowSidebar(false)}>
                                 <span>📈</span> Análisis
                             </NavLinkStyled>
-                            <NavLinkStyled to="/analisis" $active={isActive("/reportes")} onClick={() => setShowSidebar(false)}>
+                            <NavLinkStyled to="/historial" $active={isActive("/historial")} onClick={() => setShowSidebar(false)}>
                                 <span>🧾</span> Historial
                             </NavLinkStyled>
                         </>
