@@ -23,6 +23,7 @@ export const loginCtrl: RequestHandler = async (req, res) => {
         ingenioId: user.ingenioId
     };
 
+
     const ingenio = user.ingenioId
         ? await prisma.ingenio.findUnique({ where: { id: user.ingenioId } })
         : null;
@@ -35,16 +36,51 @@ export const loginCtrl: RequestHandler = async (req, res) => {
         return res.status(401).json({ message: "Ingenio inactivo" });
     }
 
+    let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '0.0.0.0';
+    if (Array.isArray(ip)) ip = ip[0];
+
+    prisma.auditLog.create({
+        data: {
+            userId: user.id,
+            ingenioId: user.ingenioId,
+            action: 'LOGIN', // Acción personalizada
+            entity: 'Auth',
+            entityId: user.id,
+            ip: String(ip),
+            meta: { method: 'email/password' } // Opcional
+        }
+    }).catch(console.error);
+
     res.json({ message: "Login successful", user: req.session.user });
 };
 
 export const logoutCtrl: RequestHandler = (req, res) => {
+    const user = req.session.user;
+    if (!user) {
+        return res.status(401).json({ message: "Unauthorized" });
+    };
+
     req.session.destroy((err) => {
         if (err) {
             return res.status(500).json({ message: "Logout failed" });
         }
         res.json({ message: "Logout successful" });
     });
+
+    let ip = req.headers['x-forwarded-for'] || req.socket.remoteAddress || '0.0.0.0';
+    if (Array.isArray(ip)) ip = ip[0];
+
+    prisma.auditLog.create({
+        data: {
+            userId: user.id,
+            ingenioId: user.ingenioId,
+            action: 'LOGIN', // Acción personalizada
+            entity: 'Auth',
+            entityId: user.id,
+            ip: String(ip),
+            meta: { method: 'email/password' } // Opcional
+        }
+    }).catch(console.error);
 }
 
 export const getSessionCtrl: RequestHandler = (req, res) => {
