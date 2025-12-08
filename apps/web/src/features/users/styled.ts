@@ -334,14 +334,28 @@ export const Toolbar = styled.div`
   display: flex;
   align-items: center;
   gap: 15px;
+  flex-wrap: wrap; 
 
-  @media (max-width: ${({ theme }) => theme.breakpoints.mobile}) {
-    flex-wrap: wrap;
+  .filter-select-container {
+    width: 220px;
+    z-index: 50;
+  }
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.laptop}) {
+     /* Early wrap for smaller laptops if needed, but primarily stack on tablet */
+  }
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
     width: 100%;
+    flex-direction: column;
+    align-items: stretch;
     
-    input {
+    .filter-select-container {
       width: 100%;
-      min-width: 0;
+    }
+
+    button {
+      width: 100%;
     }
   }
 `;
@@ -352,7 +366,7 @@ export const TextInput = styled.input`
   border-radius: 6px;
   background: ${({ theme }) => theme.colors.card};
   color: ${({ theme }) => theme.colors.text.primary};
-  min-width: 200px;
+  width: 200px; /* Fixed width on desktop */
 
   &::placeholder {
     color: ${({ theme }) => theme.colors.text.tertiary};
@@ -361,5 +375,9 @@ export const TextInput = styled.input`
   &:focus {
     border-color: ${({ theme }) => theme.colors.accent.primary};
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  }
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    width: 100%;
   }
 `;

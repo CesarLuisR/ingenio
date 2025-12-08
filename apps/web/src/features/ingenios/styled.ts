@@ -157,6 +157,12 @@ export const ListItem = styled.div`
   justify-content: space-between;
   align-items: center; /* Alineación vertical centrada */
 
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
   &:last-child {
     border-bottom: none;
   }
@@ -166,6 +172,10 @@ export const ItemLeft = styled.div`
   display: flex;
   flex-direction: column;
   gap: 4px;
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    width: 100%;
+  }
 `;
 
 export const ItemName = styled.div`
@@ -196,6 +206,17 @@ export const Badge = styled.span<{ $active: boolean }>`
 export const Actions = styled.div`
   display: flex;
   gap: 8px;
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    width: 100%;
+    flex-wrap: wrap;
+    
+    button {
+       flex: 1;
+       text-align: center;
+       justify-content: center;
+    }
+  }
 `;
 
 /* CORRECCIÓN: ActionButton más robusto con variantes */

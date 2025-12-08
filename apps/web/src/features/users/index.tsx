@@ -63,6 +63,13 @@ const Toolbar = styled.div`
   display: flex;
   align-items: center;
   gap: 15px;
+
+  /* Cuando la pantalla sea menor a 768px */
+  @media (max-width: 768px) {
+    flex-direction: column; /* Cambia a columna */
+    align-items: stretch;   /* Hace que los hijos ocupen todo el ancho (opcional) */
+    width: 100%;            /* Asegura que el contenedor ocupe todo el ancho */
+  }
 `;
 
 export default function Usuarios() {
@@ -115,14 +122,13 @@ export default function Usuarios() {
                     {/* BARRRA DE BÚSQUEDA */}
                     <TextInput 
                         placeholder="Buscar usuario..." 
-                        style={{ width: 200 }}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
 
                     {/* SELECT DE INGENIO (SOLO SUPERADMIN) */}
                     {isSuperAdmin && (
-                        <div style={{ zIndex: 50, width: 220 }}> 
+                        <div className="filter-select-container"> 
                             <SearchableSelect
                                 options={ingenioOptions}
                                 value={selectedIngenioId || 0}
