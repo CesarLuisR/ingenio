@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # ---------------------------------------------------------
   # FRONTEND (Nginx sirviendo build de Vite)

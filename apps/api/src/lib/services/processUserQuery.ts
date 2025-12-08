@@ -1,4 +1,4 @@
-import { ReportContext, ReportParams, ReportResponse } from '../../types/reports';
+import { ReportContext, ReportParams } from '../../types/reports';
 import { UserRole } from '@prisma/client';
 import { decideReportWithGemini } from '../services/reports/geminiDispatcher';
 import { REPORT_REGISTRY } from '../services/reports/reportRegistry';
@@ -6,7 +6,8 @@ import { REPORT_REGISTRY } from '../services/reports/reportRegistry';
 export type AIControllerResponse =
     | {
         type: 'WIDGET';
-        payload: ReportResponse;
+        // todo: por ahora para que no falle
+        payload: any;
         debug?: { aiParams: any; reportId: string }; // Útil para depurar
     }
     | {

@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   # ---------------------------------------------------------
   # FRONTEND (Vite en modo dev)
