@@ -17,8 +17,8 @@ const TableWrapper = styled.div`
   background: ${({ theme }) => theme.colors.card};
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 16px;
-  overflow: hidden;
   box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+  overflow-x: auto;
 `;
 
 const Table = styled.table`
@@ -97,7 +97,7 @@ export default function AuditPage() {
       </Header>
 
       {/* --- BARRA DE FILTROS --- */}
-      <FiltersBar style={{ gridTemplateColumns: "1fr 1fr 1fr auto" }}>
+      <FiltersBar>
         {/* Filtro Entidad */}
         <TextInput 
           placeholder="Buscar entidad (Ej: Machine)..."
@@ -118,16 +118,18 @@ export default function AuditPage() {
         </SelectInput>
 
         {/* Filtro Fecha (Simple) */}
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <TextInput 
                 type="date" 
                 value={filters.startDate}
                 onChange={(e) => handleFilterChange("startDate", e.target.value)}
+                style={{ minWidth: '130px' }}
             />
             <TextInput 
                 type="date" 
                 value={filters.endDate}
                 onChange={(e) => handleFilterChange("endDate", e.target.value)}
+                style={{ minWidth: '130px' }}
             />
         </div>
 

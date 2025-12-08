@@ -8,10 +8,14 @@ const fadeIn = keyframes`
 
 export const Container = styled.div`
     padding: 2rem 3rem;
-    background: ${({ theme }) => theme.colors.background}; /* Slate-50 */
+    background: ${({ theme }) => theme.colors.background};
     min-height: 100vh;
     font-family: 'Inter', sans-serif;
     animation: ${fadeIn} 0.5s ease-out;
+
+    @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+        padding: 1.5rem;
+    }
 `;
 
 export const Header = styled.div`
@@ -21,6 +25,12 @@ export const Header = styled.div`
     margin-bottom: 2.5rem;
     padding-bottom: 1.5rem;
     border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+
+    @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1.5rem;
+    }
 `;
 
 export const Title = styled.h1`
@@ -43,6 +53,13 @@ export const HeaderActions = styled.div`
     display: flex;
     gap: 1rem;
     align-items: center;
+
+    @media (max-width: ${({ theme }) => theme.breakpoints.mobile}) {
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
 `;
 
 export const ConnectionBadge = styled.div<{ status: "connecting" | "connected" | "closed" }>`
@@ -64,11 +81,11 @@ export const ConnectionBadge = styled.div<{ status: "connecting" | "connected" |
         height: 8px;
         border-radius: 50%;
         background-color: ${p =>
-        p.status === 'connected' ? '#22c55e' :
-            p.status === 'connecting' ? '#eab308' : '#ef4444'};
+    p.status === 'connected' ? '#22c55e' :
+      p.status === 'connecting' ? '#eab308' : '#ef4444'};
         box-shadow: 0 0 0 2px ${p =>
-        p.status === 'connected' ? '#dcfce7' :
-            p.status === 'connecting' ? '#fef9c3' : '#fee2e2'};
+    p.status === 'connected' ? '#dcfce7' :
+      p.status === 'connecting' ? '#fef9c3' : '#fee2e2'};
     }
 `;
 
@@ -81,10 +98,10 @@ export const HealthBadge = styled.div<{ status: "ok" | "warning" | "critical" | 
     letter-spacing: 0.05em;
     color: white;
     background: ${p =>
-        p.status === "ok" ? "linear-gradient(135deg, #16a34a, #15803d)" :
-            p.status === "warning" ? "linear-gradient(135deg, #ca8a04, #a16207)" :
-                p.status === "critical" ? "linear-gradient(135deg, #dc2626, #b91c1c)" :
-                    "#94a3b8"};
+    p.status === "ok" ? "linear-gradient(135deg, #16a34a, #15803d)" :
+      p.status === "warning" ? "linear-gradient(135deg, #ca8a04, #a16207)" :
+        p.status === "critical" ? "linear-gradient(135deg, #dc2626, #b91c1c)" :
+          "#94a3b8"};
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
 `;
 
@@ -106,7 +123,7 @@ export const DashboardGrid = styled.div`
     gap: 2rem;
     margin-bottom: 2rem;
 
-    @media (max-width: 1024px) {
+    @media (max-width: ${({ theme }) => theme.breakpoints.laptop}) {
         grid-template-columns: 1fr;
     }
 `;

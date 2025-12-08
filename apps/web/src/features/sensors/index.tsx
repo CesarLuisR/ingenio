@@ -243,7 +243,7 @@ export default function Sensores() {
                 />
 
                 {/* Reemplazo del Select nativo de máquinas */}
-                <div style={{ width: 250, zIndex: 20 }}>
+                <div style={{ zIndex: 20 }}>
                     <SearchableSelect
                         options={machineOptions}
                         value={selectedMachine === "all" ? 0 : selectedMachine}

@@ -27,6 +27,8 @@ export const HeaderContainer = styled.div`
   margin-bottom: 32px;
   padding-bottom: 24px;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+  flex-wrap: wrap; 
+  gap: 16px;
 `;
 
 export const TitleBlock = styled.div`
@@ -42,6 +44,10 @@ export const Title = styled.h1`
   margin: 0;
   letter-spacing: -0.02em;
   line-height: 1.1;
+
+  @media (max-width: 480px) {
+    font-size: 24px;
+  }
 `;
 
 export const Sub = styled.p`

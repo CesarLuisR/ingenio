@@ -12,11 +12,15 @@ export const Container = styled.div`
   max-width: 1600px;
   margin: 0 auto;
   min-height: 100vh;
-  background-color: ${({ theme }) => theme.colors.background}; /* Slate 50 */
+  background-color: ${({ theme }) => theme.colors.background};
   font-family: 'Inter', sans-serif;
 
-  @media (max-width: 768px) {
-    padding: 20px;
+  @media (max-width: ${({ theme }) => theme.breakpoints.laptop}) {
+    padding: 24px;
+  }
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.mobile}) {
+    padding: 16px;
   }
 `;
 
@@ -27,6 +31,12 @@ export const Header = styled.div`
   margin-bottom: 32px;
   padding-bottom: 20px;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
 `;
 
 export const Title = styled.h1`
@@ -40,8 +50,8 @@ export const Title = styled.h1`
 
 // --- Toolbar de Filtros ---
 export const FilterContainer = styled.div`
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr 250px auto;
   gap: 16px;
   align-items: center;
   margin-bottom: 32px;
@@ -50,6 +60,39 @@ export const FilterContainer = styled.div`
   border-radius: 16px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+
+  /* Ensure SearchableSelect wrapper fills its grid cell */
+  & > div:nth-child(2) {
+    width: 100%;
+  }
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.laptop}) {
+    grid-template-columns: 1fr 1fr;
+    
+    /* SearchInput (1st child) and Select (2nd child) take first row */
+    
+    /* ButtonGroup (3rd child) moves to second row, full width */
+    & > *:nth-child(3) {
+      grid-column: 1 / -1;
+      width: 100%;
+      overflow-x: auto; /* Allow horizontal scroll if buttons don't fit */
+      padding-bottom: 4px;
+      
+      /* Hide scrollbar for cleaner look if possible, or style it */
+      &::-webkit-scrollbar { height: 4px; }
+      &::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 2px; }
+    }
+  }
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.mobile}) {
+    grid-template-columns: 1fr;
+    gap: 12px;
+
+    & > * {
+      grid-column: 1 / -1 !important;
+      width: 100%;
+    }
+  }
 `;
 
 export const SearchInput = styled.input`
@@ -62,6 +105,7 @@ export const SearchInput = styled.input`
   background: ${({ theme }) => theme.colors.background};
   color: ${({ theme }) => theme.colors.text.primary};
   transition: all 0.2s;
+  width: 100%; /* Ensure it fills grid cell */
 
   &:focus {
     outline: none;
@@ -103,7 +147,8 @@ export const FilterButton = styled.button<{ $active: boolean }>`
   border: none;
   cursor: pointer;
   transition: all 0.2s ease;
-  
+  white-space: nowrap; /* Prevent text wrapping inside buttons */
+
   background: ${(p) => (p.$active ? p.theme.colors.card : "transparent")};
   color: ${(p) => (p.$active ? p.theme.colors.text.primary : p.theme.colors.text.secondary)};
   box-shadow: ${(p) => (p.$active ? "0 1px 3px rgba(0,0,0,0.1)" : "none")};
@@ -152,8 +197,12 @@ export const ActionButton = styled.button`
 // --- Grid y Cards ---
 export const Grid = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 24px;
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.mobile}) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 // --- CARD MODIFICADA: Soporte para $isUnconfigured ---
@@ -162,7 +211,7 @@ export const Card = styled.div<{ $isActive: boolean; $isUnconfigured?: boolean }
   border-radius: 20px;
   padding: 24px;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
   position: relative;
   overflow: hidden;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -189,7 +238,7 @@ export const Card = styled.div<{ $isActive: boolean; $isUnconfigured?: boolean }
   &:hover {
     /* Si no está configurado, no se levanta */
     transform: ${(p) => p.$isUnconfigured ? "none" : "translateY(-4px)"};
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 20px 25px -5px rgba(0,0,0,0.05);
     border-color: ${({ theme }) => theme.colors.border};
   }
 `;
@@ -238,12 +287,12 @@ export const Badge = styled.span<{ $status: string }>`
     p.$status === "active" ? "#ecfdf5" :
       p.$status === "inactive" ? "#fef2f2" :
         p.$status === "warning" ? "#fffbeb" : p.theme.colors.background}; /* warning = amarillo claro */
-    
+
   color: ${(p) =>
     p.$status === "active" ? "#059669" :
       p.$status === "inactive" ? "#b91c1c" :
         p.$status === "warning" ? "#b45309" : p.theme.colors.text.secondary}; /* warning = ámbar oscuro */
-    
+
   border: 1px solid ${(p) =>
     p.$status === "active" ? "#a7f3d0" :
       p.$status === "inactive" ? "#fecaca" :
@@ -337,7 +386,7 @@ export const Loading = styled.div`
   border: 1px dashed ${({ theme }) => theme.colors.border};
 `;
 
-// --- MODAL & FORMULARIOS (Conservados del original) ---
+// --- MODAL & FORMULARIOS ---
 
 export const Modal = styled.div`
   position: fixed;
@@ -458,7 +507,7 @@ export const SubmitButton = styled(BaseButton)`
   }
 `;
 
-// --- EDITOR DE CONFIGURACIÓN (MetricsConfigEditor) (Conservados) ---
+// --- EDITOR DE CONFIGURACIÓN (MetricsConfigEditor) ---
 
 export const EditorContainer = styled.div`
   display: flex;
@@ -616,17 +665,17 @@ export const PaginationButton = styled.button<{ $primary?: boolean }>`
     $primary
       ? theme.colors.accent.primary
       : theme.mode === "dark"
-      ? "#1e293b"
-      : "#e2e8f0"};
+        ? "#1e293b"
+        : "#e2e8f0"};
 
   color: ${({ $primary }) =>
     $primary ? "white" : undefined};
 
   &:hover {
     background: ${({ $primary, theme }) =>
-      $primary
-        ? theme.colors.accent.hover
-        : theme.mode === "dark"
+    $primary
+      ? theme.colors.accent.hover
+      : theme.mode === "dark"
         ? "#334155"
         : "#cbd5e1"};
   }
@@ -635,11 +684,11 @@ export const PaginationButton = styled.button<{ $primary?: boolean }>`
     cursor: not-allowed;
     opacity: 0.45;
     background: ${({ $primary, theme }) =>
-      $primary
-        ? theme.mode === "dark"
-          ? "#475569"
-          : "#93c5fd"
-        : theme.mode === "dark"
+    $primary
+      ? theme.mode === "dark"
+        ? "#475569"
+        : "#93c5fd"
+      : theme.mode === "dark"
         ? "#334155"
         : "#cbd5e1"};
   }

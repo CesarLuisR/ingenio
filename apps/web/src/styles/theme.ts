@@ -27,6 +27,12 @@ export const lightTheme: DefaultTheme = {
       tooltip: '#ffffff',
     }
   },
+  breakpoints: {
+    mobile: '480px',
+    tablet: '768px',
+    laptop: '1024px',
+    desktop: '1200px',
+  }
 };
 
 export const darkTheme: DefaultTheme = {
@@ -55,6 +61,12 @@ export const darkTheme: DefaultTheme = {
       grid: '#334155',
       tooltip: '#1e293b',
     }
+  },
+  breakpoints: {
+    mobile: '480px',
+    tablet: '768px',
+    laptop: '1024px',
+    desktop: '1200px',
   },
 };
 

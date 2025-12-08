@@ -54,7 +54,7 @@ export default function SensorDetail() {
             </div>
 
             {/* Tablas de Historial (Grid layout para aprovechar espacio) */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: '24px', marginTop: '40px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '24px', marginTop: '40px', width: '100%' }}>
                 <SensorFailures items={failures} />
             </div>
         </Page>

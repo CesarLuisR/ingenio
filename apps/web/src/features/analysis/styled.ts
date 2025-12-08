@@ -15,9 +15,15 @@ export const Container = styled.div`
   flex-direction: column;
   gap: 32px;
   font-family: 'Inter', sans-serif;
-`;
 
-/* RESTO IGUAL (con la misma fuente)... */
+  @media (max-width: ${({ theme }) => theme.breakpoints.laptop}) {
+    padding: 24px;
+  }
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.mobile}) {
+    padding: 16px;
+  }
+`;
 
 export const Header = styled.div`
   display: flex;
@@ -25,6 +31,11 @@ export const Header = styled.div`
   align-items: flex-end;
   flex-wrap: wrap;
   gap: 24px;
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 `;
 
 export const Title = styled.h1`
@@ -313,5 +324,55 @@ export const ChartContainer = styled.div`
   height: 250px;
 `;
 
-export const PanelHeader = styled.div`display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; h3 { margin: 0; font-size: 16px; font-weight: 700; color: ${({ theme }) => theme.colors.text.primary}; } ;`
-export const ActionButton = styled.button`padding: 10px 20px; background: ${({ theme }) => theme.colors.accent.primary}; color: white; border: none; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 14px; box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2); transition: all 0.2s; white-space: nowrap; &:hover:not(:disabled) { background: ${({ theme }) => theme.colors.accent.hover}; transform: translateY(-1px); box-shadow: 0 6px 10px -1px rgba(37, 99, 235, 0.3); } &:disabled { opacity: 0.6; cursor: not-allowed; background: ${({ theme }) => theme.colors.text.tertiary}; box-shadow: none; } ;`;
+export const PanelHeader = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+
+  h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: ${({ theme }) => theme.colors.text.primary};
+  }
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.mobile}) {
+    flex-direction: column;
+    align-items: stretch;
+    
+    button {
+      width: 100%;
+    }
+  }
+`;
+
+export const ActionButton = styled.button`
+  padding: 10px 20px;
+  background: ${({ theme }) => theme.colors.accent.primary};
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+  box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);
+  transition: all 0.2s;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.2;
+
+  &:hover:not(:disabled) {
+    background: ${({ theme }) => theme.colors.accent.hover};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 10px -1px rgba(37, 99, 235, 0.3);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: ${({ theme }) => theme.colors.text.tertiary};
+    box-shadow: none;
+  }
+`;

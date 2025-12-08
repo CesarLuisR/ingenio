@@ -20,8 +20,12 @@ export const Container = styled.div`
   min-height: 100vh;
   font-family: 'Inter', sans-serif;
 
-  @media (max-width: 1024px) {
-    padding: 20px;
+  @media (max-width: ${({ theme }) => theme.breakpoints.laptop}) {
+    padding: 24px;
+  }
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.mobile}) {
+    padding: 16px;
   }
 `;
 
@@ -164,9 +168,13 @@ export const FiltersBar = styled.div`
   border: 1px solid ${({ theme }) => theme.colors.border};
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.01);
 
-  @media (max-width: 1024px) {
-    grid-template-columns: 1fr;
+  @media (max-width: ${({ theme }) => theme.breakpoints.laptop}) {
+    grid-template-columns: 1fr 1fr;
     padding: 16px;
+  }
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    grid-template-columns: 1fr;
   }
 `;
 
@@ -263,7 +271,11 @@ export const ResetFiltersButton = styled(FilterButtonBase)`
 
 export const MachineList = styled.div`
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  
+  @media (max-width: ${({ theme }) => theme.breakpoints.mobile}) {
+    grid-template-columns: 1fr;
+  }
   gap: 24px;
   margin-top: 8px;
 `;
@@ -803,7 +815,7 @@ export const InlineInfoPill = styled.div`
   border: 1px solid #bae6fd;
 `;
 
- export const SubmitButton = styled(BaseButton)`
+export const SubmitButton = styled(BaseButton)`
   background: ${({ theme }) => theme.colors.accent.primary};
   color: white;
   box-shadow: 0 4px 6px -1px rgba(37, 99, 235, 0.2);

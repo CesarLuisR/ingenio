@@ -9,71 +9,54 @@ export const Container = styled.div`
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 `;
 
-// --- MOBILE HEADER (solo visible en móvil) ---
-export const MobileHeader = styled.header`
-  display: none;
-
-  @media (max-width: 768px) {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 60px;
-    background-color: ${({ theme }) => theme.colors.card};
-    border-bottom: 1px solid ${({ theme }) => theme.colors.border};
-    padding: 0 16px;
-    z-index: 100;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+// --- GLOBAL HEADER CONTROLS ---
+export const GlobalHeaderControls = styled.div`
+  /* Default hidden on desktop if desired, but good for "Back" */
+  display: flex;
+  align-items: center;
+  padding: 16px 24px;
+  gap: 16px;
+  
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    padding: 12px 16px;
   }
 `;
 
-export const MobileMenuButton = styled.button`
-  background: transparent;
-  border: none;
-  color: ${({ theme }) => theme.colors.text.primary};
-  font-size: 24px;
-  cursor: pointer;
-  padding: 8px;
-  display: flex;
+export const GlobalBackButton = styled.button`
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
-  transition: background-color 0.2s;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.card};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  color: ${({ theme }) => theme.colors.text.primary};
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  transition: all 0.2s ease;
 
   &:hover {
-    background-color: ${({ theme }) => theme.colors.background};
+    background: ${({ theme }) => theme.colors.background};
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
   }
 
   &:active {
     transform: scale(0.95);
   }
+
+  svg {
+    width: 20px;
+    height: 20px;
+    stroke: currentColor;
+    stroke-width: 2;
+  }
 `;
 
-// --- MOBILE OVERLAY ---
-export const MobileOverlay = styled.div`
-  @media (max-width: 768px) {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 49;
-    backdrop-filter: blur(2px);
-    animation: fadeIn 0.2s ease;
-  }
-
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
-  }
+// --- MOBILE HEADER (Oculto en rediseño anterior, pero podría reutilizarse si fuera necesario) ---
+export const MobileHeader = styled.header`
+  display: none !important;
 `;
 
 // --- Sidebar (Barra Lateral) ---
@@ -91,10 +74,9 @@ export const Sidebar = styled.aside<{ $isOpen?: boolean }>`
   transition: transform 0.3s ease;
   box-shadow: 2px 0 8px rgba(0,0,0,0.02);
 
-  @media (max-width: 768px) {
-    transform: translateX(${({ $isOpen }) => ($isOpen ? '0' : '-100%')});
-    z-index: 51;
-    box-shadow: ${({ $isOpen }) => ($isOpen ? '4px 0 16px rgba(0,0,0,0.1)' : 'none')};
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    transform: translateX(-100%); /* Siempre oculto en móvil, usaremos el Bottom Sheet */
+    display: none; 
   }
 `;
 
@@ -104,10 +86,6 @@ export const SidebarHeader = styled.div`
   display: flex;
   flex-direction: column;
   gap: 8px;
-
-  @media (max-width: 768px) {
-    padding: 24px 20px;
-  }
 `;
 
 export const Title = styled.h1`
@@ -138,7 +116,7 @@ export const Nav = styled.nav`
   gap: 6px;
   flex: 1;
   overflow-y: auto;
-
+  
   &::-webkit-scrollbar { width: 4px; }
   &::-webkit-scrollbar-thumb { background: ${({ theme }) => theme.colors.border}; border-radius: 4px; }
 `;
@@ -193,14 +171,14 @@ export const NavLinkStyled = styled(Link) <{ $active: boolean }>`
 export const MobileBottomNav = styled.nav`
   display: none;
 
-  @media (max-width: 768px) {
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
     display: flex;
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
     height: 65px;
-    background-color: ${({ theme }) => theme.colors.card};
+    background-color: ${({ theme }) => theme.colors.card}; /* O usar rgba con blur */
     border-top: 1px solid ${({ theme }) => theme.colors.border};
     padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
     z-index: 100;
@@ -210,7 +188,7 @@ export const MobileBottomNav = styled.nav`
   }
 `;
 
-export const MobileNavItem = styled(Link) <{ $active: boolean }>`
+export const MobileNavItem = styled(Link) <{ $active?: boolean; as?: any; onClick?: any }>`
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -222,6 +200,9 @@ export const MobileNavItem = styled(Link) <{ $active: boolean }>`
   transition: all 0.2s ease;
   min-width: 64px;
   position: relative;
+  border: none;
+  background: transparent;
+  cursor: pointer;
 
   .icon {
     font-size: 22px;
@@ -233,7 +214,7 @@ export const MobileNavItem = styled(Link) <{ $active: boolean }>`
   .label {
     font-size: 11px;
     font-weight: 600;
-    color: ${(props) => (props.$active ? "#1d4ed8" : "#64748b")};
+    color: ${(props) => (props.$active ? props.theme.colors.accent.primary : props.theme.colors.text.tertiary)};
     transition: color 0.2s;
   }
 
@@ -255,10 +236,6 @@ export const MobileNavItem = styled(Link) <{ $active: boolean }>`
   &:active {
     transform: scale(0.95);
   }
-
-  ${(props) => props.$active && `
-    background-color: ${props.theme.colors.background};
-  `}
 `;
 
 // --- Contenido Principal ---
@@ -268,11 +245,11 @@ export const MainContent = styled.main`
   padding: 0;
   min-height: 100vh;
   
-  @media (max-width: 768px) {
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
     margin-left: 0;
     width: 100%;
-    padding-top: 60px; /* Altura del header móvil */
-    padding-bottom: 65px; /* Altura del bottom nav */
+    padding-top: 0;
+    padding-bottom: 80px;
   }
 `;
 
@@ -284,10 +261,6 @@ export const SidebarFooter = styled.div`
   display: flex;
   align-items: center;
   gap: 12px;
-
-  @media (max-width: 768px) {
-    padding: 12px 16px;
-  }
 `;
 
 export const UserAvatar = styled.div`
@@ -412,7 +385,7 @@ export const ModalContent = styled.div`
     max-width: 400px;
     margin: 16px;
 
-    @media (max-width: 768px) {
+    @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
       max-width: calc(100% - 32px);
     }
 `;
@@ -509,5 +482,152 @@ export const SubmitButton = styled.button`
     &:disabled {
         opacity: 0.5;
         cursor: not-allowed;
+    }
+`;
+
+// --- Mobile Menu Sheet Styles ---
+
+export const MobileMenuOverlay = styled.div<{ $isOpen: boolean }>`
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 200;
+  opacity: ${({ $isOpen }) => ($isOpen ? 1 : 0)};
+  pointer-events: ${({ $isOpen }) => ($isOpen ? "auto" : "none")};
+  transition: opacity 0.3s ease;
+`;
+
+export const MobileMenuSheet = styled.div<{ $isOpen: boolean }>`
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: ${({ theme }) => theme.colors.card};
+  border-top-left-radius: 24px;
+  border-top-right-radius: 24px;
+  padding: 24px;
+  padding-bottom: calc(85px + env(safe-area-inset-bottom)); /* Clear bottom nav */
+  z-index: 201; /* Above Bottom Nav */
+  transform: translateY(${({ $isOpen }) => ($isOpen ? "0%" : "100%")});
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+  max-height: 80vh;
+  overflow-y: auto;
+  
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+`;
+
+export const MobileMenuHeader = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+`;
+
+export const MobileMenuAvatar = styled.div`
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  font-weight: 700;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+`;
+
+export const MobileMenuUserInfo = styled.div`
+  display: flex;
+  flex-direction: column;
+
+  strong {
+    font-size: 16px;
+    font-weight: 700;
+    color: ${({ theme }) => theme.colors.text.primary};
+  }
+
+  span {
+    font-size: 13px;
+    color: ${({ theme }) => theme.colors.text.secondary};
+    text-transform: uppercase;
+  }
+`;
+
+export const MobileMenuSectionTitle = styled.h4`
+    font-size: 12px;
+    text-transform: uppercase;
+    color: ${({ theme }) => theme.colors.text.tertiary};
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin: 0;
+`;
+
+export const MobileMenuGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+`;
+
+export const MobileMenuLink = styled(Link) <{ $active?: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: ${({ $active, theme }) => $active ? theme.colors.background : 'transparent'};
+  border: 1px solid ${({ $active, theme }) => $active ? theme.colors.accent.primary : theme.colors.border};
+  border-radius: 12px;
+  color: ${({ theme }) => theme.colors.text.primary};
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.2s;
+
+  span { font-size: 18px; }
+
+  &:active {
+    transform: scale(0.98);
+    background: ${({ theme }) => theme.colors.background};
+  }
+`;
+
+export const MobileMenuActionRow = styled.div`
+  display: flex;
+  gap: 12px;
+`;
+
+export const MobileMenuButton = styled.button`
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid ${({ theme }) => theme.colors.border};
+    background: transparent;
+    color: ${({ theme }) => theme.colors.text.primary};
+
+    &.primary {
+        background: ${({ theme }) => theme.colors.background};
+    }
+
+    &.danger {
+        color: #ef4444;
+        border-color: #fecaca;
+        background: #fef2f2;
+    }
+
+    &:active {
+        transform: scale(0.98);
     }
 `;

@@ -127,8 +127,18 @@ export default function Analisis() {
                     <PanelHeader>
                         <h3>Ejecutar Nuevo Diagnóstico</h3>
 
-                        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                            <div style={{ width: 300 }}>
+                        <div style={{ 
+                            display: "flex", 
+                            gap: 10, 
+                            alignItems: "stretch", // O "center" si prefieres, pero stretch ayuda en móvil
+                            flexWrap: "wrap" // <--- ESTO ES LA CLAVE
+                        }}>
+                            {/* flex: "1 1 300px" significa:
+                            - 1: grow (crece si hay espacio)
+                            - 1: shrink (se encoge si es necesario)
+                            - 300px: basis (ancho ideal base)
+                            */}
+                            <div style={{ flex: "1 1 300px" }}>
                                 <SearchableSelect
                                     options={machineOptions}
                                     value={selectedMachineId ? Number(selectedMachineId) : undefined}
@@ -138,7 +148,14 @@ export default function Analisis() {
                                 />
                             </div>
 
-                            <ActionButton disabled={!selectedMachineId || loading}>
+                            {/* El botón ocupará su tamaño natural, 
+                                pero si baja de línea, podrías querer que ocupe el 100% 
+                                agregando flex: "1 1 auto" aquí también si lo deseas.
+                            */}
+                            <ActionButton 
+                                disabled={!selectedMachineId || loading}
+                                style={{ whiteSpace: "nowrap" }} // Evita que el texto del botón se rompa feo
+                            >
                                 {loading ? "Procesando..." : "Analizar Ahora"}
                             </ActionButton>
                         </div>

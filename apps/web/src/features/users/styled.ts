@@ -21,8 +21,12 @@ export const Container = styled.div`
   font-family: 'Inter', sans-serif;
   animation: ${fadeIn} 0.4s ease-out;
 
-  @media (max-width: 768px) {
-    padding: 20px;
+  @media (max-width: ${({ theme }) => theme.breakpoints.laptop}) {
+    padding: 24px;
+  }
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.mobile}) {
+    padding: 16px;
   }
 `;
 
@@ -33,6 +37,12 @@ export const Header = styled.div`
   margin-bottom: 32px;
   padding-bottom: 20px;
   border-bottom: 1px solid ${({ theme }) => theme.colors.border};
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.tablet}) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
 `;
 
 export const Title = styled.h1`
@@ -68,7 +78,8 @@ export const TableContainer = styled.div`
   border-radius: 16px;
   border: 1px solid ${({ theme }) => theme.colors.border};
   box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
-  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+  overflow-x: auto;
 `;
 
 export const Table = styled.table`
@@ -323,6 +334,16 @@ export const Toolbar = styled.div`
   display: flex;
   align-items: center;
   gap: 15px;
+
+  @media (max-width: ${({ theme }) => theme.breakpoints.mobile}) {
+    flex-wrap: wrap;
+    width: 100%;
+    
+    input {
+      width: 100%;
+      min-width: 0;
+    }
+  }
 `;
 
 export const TextInput = styled.input`
