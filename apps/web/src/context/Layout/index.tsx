@@ -116,6 +116,8 @@ export default function Layout() {
                 { to: "/usuarios", label: "Usuarios", icon: LuUsers },
                 { to: "/maquinas", label: "Máquinas", icon: LuSettings2 },
                 { to: "/sensores", label: "Sensores", icon: LuActivity },
+                { to: "/reportes", label: "Reportes", icon: LuFileText },
+                { to: "/historial", label: "Historial", icon: LuHistory }
             ];
         }
 

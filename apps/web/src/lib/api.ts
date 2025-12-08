@@ -33,7 +33,8 @@ class BaseApiClient {
 
         if (!response.ok) {
             const errText = await response.text();
-            throw new Error(`API Error ${response.status}: ${errText}`);
+            throw new Error(errText);
+            // throw new Error(`API Error ${response.status}: ${errText}`);
         }
 
         if (response.status === 204) return undefined as T;

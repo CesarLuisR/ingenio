@@ -43,7 +43,10 @@ export default function LoginModule() {
             setUser(user);
             navigate("/");
         } catch (err: any) {
-            setError(err.message || "Credenciales incorrectas. Intenta de nuevo.");
+            // todo: pa que tu veas si este codigo esta limpio
+            // que disparate
+            const error = await JSON.parse(err.message);
+            setError(error.message || "Credenciales incorrectas. Intenta de nuevo.");
         } finally {
             setLoading(false);
         }

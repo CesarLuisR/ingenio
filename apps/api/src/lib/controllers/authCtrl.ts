@@ -23,7 +23,6 @@ export const loginCtrl: RequestHandler = async (req, res) => {
         ingenioId: user.ingenioId
     };
 
-
     const ingenio = user.ingenioId
         ? await prisma.ingenio.findUnique({ where: { id: user.ingenioId } })
         : null;
