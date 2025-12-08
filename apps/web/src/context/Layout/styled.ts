@@ -339,7 +339,8 @@ export const LogoutButton = styled.button`
 export const ThemeToggleButton = styled.button`
   background: transparent;
   border: 1px solid ${({ theme }) => theme.colors.border};
-  color: ${({ theme }) => theme.colors.text.secondary};
+  /* Añadimos un color de respaldo (gris) por si text.secondary no carga */
+  color: ${({ theme }) => theme.colors.text.secondary || '#94a3b8'}; 
   width: 36px;
   height: 36px;
   border-radius: 8px;
@@ -348,11 +349,21 @@ export const ThemeToggleButton = styled.button`
   align-items: center;
   justify-content: center;
   transition: all 0.2s;
-  font-size: 18px;
+  
+  /* ELIMINA font-size, los SVGs usan width/height explícito */
+  /* font-size: 18px;  <-- Borra esto */
+
+  /* AGREGA ESTO: Apunta directamente al icono SVG */
+  & > svg {
+    display: block; /* Elimina espacios fantasma */
+    stroke: currentColor; /* Fuerza a usar el color del botón */
+    /* stroke-width: 2; Si se ve muy delgado, descomenta esto */
+  }
 
   &:hover {
     background-color: ${({ theme }) => theme.colors.background};
-    color: ${({ theme }) => theme.colors.text.primary};
+    /* Asegura que al hacer hover, el color cambie al primario */
+    color: ${({ theme }) => theme.colors.text.primary}; 
     border-color: ${({ theme }) => theme.colors.text.secondary};
   }
 

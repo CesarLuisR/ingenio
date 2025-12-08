@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Analisis from "./features/analysis";
 import Dashboard from "./features/dashboard";
-import Layout from "./features/shared/components/Layout";
+import Layout from "./context/Layout";
 import Sensores from "./features/sensors";
 import SensorDetail from "./features/sensor-detail";
 import Mantenimientos from "./features/maintenances";
@@ -9,7 +9,7 @@ import Fallos from "./features/failures";
 import Technicians from "./features/technicians";
 import LoginModule from "./features/auth";
 import ProtectedRoute from "./features/auth/components/ProtectedRoute";
-import { GlobalWebSocketProvider } from "./features/shared/components/WebSocketProvider";
+import { GlobalWebSocketProvider } from "./context/WebSocketProvider";
 import Usuarios from "./features/users";
 import MachinesPage from "./features/machines";
 import MachineDetailPage from "./features/machines/MachineDetailPage";

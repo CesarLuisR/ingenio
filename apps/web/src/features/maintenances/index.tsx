@@ -222,7 +222,7 @@ export default function Mantenimientos() {
         </SelectInput>
 
         <TextInput
-          placeholder="🔍 Buscar notas..."
+          placeholder="Buscar notas..."
           value={filters.search}
           onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
           style={{ flex: 1 }}

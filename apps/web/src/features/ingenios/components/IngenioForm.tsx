@@ -1,57 +1,83 @@
 import { useState, useEffect } from "react";
-import styled from "styled-components";
+import styled, { keyframes } from "styled-components";
 import { api } from "../../../lib/api";
 import type { Ingenio } from "../../../types";
 
+const fadeIn = keyframes`
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+
+const modalSlide = keyframes`
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+`;
+
 const Overlay = styled.div`
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 100;
+  padding: 20px;
+  animation: ${fadeIn} 0.2s ease;
 `;
 
 const ModalContainer = styled.div`
-  background: white;
-  padding: 24px;
-  border-radius: 12px;
+  background: ${({ theme }) => theme.colors.card};
+  border-radius: 20px;
   width: 100%;
   max-width: 500px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  padding: 32px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: ${modalSlide} 0.3s ease-out;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+
+  form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
 `;
 
 const Title = styled.h2`
-  margin: 0 0 20px 0;
-  color: #0f172a;
-  font-size: 20px;
+  font-size: 24px;
+  font-weight: 800;
+  color: ${({ theme }) => theme.colors.text.primary};
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid ${({ theme }) => theme.colors.border};
 `;
 
 const FormGroup = styled.div`
-  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 `;
 
 const Label = styled.label`
-  display: block;
-  margin-bottom: 8px;
-  font-weight: 500;
-  color: #334155;
+  font-size: 13px;
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.text.primary};
 `;
 
 const Input = styled.input`
   width: 100%;
-  padding: 10px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 14px;
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  background: ${({ theme }) => theme.colors.background};
+  color: ${({ theme }) => theme.colors.text.primary};
+  transition: all 0.2s;
+
   &:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+    border-color: ${({ theme }) => theme.colors.accent.primary};
+    background: ${({ theme }) => theme.colors.card};
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
   }
 `;
 

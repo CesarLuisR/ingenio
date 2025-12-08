@@ -114,7 +114,7 @@ export default function Usuarios() {
                 <Toolbar>
                     {/* BARRRA DE BÚSQUEDA */}
                     <TextInput 
-                        placeholder="🔍 Buscar usuario..." 
+                        placeholder="Buscar usuario..." 
                         style={{ width: 200 }}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}

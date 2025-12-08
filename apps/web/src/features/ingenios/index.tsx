@@ -26,7 +26,8 @@ import {
   ActionButton,
   PaginationContainer,
   PageInfo,
-  PaginationButton
+  PaginationButton,
+  Badge // <--- Agregamos el import del Badge
 } from "./styled";
 
 export default function IngeniosPage() {
@@ -122,6 +123,30 @@ export default function IngeniosPage() {
     setIngeniosBuffer([]);
   };
 
+  // --- ACTION HANDLERS (NUEVO) ---
+  const handleToggleStatus = async (ingenio: Ingenio) => {
+    const action = ingenio.active ? "desactivar" : "activar";
+    
+    if (!confirm(`¿Estás seguro de que deseas ${action} el ingenio "${ingenio.name}"?`)) {
+      return;
+    }
+
+    try {
+      if (ingenio.active) {
+        // Usando la API como pediste
+        await api.ingenios.deactivate(ingenio.id); 
+      } else {
+        await api.ingenios.activate(ingenio.id);
+      }
+      
+      // Recargar datos manteniendo filtros
+      loadData(true); 
+    } catch (error) {
+      console.error("Error cambiando estado", error);
+      alert("Hubo un error al cambiar el estado.");
+    }
+  };
+
   // ---- RENDER ----
   const totalUiPages = Math.ceil(totalItems / UI_LIMIT);
 
@@ -170,7 +195,7 @@ export default function IngeniosPage() {
           </SelectInput>
         </InputGroup>
 
-        <PrimaryButton onClick={applyFilters}>🔍 Buscar</PrimaryButton>
+        <PrimaryButton onClick={applyFilters}>Buscar</PrimaryButton>
       </FilterBar>
 
       {/* LIST */}
@@ -178,23 +203,11 @@ export default function IngeniosPage() {
         <ListHeader>Ingenios Registrados</ListHeader>
 
         {loading && apiPage === 1 ? (
-          <div
-            style={{
-              padding: 40,
-              textAlign: "center",
-              color: "var(--text-secondary)"
-            }}
-          >
+          <div style={{ padding: 40, textAlign: "center", color: "var(--text-secondary)" }}>
             Cargando...
           </div>
         ) : visibleIngenios.length === 0 ? (
-          <div
-            style={{
-              padding: 40,
-              textAlign: "center",
-              color: "var(--text-secondary)"
-            }}
-          >
+          <div style={{ padding: 40, textAlign: "center", color: "var(--text-secondary)" }}>
             No se encontraron ingenios.
           </div>
         ) : (
@@ -202,10 +215,24 @@ export default function IngeniosPage() {
             <ListItem key={ing.id}>
               <ItemLeft>
                 <ItemName>{ing.name}</ItemName>
-                <ItemSub>{ing.location || "Sin ubicación"}</ItemSub>
+                <ItemSub>
+                  {ing.location || "Sin ubicación"}
+                  {/* Badge visual para ver el estado rápidamente */}
+                  <Badge $active={ing.active}>
+                    {ing.active ? "Activo" : "Inactivo"}
+                  </Badge>
+                </ItemSub>
               </ItemLeft>
 
               <Actions>
+                {/* Nuevo Botón de Toggle */}
+                <ActionButton 
+                  onClick={() => handleToggleStatus(ing)}
+                  $variant={ing.active ? "warning" : "success"}
+                >
+                  {ing.active ? "Desactivar" : "Activar"}
+                </ActionButton>
+
                 <ActionButton onClick={() => {
                   setEditing(ing);
                   setShowForm(true);
@@ -214,7 +241,7 @@ export default function IngeniosPage() {
                 </ActionButton>
 
                 <ActionButton
-                  $danger
+                  $variant="danger"
                   onClick={async () => {
                     if (confirm(`¿Eliminar ${ing.name}?`)) {
                       await api.deleteIngenio(ing.id);
@@ -277,7 +304,7 @@ export default function IngeniosPage() {
           onSave={() => {
             setShowForm(false);
             setEditing(null);
-            applyFilters(); // recarga limpia con filtros activos
+            applyFilters();
           }}
         />
       )}

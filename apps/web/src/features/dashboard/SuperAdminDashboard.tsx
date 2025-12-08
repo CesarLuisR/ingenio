@@ -24,6 +24,7 @@ import {
   PageInfo,
   PaginationButton
 } from "./styled";
+import { ItemName } from "../ingenios/styled";
 
 export default function SuperAdminDashboard() {
     // --- CONFIGURACIÓN DE BÚFER ---
@@ -197,7 +198,7 @@ export default function SuperAdminDashboard() {
                 </InputGroup>
 
                 <PrimaryButton onClick={handleApplyFilters}>
-                    🔍 Buscar
+                    Buscar
                 </PrimaryButton>
             </FilterBar>
 
@@ -216,7 +217,7 @@ export default function SuperAdminDashboard() {
                     visibleIngenios.map(ing => (
                         <ListItem key={ing.id}>
                             <div>
-                                <div style={{fontWeight: 600, color: '#1e293b'}}>{ing.name}</div>
+                                <ItemName>{ing.name}</ItemName>
                                 <div style={{fontSize: 13, color: '#64748b'}}>{ing.location || 'Sin ubicación'}</div>
                             </div>
                             <div style={{

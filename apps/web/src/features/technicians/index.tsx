@@ -81,7 +81,7 @@ export default function Technicians() {
       {/* FILTROS */}
       <FiltersBar>
         <TextInput
-          placeholder="🔍 Buscar por nombre, email o tel..."
+          placeholder="Buscar por nombre, email o tel..."
           value={filterText}
           onChange={(e) => setFilterText(e.target.value)}
         />

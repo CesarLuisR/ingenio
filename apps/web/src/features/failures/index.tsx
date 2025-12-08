@@ -135,7 +135,7 @@ export default function Fallos() {
         </SelectInput>
 
         <TextInput
-          placeholder="🔍 Buscar..."
+          placeholder="Buscar..."
           value={filterText}
           onChange={(e) => setFilterText(e.target.value)}
           style={{ flex: 1 }}

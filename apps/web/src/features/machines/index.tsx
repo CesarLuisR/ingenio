@@ -188,7 +188,7 @@ export default function MachinesPage() {
                   options={ingenioOptions}
                   value={selectedIngenioId ?? 0}
                   onChange={(val) => setSelectedIngenioId(val === 0 ? undefined : val)}
-                  placeholder="🔍 Buscar ingenio..."
+                  placeholder="Buscar ingenio..."
                 />
               </div>
             )}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { api } from "../../../../lib/api"; // Ajusta la ruta según tu estructura
+import { api } from "../../lib/api"; // Ajusta la ruta según tu estructura
 import {
     ModalOverlay, // Asegúrate que estos existan en tu styled compartido o impórtalos
     ModalContent,

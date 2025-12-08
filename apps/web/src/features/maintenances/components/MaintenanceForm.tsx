@@ -127,7 +127,7 @@ export default function MaintenanceForm({
               {/* Buscador de fallas */}
               <div style={{ marginBottom: "8px" }}>
                 <TextInput 
-                  placeholder="🔍 Buscar falla por descripción..." 
+                  placeholder="Buscar falla por descripción..." 
                   value={failureSearch}
                   onChange={(e) => setFailureSearch(e.target.value)}
                   style={{ fontSize: "13px", padding: "6px 10px" }}
